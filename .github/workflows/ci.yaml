@@ -1,0 +1,50 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - ci/*
+  pull_request:
+    branches:
+      - main
+      - dev
+  workflow_dispatch: # 🚀 수동 실행 트리거
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+
+      - name: 📦 Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: 🧾 Make application.properties
+        run: |
+          mkdir -p ./src/main/resources
+          touch ./src/main/resources/application.properties
+          echo "${{ secrets.PROPERTIES }}" > ./src/main/resources/application.properties
+        shell: bash
+
+      - name: 🏗️ Build with Maven
+        run: mvn -B -DskipTests package --file pom.xml
+
+      - name: 📝 Rename jar
+        run: mv target/*.jar target/app.jar
