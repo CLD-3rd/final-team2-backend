@@ -25,8 +25,15 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/favicon.ico", "/api/public/**", "/error").permitAll()
+                        .requestMatchers("/", "/favicon.ico", "/api/public/**", "/error", "/index.html", "/oauth2/**", "/login").permitAll()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login") // 필요 시 커스텀 로그인 페이지
+                )
+                .logout(logout -> logout
+                        .logoutSuccessUrl("/")
+                        .invalidateHttpSession(true)
                 );
 
         return http.build();

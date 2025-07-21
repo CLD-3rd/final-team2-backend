@@ -1,13 +1,6 @@
 package com.goteego.user.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,10 +16,6 @@ public class User {
     @Column(name = "member_id")
     private Long id;
 
-    private String name;
-    private String email;
-    private String password;
-
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
@@ -34,10 +23,7 @@ public class User {
     private OauthInfo oauthInfo;
 
     @Builder
-    public User(String name, String email, String password, UserRole role, OauthInfo oauthInfo) {
-        this.name = name;
-        this.email = email;
-        this.password = password;
+    public User(UserRole role, OauthInfo oauthInfo) {
         this.role = role;
         this.oauthInfo = oauthInfo;
     }
@@ -47,9 +33,5 @@ public class User {
                 .role(UserRole.USER)
                 .oauthInfo(oauthInfo)
                 .build();
-    }
-
-    public boolean isMatchingPassword(String password) {
-        return this.password.equals(password);
     }
 }

@@ -1,6 +1,5 @@
 package com.goteego.user.domain;
 
-import com.goteego.user.domain.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,6 +20,10 @@ public class CustomOAuth2User implements OAuth2User {
         this.attributes = attributes;
     }
 
+    public OauthInfo toOauthInfo() {
+        return user.getOauthInfo();
+    }
+
     @Override
     public Map<String, Object> getAttributes() {
         return attributes;
@@ -33,6 +36,6 @@ public class CustomOAuth2User implements OAuth2User {
 
     @Override
     public String getName() {
-        return user.getName();
+        return user.getOauthInfo().getOauthId();
     }
 }
