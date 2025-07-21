@@ -3,7 +3,6 @@ package com.goteego.user.service;
 import com.goteego.user.domain.CustomOAuth2User;
 import com.goteego.user.domain.OauthInfo;
 import com.goteego.user.domain.User;
-import com.goteego.user.domain.UserRole;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +49,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     return userRepository.save(User.createDefaultOAuthMember(oauthInfo));
                 });
 
-        // ✅ CustomUserPrincipal 반환 (직접 구현)
+        // ✅ CustomUserPrincipal 반환
         return new CustomOAuth2User(user, attributes);
     }
 }

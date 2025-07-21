@@ -22,6 +22,8 @@ public class User {
     @Embedded
     private OauthInfo oauthInfo;
 
+    private String refreshToken;
+
     @Builder
     public User(UserRole role, OauthInfo oauthInfo) {
         this.role = role;
@@ -33,5 +35,13 @@ public class User {
                 .role(UserRole.USER)
                 .oauthInfo(oauthInfo)
                 .build();
+    }
+
+    public void setRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
+
+    public void updateRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
     }
 }
