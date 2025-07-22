@@ -39,30 +39,28 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         log.info("[OAuth2SuccessHandler] 소셜 로그인 성공");
 
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+        User user = oAuth2User.getUser();
 
-        // 유저 저장 or 조회
-        User user = userService.registerOrGetOAuthUser(oAuth2User.toOauthInfo());
-
-        log.info("✅ [OAuth2 Success] 사용자 인증 성공: {}", user.getOauthInfo().getOauthEmail());
+        log.info("✅ [OAuth2SuccessHandler] 사용자 인증 성공: {}", user.getOauthInfo().getOauthEmail());
 
         // ✅ JWT 발급
         String accessToken = jwtTokenProvider.createAccessToken(user);
         String refreshToken = jwtTokenProvider.createRefreshToken(user);
 
-// ✅ RefreshToken 저장
+        // ✅ RefreshToken 저장
         userService.updateRefreshToken(user.getId(), refreshToken);
-        log.info("✅ [OAuth2 Success] RefreshToken 저장 성공");
+        log.info("✅ [OAuth2SuccessHandler] RefreshToken 저장 성공");
 
-// ✅ 쿠키 생성 및 응답에 추가
+        // ✅ 쿠키 생성 및 응답에 추가
         Cookie accessTokenCookie = CookieUtil.createCookieForLocal("accessToken", accessToken, jwtTokenProvider.getAccessTokenMaxAgeInSeconds());
         Cookie refreshTokenCookie = CookieUtil.createCookieForLocal("refreshToken", refreshToken, jwtTokenProvider.getRefreshTokenMaxAgeInSeconds());
 
         response.addCookie(accessTokenCookie);
         response.addCookie(refreshTokenCookie);
 
-        log.info("✅ [OAuth2 Success] Token 쿠키로 전송 완료");
+        log.info("✅ [OAuth2SuccessHandler] Token 쿠키로 전송 완료");
 
-// ✅ 리디렉션
+        // ✅ 리디렉션
         response.sendRedirect("/");
     }
 }

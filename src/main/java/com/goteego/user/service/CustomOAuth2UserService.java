@@ -31,8 +31,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String oauthId = (String) attributes.get("sub");
         String name = (String) attributes.get("name");
         String email = (String) attributes.get("email");
+        String pictureUrl = (String) attributes.get("picture");
 
-        log.info("[OAuth2] 로그인 요청: {}, {}, {}", name, email, oauthId);
+        log.info("[OAuth2] 로그인 요청: {}, {}, {} {}", name, email, oauthId, pictureUrl);
 
         // ✅ OauthInfo 객체 생성
         OauthInfo oauthInfo = OauthInfo.builder()
@@ -46,7 +47,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         User user = userRepository.findByOauthInfoOauthId(oauthId)
                 .orElseGet(() -> {
                     log.info("[OAuth2] 새로운 사용자 등록: {}", email);
-                    return userRepository.save(User.createDefaultOAuthMember(oauthInfo));
+                    return userRepository.save(User.createDefaultOAuthUser(oauthInfo, pictureUrl));
                 });
 
         // ✅ CustomUserPrincipal 반환

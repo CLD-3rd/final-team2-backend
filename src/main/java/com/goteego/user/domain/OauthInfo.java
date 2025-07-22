@@ -14,6 +14,7 @@ public class OauthInfo {
 
     public String oauthId;
     private String oauthProvider;
+    @Column(nullable = false, unique = true)
     private String oauthEmail;
     @Column(name = "oauth_name")
     private String name;
