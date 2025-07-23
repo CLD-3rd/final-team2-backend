@@ -29,7 +29,9 @@ public class SecurityConfig {
             "/index.html",
             "/oauth2/**",
             "/login",
-            "/.well-known/**"
+            "/.well-known/**",
+            "/test.html",  // ✅ 테스트 페이지 허용
+            "/static/**"   // ✅ 정적 리소스 허용
     };
     private final OAuth2SuccessHandler oAuth2SuccessHandler; // ✅ 주입받기
     private final CustomOAuth2UserService customOAuth2UserService;
@@ -60,7 +62,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
+//        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // * 대신 명시적으로 작성
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
