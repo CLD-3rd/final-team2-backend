@@ -9,6 +9,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
@@ -40,6 +42,9 @@ public class User {
     private LocalDateTime updatedAt;
 
     private String refreshToken;
+
+//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+//    private List<UserChatRoom> userChatRooms = new ArrayList<>();
 
     @Builder
     public User(String nickname, String profileImgUrl, UserRole role, OauthInfo oauthInfo, LocalDateTime createdAt, LocalDateTime updatedAt) {

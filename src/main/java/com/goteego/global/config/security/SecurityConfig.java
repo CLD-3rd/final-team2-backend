@@ -30,7 +30,7 @@ public class SecurityConfig {
             "/oauth2/**",
             "/login",
             "/.well-known/**",
-            "/test.html",  // ✅ 테스트 페이지 허용
+            "/dashboard.html",  // ✅ 테스트 페이지 허용
             "/static/**"   // ✅ 정적 리소스 허용
     };
     private final OAuth2SuccessHandler oAuth2SuccessHandler; // ✅ 주입받기
