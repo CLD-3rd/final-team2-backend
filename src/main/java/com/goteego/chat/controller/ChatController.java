@@ -72,9 +72,14 @@ public class ChatController {
 
         // 메시지 저장 로직 추가
         chatService.saveMessage(chatMessageDto);
-        // 메시지 전송
+
+        // 1. 수신자에게 메시지 전송
         // /queue/messages는 내부적으로 /user/{recipientPrincipalName}/queue/messages로 변경
         messagingTemplate.convertAndSendToUser(String.valueOf(recipient.getId()), "/queue/messages", chatMessageDto);
+
+        // 2. 발신자에게 메시지 전송 (1:1 채팅이라서 아래를 수행하지 않으면 내가 보낸 메시지를 채팅창에서 확인할 수 없음)
+        messagingTemplate.convertAndSendToUser(String.valueOf(sender.getId()), "/queue/messages", chatMessageDto);
+
         return chatMessageDto;
     }
 
