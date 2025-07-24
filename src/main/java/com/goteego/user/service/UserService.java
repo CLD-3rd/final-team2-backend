@@ -29,7 +29,7 @@ public class UserService {
     public List<UserDto> findAll() {
         List<User> findUsers = userRepository.findAll();
         return findUsers.stream()
-                .map(user -> new UserDto(user.getId(), user.getNickname()))
+                .map(user -> new UserDto(user.getId(), user.getOauthInfo().getOauthEmail()))
                 .collect(Collectors.toList());
     }
 

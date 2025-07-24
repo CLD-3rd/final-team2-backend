@@ -1,5 +1,6 @@
 package com.goteego.user.domain;
 
+import com.goteego.chat.domain.UserChatRoom;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -43,8 +44,8 @@ public class User {
 
     private String refreshToken;
 
-//    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-//    private List<UserChatRoom> userChatRooms = new ArrayList<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<UserChatRoom> userChatRooms = new ArrayList<>();
 
     @Builder
     public User(String nickname, String profileImgUrl, UserRole role, OauthInfo oauthInfo, LocalDateTime createdAt, LocalDateTime updatedAt) {
