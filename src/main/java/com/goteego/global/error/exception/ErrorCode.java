@@ -29,6 +29,9 @@ public enum ErrorCode {
     // 유저 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
     OAUTH_PROVIDER_MISMATCH(HttpStatus.BAD_REQUEST, "OAuth 제공자가 일치하지 않습니다."),
+
+    // 채팅 관련
+    CHATROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방이 존재하지 않습니다.")
     ;
 
     private final HttpStatus status;
