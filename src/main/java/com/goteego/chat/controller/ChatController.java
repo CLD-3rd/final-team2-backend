@@ -50,7 +50,7 @@ public class ChatController {
      */
     @Transactional
     @MessageMapping("/chat.direct.send/{roomId}")
-    public ChatMessageDto sendDirectMessage(@Payload ChatMessageDto chatMessageDto, @DestinationVariable String roomId,
+    public void sendDirectMessage(@Payload ChatMessageDto chatMessageDto, @DestinationVariable String roomId,
                                             Principal principal) {
 
         log.info("principal name = {}", principal.getName());
@@ -80,7 +80,6 @@ public class ChatController {
         // 2. 발신자에게 메시지 전송 (1:1 채팅이라서 아래를 수행하지 않으면 내가 보낸 메시지를 채팅창에서 확인할 수 없음)
         messagingTemplate.convertAndSendToUser(String.valueOf(sender.getId()), "/queue/messages", chatMessageDto);
 
-        return chatMessageDto;
     }
 
     /**

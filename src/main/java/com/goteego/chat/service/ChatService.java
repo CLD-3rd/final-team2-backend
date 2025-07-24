@@ -4,6 +4,8 @@ package com.goteego.chat.service;
 import com.goteego.chat.domain.ChatMessage;
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.dto.ChatMessageDto;
+import com.goteego.global.error.exception.ErrorCode;
+import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
 import com.goteego.chat.repository.ChatMessageRepository;
 import com.goteego.chat.repository.ChatRoomRepository;
@@ -34,8 +36,8 @@ public class ChatService {
      */
     @Transactional
     public ChatMessage saveMessage(ChatMessageDto messageDto) {
-        ChatRoom chatRoom = chatRoomRepository.findByRoomId(messageDto.getRoomId()).orElseThrow();
-        User sender = userRepository.findById(messageDto.getSenderId()).orElseThrow();
+        ChatRoom chatRoom = chatRoomRepository.findByRoomId(messageDto.getRoomId()).orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+        User sender = userRepository.findById(messageDto.getSenderId()).orElseThrow(() -> new NotFoundException(ErrorCode.CHATROOM_NOT_FOUND));
 
         ChatMessage chatMessage = ChatMessage.create(
                 chatRoom.getRoomId(),
