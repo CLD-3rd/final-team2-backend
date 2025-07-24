@@ -32,7 +32,7 @@ public class UserChatRoom {
         this.lastReadAt = LocalDateTime.now();
     }
 
-    public static UserChatRoom of(User user, ChatRoom chatRoom) {
+    public static UserChatRoom createConnection(User user, ChatRoom chatRoom) {
         return new UserChatRoom(user, chatRoom);
     }
 

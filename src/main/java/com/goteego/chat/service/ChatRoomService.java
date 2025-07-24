@@ -52,11 +52,11 @@ public class ChatRoomService {
         User currentUser = userRepository.findById(currentUserId).orElseThrow();
         User otherUser = userRepository.findById(otherUserId).orElseThrow();
 
-        ChatRoom newRoom = ChatRoom.createDirectChat();
-        newRoom.addParticipant(currentUser);
-        newRoom.addParticipant(otherUser);
+        ChatRoom directRoom = ChatRoom.createDirectRoom();
+        directRoom.addParticipant(currentUser);
+        directRoom.addParticipant(otherUser);
 
-        ChatRoom savedRoom = chatRoomRepository.save(newRoom);
+        ChatRoom savedRoom = chatRoomRepository.save(directRoom);
         log.info("새로운 채팅방 생성 - roomId: {}, 생성자: {}", savedRoom.getRoomId(), currentUser.getNickname());
 
         return createChatRoomDto(savedRoom, currentUserId);

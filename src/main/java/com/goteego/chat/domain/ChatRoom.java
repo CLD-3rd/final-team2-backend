@@ -44,7 +44,7 @@ public class ChatRoom {
      * ㄴ createDirectChat: 개인 채팅방 생성
      * ㄴ createGroupChat:  그룹 채팅방 생성
      */
-    public static ChatRoom createDirectChat() {
+    public static ChatRoom createDirectRoom() {
         ChatRoom room = new ChatRoom();
         room.roomId = UUID.randomUUID().toString();
         room.type = ChatType.DIRECT;
@@ -52,7 +52,7 @@ public class ChatRoom {
         return room;
     }
 
-    public static ChatRoom createGroupChat(String name) {
+    public static ChatRoom createGroupRoom(String name) {
         ChatRoom room = new ChatRoom();
         room.roomId = UUID.randomUUID().toString();
         room.type = ChatType.GROUP;
@@ -66,7 +66,7 @@ public class ChatRoom {
      */
     public void addParticipant(User user) {
         if (participants.stream().noneMatch(ucr -> ucr.getUser().equals(user))) {
-            UserChatRoom userChatRoom = UserChatRoom.of(user, this);
+            UserChatRoom userChatRoom = UserChatRoom.createConnection(user, this);
             participants.add(userChatRoom);
             user.getUserChatRooms().add(userChatRoom);
         }
