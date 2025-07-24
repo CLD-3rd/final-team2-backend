@@ -6,6 +6,7 @@ import com.goteego.user.dto.UserDto;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +21,10 @@ public class UserController {
 
     private final UserService userService;
 
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getCurrentUser(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(new UserDto(user.getId(), user.getOauthInfo().getOauthEmail()));
+    }
     @GetMapping
     public List<UserDto> searchAllUsers(@AuthenticationPrincipal User user) {
         return userService.findAll();
