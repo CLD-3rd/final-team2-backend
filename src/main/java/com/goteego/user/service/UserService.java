@@ -33,4 +33,11 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    public List<UserDto> findAllExcludingMe(Long excludeId) {
+        return userRepository.findAll().stream()
+                .filter(user -> !user.getId().equals(excludeId)) // 자신 제외
+                .map(user -> new UserDto(user.getId(), user.getOauthInfo().getOauthEmail()))
+                .collect(Collectors.toList());
+    }
+
 }

@@ -31,7 +31,8 @@ public enum ErrorCode {
     OAUTH_PROVIDER_MISMATCH(HttpStatus.BAD_REQUEST, "OAuth 제공자가 일치하지 않습니다."),
 
     // 채팅 관련
-    CHATROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방이 존재하지 않습니다.")
+    CHATROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방이 존재하지 않습니다."),
+    INVALID_CHAT(HttpStatus.BAD_REQUEST, "자신과는 채팅할 수 없습니다.")
     ;
 
     private final HttpStatus status;

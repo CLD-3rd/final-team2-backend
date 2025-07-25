@@ -27,7 +27,6 @@ public class UserController {
     }
     @GetMapping
     public List<UserDto> searchAllUsers(@AuthenticationPrincipal User user) {
-        return userService.findAll();
+        return userService.findAllExcludingMe(user.getId());
     }
-
 }
