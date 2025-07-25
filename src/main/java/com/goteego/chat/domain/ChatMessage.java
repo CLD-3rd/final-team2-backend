@@ -1,6 +1,7 @@
 package com.goteego.chat.domain;
 
 import com.goteego.chat.domain.enumerate.MessageType;
+import com.goteego.chat.dto.message.DirectMessageResponse;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
@@ -25,7 +26,6 @@ public class ChatMessage {
 
     private String content;
 
-    @Enumerated(EnumType.STRING)
     private MessageType type;
 
     private LocalDateTime timestamp;
@@ -39,6 +39,17 @@ public class ChatMessage {
         message.type = type;
         message.timestamp = LocalDateTime.now();
         return message;
+    }
+
+    public DirectMessageResponse toDto() {
+        return new DirectMessageResponse(
+                this.roomId,
+                this.senderId,
+                this.senderName,
+                this.content,
+                this.timestamp,
+                this.type
+                );
     }
 
 }

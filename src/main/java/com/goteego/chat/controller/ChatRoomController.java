@@ -1,9 +1,8 @@
 package com.goteego.chat.controller;
 
 
-import com.goteego.chat.dto.ChatMessageDto;
-import com.goteego.chat.dto.ChatRoomDto;
-import com.goteego.chat.dto.DirectChatRoomDto;
+import com.goteego.chat.dto.chatroom.DirectChatRoomDto;
+import com.goteego.chat.dto.message.DirectMessageResponse;
 import com.goteego.chat.service.ChatRoomService;
 import com.goteego.chat.service.ChatService;
 import com.goteego.user.domain.User;
@@ -31,7 +30,7 @@ public class ChatRoomController {
     public ResponseEntity<?> createDirectChatRoom(@PathVariable Long otherUserId, @AuthenticationPrincipal User user) {
         Long currentUserId = user.getId();
         try {
-            ChatRoomDto chatRoomDto = chatRoomService.createOrGetDirectChatRoom(currentUserId, otherUserId);
+            DirectChatRoomDto chatRoomDto = chatRoomService.createOrGetDirectChatRoom(currentUserId, otherUserId);
             return ResponseEntity.ok(chatRoomDto);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -56,8 +55,8 @@ public class ChatRoomController {
      * roomId: 채팅방의 UUID
      */
     @GetMapping("/rooms/{roomId}/messages")
-    public ResponseEntity<List<ChatMessageDto>> getChatMessages(@PathVariable String roomId) {
-        List<ChatMessageDto> messages = chatService.findChatMessages(roomId);
+    public ResponseEntity<List<DirectMessageResponse>> getChatMessages(@PathVariable String roomId) {
+        List<DirectMessageResponse> messages = chatService.findChatMessages(roomId);
         return ResponseEntity.ok(messages);
     }
 

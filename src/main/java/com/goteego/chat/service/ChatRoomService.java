@@ -3,8 +3,7 @@ package com.goteego.chat.service;
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.domain.UserChatRoom;
 import com.goteego.chat.domain.enumerate.ChatType;
-import com.goteego.chat.dto.ChatRoomDto;
-import com.goteego.chat.dto.DirectChatRoomDto;
+import com.goteego.chat.dto.chatroom.DirectChatRoomDto;
 import com.goteego.chat.repository.ChatRoomRepository;
 import com.goteego.chat.repository.UserChatRoomRepository;
 import com.goteego.global.error.exception.ErrorCode;
@@ -29,28 +28,41 @@ public class ChatRoomService {
     private final UserRepository userRepository;
     private final UserChatRoomRepository userChatRoomRepository;
 
-    /**
-     * 1:1 채팅방 생성 
-     */
+    // 1:1 채팅방 생성 또는 조회
     @Transactional
-    public ChatRoomDto createOrGetDirectChatRoom(Long currentUserId, Long otherUserId) {
+    public DirectChatRoomDto createOrGetDirectChatRoom(Long currentUserId, Long otherUserId) {
 
-        if (currentUserId == null) {
-            throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-        }
-        if (currentUserId.equals(otherUserId)) {
-            throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
-        }
+        validateUsers(currentUserId, otherUserId);
 
         return chatRoomRepository.findDirectChatRoomByUsers(currentUserId, otherUserId)
-                .map(room -> {
-                    log.info("기존 채팅방 조회 - roomId: {}", room.getRoomId());
-                    return createChatRoomDto(room, currentUserId);
-                })
+                .map(room -> toDto(room, currentUserId))
                 .orElseGet(() -> createNewDirectChatRoom(currentUserId, otherUserId));
     }
 
-    private ChatRoomDto createNewDirectChatRoom(Long currentUserId, Long otherUserId) {
+    private void validateUsers(Long currentUserId, Long otherUserId) {
+        if (currentUserId == null || currentUserId.equals(otherUserId)) {
+            throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+        }
+    }
+
+    // Entity → DTO 변환
+    private DirectChatRoomDto toDto(ChatRoom room, Long currentUserId) {
+        User otherUser = room.getParticipants().stream()
+                .filter(p -> !p.getUser().getId().equals(currentUserId))
+                .findFirst()
+                .map(UserChatRoom::getUser)
+                .orElseThrow(() -> new IllegalStateException("채팅방에 상대방이 없습니다."));
+
+        return new DirectChatRoomDto(
+                room.getRoomId(),
+                room.getType(),
+                otherUser.getId(),
+                otherUser.getNickname(),
+                otherUser.getOauthInfo().getOauthEmail()
+        );
+    }
+
+    private DirectChatRoomDto createNewDirectChatRoom(Long currentUserId, Long otherUserId) {
         User currentUser = userRepository.findById(currentUserId).orElseThrow();
         User otherUser = userRepository.findById(otherUserId).orElseThrow();
 
@@ -61,15 +73,7 @@ public class ChatRoomService {
         ChatRoom savedRoom = chatRoomRepository.save(directRoom);
         log.info("새로운 채팅방 생성 - roomId: {}, 생성자: {}", savedRoom.getRoomId(), currentUser.getNickname());
 
-        return createChatRoomDto(savedRoom, currentUserId);
-    }
-
-    private ChatRoomDto createChatRoomDto(ChatRoom room, Long currentUserId) {
-        return room.getParticipants().stream()
-                .filter(p -> !p.getUser().getId().equals(currentUserId))
-                .findFirst()
-                .map(other -> new ChatRoomDto(room, currentUserId))
-                .orElseGet(() -> new ChatRoomDto(room, currentUserId));
+        return toDto(savedRoom, currentUserId);
     }
 
 
@@ -77,32 +81,11 @@ public class ChatRoomService {
      * 자신이 속한 채팅방 조회
      */
     public List<DirectChatRoomDto> findMyChatRooms(Long currentUserId) {
-        List<UserChatRoom> userChatRooms =
-                userChatRoomRepository.findChatRoomsWithParticipantsByUserId(currentUserId);
-
-        return userChatRooms.stream()
-                .map(ucr -> {
-                    ChatRoom room = ucr.getChatRoom();
-                    if (room.getType() == ChatType.DIRECT) {
-                        // 상대방 정보 추출
-                        User otherUser = room.getParticipants().stream()
-                                .filter(p -> !p.getUser().getId().equals(currentUserId))
-                                .findFirst()
-                                .map(UserChatRoom::getUser)
-                                .orElseThrow(() -> new IllegalStateException("채팅방에 상대방이 없습니다."));
-
-                        return new DirectChatRoomDto(
-                                room.getRoomId(),
-                                otherUser.getNickname(),  // name 필드에 상대방 닉네임
-                                ChatType.DIRECT,
-                                otherUser.getId(),       // otherUserId
-                                otherUser.getOauthInfo().getOauthEmail()  // otherUserEmail
-                        );
-                    } else {
-                        return null; // 그룹 채팅은 일단 null 처리 (추후 구현)
-                    }
-                })
-                .filter(Objects::nonNull) // null 제거
+        return userChatRoomRepository.findChatRoomsWithParticipantsByUserId(currentUserId)
+                .stream()
+                .map(ucr -> ucr.getChatRoom())
+                .filter(room -> room.getType() == ChatType.DIRECT)
+                .map(room -> toDto(room, currentUserId)) // toDto 재사용
                 .collect(Collectors.toList());
     }
 

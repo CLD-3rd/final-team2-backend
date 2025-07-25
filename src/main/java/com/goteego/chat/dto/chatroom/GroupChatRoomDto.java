@@ -1,6 +1,7 @@
-package com.goteego.chat.dto;
+package com.goteego.chat.dto.chatroom;
 
 import com.goteego.chat.domain.enumerate.ChatType;
+import com.goteego.chat.dto.UserChatRoomDto;
 import lombok.Data;
 
 import java.util.List;

@@ -35,9 +35,6 @@ public class ChatRoom {
 
     private LocalDateTime createdAt;
 
-    //@OneToMany(mappedBy = "chatRoom")
-    //private List<ChatMessage> messages = new ArrayLㄹist<>();
-
 
     /**
      * 정적 팩토리 메서드

@@ -1,3 +1,166 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="ko">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>1:1 채팅 테스트</title>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>-->
+<!--    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>-->
+<!--</head>-->
+<!--<body>-->
+<!--<h1>📬 1:1 채팅 테스트</h1>-->
+
+<!--<section style="margin-bottom: 20px;">-->
+<!--    <button onclick="loadUsers()">[유저 목록 불러오기]</button>-->
+<!--    <button onclick="loadMyChatRooms()">[내 채팅 목록 보기]</button>-->
+<!--</section>-->
+
+<!--<section>-->
+<!--    <h2>👤 전체 유저 목록</h2>-->
+<!--    <div id="user-list" style="border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>-->
+<!--</section>-->
+
+<!--<section>-->
+<!--    <h2>💬 내 채팅방 목록</h2>-->
+<!--    <div id="chat-room-list" style="border: 1px solid #ddd; padding: 10px; margin-bottom: 20px;"></div>-->
+<!--</section>-->
+
+<!--<section>-->
+<!--    <h2>📨 채팅창</h2>-->
+<!--    <div id="chat-box" style="display: none;">-->
+<!--        <div id="messages" style="border: 1px solid #ccc; height: 200px; overflow-y: scroll; padding: 5px;"></div>-->
+<!--        <input type="text" id="messageInput" placeholder="메시지를 입력하세요" style="width: 70%;" />-->
+<!--        <button onclick="sendMessage()">보내기</button>-->
+<!--    </div>-->
+<!--</section>-->
+
+<!--<script>-->
+<!--    let stompClient = null;-->
+<!--    let currentRoomId = null;-->
+<!--    let recipientEmail = null;-->
+
+<!--    async function loadUsers() {-->
+<!--        const res = await axios.get('/api/users');-->
+<!--        const users = res.data;-->
+<!--        const container = document.getElementById('user-list');-->
+<!--        container.innerHTML = '';-->
+
+<!--        users.forEach(user => {-->
+<!--            const div = document.createElement('div');-->
+<!--            div.innerHTML = `${user.email}-->
+<!--                <button onclick="startDirectChat(${user.id}, '${user.email}')">[1:1 채팅 시작]</button>`;-->
+<!--            container.appendChild(div);-->
+<!--        });-->
+<!--    }-->
+
+<!--    async function loadMyChatRooms() {-->
+<!--        const res = await axios.get('/api/chat/my-rooms');-->
+<!--        const rooms = res.data;-->
+
+<!--        const container = document.getElementById('chat-room-list');-->
+<!--        container.innerHTML = '';-->
+
+<!--        rooms.forEach(room => {-->
+<!--            const div = document.createElement('div');-->
+<!--            div.innerHTML = `-->
+<!--            🟢 ${room.name || '채팅방'}-->
+<!--            <button onclick="enterChatRoom('${room.roomId}', '${room.otherUserEmail || ''}')">[입장]</button>`;-->
+<!--            container.appendChild(div);-->
+<!--        });-->
+<!--    }-->
+
+<!--    async function startDirectChat(otherUserId, otherUserEmail) {-->
+<!--        try {-->
+<!--            const res = await axios.post(`/api/chat/direct/${otherUserId}`);-->
+<!--            const room = res.data;-->
+<!--            recipientEmail = room.otherUserEmail;-->
+<!--            enterChatRoom(room.roomId, room.otherUserEmail);-->
+<!--        } catch (e) {-->
+<!--            alert('채팅방 생성에 실패했습니다');-->
+<!--            console.error(e);-->
+<!--        }-->
+<!--    }-->
+
+<!--    async function enterChatRoom(roomId, email) {-->
+<!--        currentRoomId = roomId;-->
+<!--        recipientEmail = email; // 👈 여기서 email 세팅-->
+<!--        document.getElementById('chat-box').style.display = 'block';-->
+<!--        document.getElementById('messages').innerHTML = '';-->
+
+<!--        // 채팅 내역 불러오기-->
+<!--        const res = await axios.get(`/api/chat/rooms/${roomId}/messages`);-->
+<!--        res.data.forEach(msg => {-->
+<!--            appendMessage(`${msg.sender}: ${msg.content}`);-->
+<!--        });-->
+
+<!--        connectWebSocket();-->
+<!--    }-->
+
+<!--    function getCookie(name) {-->
+<!--        const cookies = document.cookie.split(';');-->
+<!--        for (let i = 0; i < cookies.length; i++) {-->
+<!--            const cookie = cookies[i].trim();-->
+<!--            if (cookie.startsWith(name + '=')) {-->
+<!--                return cookie.substring(name.length + 1);-->
+<!--            }-->
+<!--        }-->
+<!--        return null;-->
+<!--    }-->
+
+<!--    function connectWebSocket() {-->
+<!--        if (stompClient) stompClient.disconnect();-->
+
+<!--        const socket = new SockJS('/ws');-->
+<!--        stompClient = Stomp.over(socket);-->
+
+<!--        const token = getCookie('accessToken'); // 👈 쿠키에서 토큰 추출-->
+
+<!--        stompClient.connect(-->
+<!--            {-->
+<!--                Authorization: 'Bearer ' + token // 👈 헤더에 명시적으로 넣어줌-->
+<!--            },-->
+<!--            async () => {-->
+
+<!--                stompClient.subscribe('/user/queue/messages', (message) => {-->
+<!--                    const msg = JSON.parse(message.body);-->
+<!--                    if (msg.roomId === currentRoomId) {-->
+<!--                        appendMessage(`${msg.sender}: ${msg.content}`);-->
+<!--                    }-->
+<!--                });-->
+<!--            },-->
+<!--            (error) => {-->
+<!--                console.error("❌ WebSocket 연결 실패", error);-->
+<!--            }-->
+<!--        );-->
+<!--    }-->
+
+<!--    function sendMessage() {-->
+<!--        const input = document.getElementById('messageInput');-->
+<!--        const content = input.value;-->
+<!--        if (!content || !currentRoomId || !recipientEmail) return;-->
+
+<!--        const message = {-->
+<!--            roomId: currentRoomId,-->
+<!--            content: content,-->
+<!--            recipientEmail: recipientEmail,-->
+<!--            type: "TALK"-->
+<!--        };-->
+
+<!--        stompClient.send(`/pub/chat.direct.send/${currentRoomId}`, {}, JSON.stringify(message));-->
+<!--        input.value = '';-->
+<!--    }-->
+
+<!--    function appendMessage(msg) {-->
+<!--        const messagesDiv = document.getElementById('messages');-->
+<!--        const div = document.createElement('div');-->
+<!--        div.textContent = msg;-->
+<!--        messagesDiv.appendChild(div);-->
+<!--        messagesDiv.scrollTop = messagesDiv.scrollHeight;-->
+<!--    }-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -37,7 +200,7 @@
 <script>
     let stompClient = null;
     let currentRoomId = null;
-    let recipientEmail = null;
+    let recipientId = null;
 
     async function loadUsers() {
         const res = await axios.get('/api/users');
@@ -48,7 +211,7 @@
         users.forEach(user => {
             const div = document.createElement('div');
             div.innerHTML = `${user.email}
-                <button onclick="startDirectChat(${user.id}, '${user.email}')">[1:1 채팅 시작]</button>`;
+                <button onclick="startDirectChat(${user.id})">[1:1 채팅 시작]</button>`;
             container.appendChild(div);
         });
     }
@@ -63,34 +226,33 @@
         rooms.forEach(room => {
             const div = document.createElement('div');
             div.innerHTML = `
-            🟢 ${room.name || '채팅방'}
-            <button onclick="enterChatRoom('${room.roomId}', '${room.otherUserEmail || ''}')">[입장]</button>`;
+            🟢 ${room.otherUserEmail || '채팅방'}
+            <button onclick="enterChatRoom('${room.roomId}', ${room.otherUserId})">[입장]</button>`;
             container.appendChild(div);
         });
     }
 
-    async function startDirectChat(otherUserId, otherUserEmail) {
+    async function startDirectChat(otherUserId) {
         try {
             const res = await axios.post(`/api/chat/direct/${otherUserId}`);
             const room = res.data;
-            recipientEmail = room.otherUserEmail;
-            enterChatRoom(room.roomId, room.otherUserEmail);
+            recipientId = room.otherUserId; // 👈 id 저장
+            enterChatRoom(room.roomId, room.otherUserId);
         } catch (e) {
             alert('채팅방 생성에 실패했습니다');
             console.error(e);
         }
     }
 
-    async function enterChatRoom(roomId, email) {
+    async function enterChatRoom(roomId, otherUserId) {
         currentRoomId = roomId;
-        recipientEmail = email; // 👈 여기서 email 세팅
+        recipientId = otherUserId;
         document.getElementById('chat-box').style.display = 'block';
         document.getElementById('messages').innerHTML = '';
 
-        // 채팅 내역 불러오기
         const res = await axios.get(`/api/chat/rooms/${roomId}/messages`);
         res.data.forEach(msg => {
-            appendMessage(`${msg.sender}: ${msg.content}`);
+            appendMessage(`${msg.senderName}: ${msg.content}`);
         });
 
         connectWebSocket();
@@ -113,18 +275,17 @@
         const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
 
-        const token = getCookie('accessToken'); // 👈 쿠키에서 토큰 추출
+        const token = getCookie('accessToken');
 
         stompClient.connect(
             {
-                Authorization: 'Bearer ' + token // 👈 헤더에 명시적으로 넣어줌
+                Authorization: 'Bearer ' + token
             },
             async () => {
-
                 stompClient.subscribe('/user/queue/messages', (message) => {
                     const msg = JSON.parse(message.body);
                     if (msg.roomId === currentRoomId) {
-                        appendMessage(`${msg.sender}: ${msg.content}`);
+                        appendMessage(`${msg.senderName}: ${msg.content}`);
                     }
                 });
             },
@@ -137,12 +298,12 @@
     function sendMessage() {
         const input = document.getElementById('messageInput');
         const content = input.value;
-        if (!content || !currentRoomId || !recipientEmail) return;
+        if (!content || !currentRoomId || !recipientId) return;
 
         const message = {
             roomId: currentRoomId,
             content: content,
-            recipientEmail: recipientEmail,
+            recipientId: recipientId, // 👈 ID로 수정
             type: "TALK"
         };
 
@@ -160,4 +321,3 @@
 </script>
 </body>
 </html>
-

@@ -2,13 +2,12 @@ package com.goteego.chat.service;
 
 
 import com.goteego.chat.domain.ChatMessage;
-import com.goteego.chat.domain.ChatRoom;
-import com.goteego.chat.dto.ChatMessageDto;
+import com.goteego.chat.dto.message.DirectMessageRequest;
+import com.goteego.chat.dto.message.DirectMessageResponse;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
 import com.goteego.chat.repository.ChatMessageRepository;
-import com.goteego.chat.repository.ChatRoomRepository;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,54 +24,54 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ChatService {
 
-    private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-
     /**
-     * 메시지 저장
+     * 1:1 채팅 메시지 전송
      */
     @Transactional
-    public ChatMessage saveMessage(ChatMessageDto messageDto) {
-        ChatRoom chatRoom = chatRoomRepository.findByRoomId(messageDto.getRoomId()).orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
-        User sender = userRepository.findById(messageDto.getSenderId()).orElseThrow(() -> new NotFoundException(ErrorCode.CHATROOM_NOT_FOUND));
+    public void sendDirectMessage(String roomId, DirectMessageRequest directMessageRequest, Long senderId) {
+        // 1. 발신자 조회
+        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalStateException("USER NOT FOUND"));
+        // 2. 수신자 조회
+        User recipient = userRepository.findById(directMessageRequest.getRecipientId())
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
 
-        ChatMessage chatMessage = ChatMessage.create(
-                chatRoom.getRoomId(),
-                sender.getId(),
-                sender.getNickname(),
-                messageDto.getContent(),
-                messageDto.getType()
+        log.info("sender id = {}", sender.getId());
+        log.info("recipient id = {}", recipient.getId());
+
+        ChatMessage message = chatMessageRepository.save(
+                ChatMessage.create(
+                        roomId,
+                        sender.getId(),
+                        sender.getNickname(),
+                        directMessageRequest.getContent(),
+                        directMessageRequest.getType()
+                )
         );
 
-        return chatMessageRepository.save(chatMessage);
+        // 3. 메시지 전송
+        sendToEachOther(message.toDto(), sender.getId(), recipient.getId());
+
+    }
+
+    private void sendToEachOther(DirectMessageResponse message, Long senderId, Long recipientId) {
+        messagingTemplate.convertAndSendToUser(recipientId.toString(), "/queue/messages", message);
+        messagingTemplate.convertAndSendToUser(senderId.toString(), "/queue/messages", message);
     }
 
     /**
      * 특정 채팅방의 메시지 내역 조회
      */
-    public List<ChatMessageDto> findChatMessages(String roomId) {
+    public List<DirectMessageResponse> findChatMessages(String roomId) {
         return chatMessageRepository.findByRoomIdOrderByTimestampAsc(roomId)
                 .stream()
-                .map(m -> new ChatMessageDto(
-                        m.getType(),
-                        m.getRoomId(),
-                        m.getSenderId(),
-                        m.getSenderName(),
-                        m.getContent(),
-                        m.getTimestamp()
-                ))
+                .map(DirectMessageResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 1:1 채팅 메시지 전송
-     */
-//    public void sendMessageToUser(String username, ChatMessageDto messageDto) {
-//        messagingTemplate.convertAndSendToUser(username, "/queue/messages", messageDto);
-//    }
 
 
 }
