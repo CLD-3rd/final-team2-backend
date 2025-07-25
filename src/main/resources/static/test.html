@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>API 통합 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h2>API 통합 테스트</h2>
+    <div style="margin-bottom:20px;">
+        <button onclick="logout()">로그아웃</button>
+        <span id="login-status"></span>
+    </div>
+
+    <!-- 사용자 API -->
+    <fieldset style="margin-bottom:20px;">
+        <legend>사용자</legend>
+        <button onclick="getCurrentUser()">내 정보</button>
+        <button onclick="getUserProfile()">프로필</button>
+        <button onclick="getUserStats()">통계</button>
+        <pre id="user-result"></pre>
+    </fieldset>
+
+    <!-- 여행 게시판 API -->
+    <fieldset style="margin-bottom:20px;">
+        <legend>여행 게시판</legend>
+        <button onclick="getTravelPosts()">게시글 목록</button>
+        <input type="number" id="travelPostId" placeholder="게시글ID" style="width:80px;">
+        <button onclick="getTravelPostDetail()">상세</button>
+        <button onclick="joinTravelPost()">참여신청</button>
+        <form id="createTravelPostForm" onsubmit="createTravelPost(event)">
+            <input placeholder="제목" id="tp-title" required>
+            <input placeholder="내용" id="tp-content" required>
+            <input type="date" id="tp-start" required>
+            <input type="date" id="tp-end" required>
+            <input type="number" id="tp-limit" placeholder="인원" required style="width:60px;">
+            <select id="tp-type" required>
+                <option value="BEFORE">사전</option>
+                <option value="NOW">현지</option>
+            </select>
+            <input placeholder="이미지URL" id="tp-img">
+            <label><input type="checkbox" id="tp-add">추가모집</label>
+            <button type="submit">작성</button>
+        </form>
+        <pre id="travel-result"></pre>
+    </fieldset>
+
+    <!-- 일정관리 API -->
+    <fieldset style="margin-bottom:20px;">
+        <legend>일정관리</legend>
+        <button onclick="getMySchedules()">내 일정</button>
+        <input type="number" id="schedulePostId" placeholder="게시글ID" style="width:80px;">
+        <button onclick="getParticipants()">참가자</button>
+        <button onclick="getApplications()">신청목록</button>
+        <input type="number" id="participantUserId" placeholder="유저ID" style="width:80px;">
+        <select id="participantStatus">
+            <option value="APPROVED">승인</option>
+            <option value="REJECTED">거절</option>
+        </select>
+        <button onclick="updateParticipantStatus()">상태변경</button>
+        <pre id="schedule-result"></pre>
+    </fieldset>
+
+    <!-- 매칭/추천/채팅 등 필요한 API 추가 가능 -->
+
+    <script>
+    // JWT 토큰을 쿠키에서 읽어오는 함수
+    function getAuthHeaders() {
+        console.log('전체 쿠키:', document.cookie);
+        const cookies = document.cookie.split(';');
+        console.log('분리된 쿠키들:', cookies);
+        
+        const accessToken = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
+        console.log('찾은 accessToken 쿠키:', accessToken);
+        
+        if (accessToken) {
+            const token = accessToken.split('=')[1];
+            console.log('추출된 토큰:', token);
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+        
+        console.log('토큰을 찾을 수 없습니다.');
+        return {
+            'Content-Type': 'application/json'
+        };
+    }
+
+    // 인증 체크 및 상태 표시
+    window.onload = function() {
+        const cookies = document.cookie.split(';');
+        const accessToken = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
+        document.getElementById('login-status').textContent = accessToken ? '로그인됨' : '로그인 필요';
+        // 로그인 체크 제거 - 페이지는 표시하되 API 호출 시 에러 처리
+    }
+    
+    // 사용자 API
+    async function getCurrentUser() {
+        try {
+            const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
+            document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('user-result').textContent = e; }
+    }
+    async function getUserProfile() {
+        try {
+            const res = await axios.get('/api/users/profile', {headers: getAuthHeaders()});
+            document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('user-result').textContent = e; }
+    }
+    async function getUserStats() {
+        try {
+            const res = await axios.get('/api/users/stats', {headers: getAuthHeaders()});
+            document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('user-result').textContent = e; }
+    }
+    
+    // 여행 게시판 API
+    async function getTravelPosts() {
+        try {
+            const res = await axios.get('/api/travel-posts', {headers: getAuthHeaders()});
+            document.getElementById('travel-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('travel-result').textContent = e; }
+    }
+    async function getTravelPostDetail() {
+        const id = document.getElementById('travelPostId').value;
+        if (!id) return alert('게시글ID 입력');
+        try {
+            const res = await axios.get(`/api/travel-posts/${id}`, {headers: getAuthHeaders()});
+            document.getElementById('travel-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('travel-result').textContent = e; }
+    }
+    async function joinTravelPost() {
+        const id = document.getElementById('travelPostId').value;
+        if (!id) return alert('게시글ID 입력');
+        try {
+            const res = await axios.post(`/api/travel-posts/requests/${id}`, {}, {headers: getAuthHeaders()});
+            document.getElementById('travel-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('travel-result').textContent = e; }
+    }
+    async function createTravelPost(e) {
+        e.preventDefault();
+        const data = {
+            title: document.getElementById('tp-title').value,
+            content: document.getElementById('tp-content').value,
+            startTime: document.getElementById('tp-start').value,
+            endTime: document.getElementById('tp-end').value,
+            recuitLimit: parseInt(document.getElementById('tp-limit').value),
+            postType: document.getElementById('tp-type').value,
+            imageUrl: document.getElementById('tp-img').value,
+            isAddRecruit: document.getElementById('tp-add').checked
+        };
+        try {
+            const res = await axios.post('/api/travel-posts/requests', data, {headers: getAuthHeaders()});
+            document.getElementById('travel-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('travel-result').textContent = e; }
+    }
+    
+    // 일정관리 API
+    async function getMySchedules() {
+        try {
+            const res = await axios.get('/api/schedule/mine', {headers: getAuthHeaders()});
+            document.getElementById('schedule-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('schedule-result').textContent = e; }
+    }
+    async function getParticipants() {
+        const id = document.getElementById('schedulePostId').value;
+        if (!id) return alert('게시글ID 입력');
+        try {
+            const res = await axios.get(`/api/schedule/${id}/participants`, {headers: getAuthHeaders()});
+            document.getElementById('schedule-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('schedule-result').textContent = e; }
+    }
+    async function getApplications() {
+        const id = document.getElementById('schedulePostId').value;
+        if (!id) return alert('게시글ID 입력');
+        try {
+            const res = await axios.get(`/api/schedule/${id}/applications`, {headers: getAuthHeaders()});
+            document.getElementById('schedule-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('schedule-result').textContent = e; }
+    }
+    async function updateParticipantStatus() {
+        const postId = document.getElementById('schedulePostId').value;
+        const userId = document.getElementById('participantUserId').value;
+        const status = document.getElementById('participantStatus').value;
+        if (!postId || !userId) return alert('게시글ID, 유저ID 입력');
+        try {
+            const res = await axios.put(`/api/schedule/${postId}/participants/${userId}`, {status}, {headers: getAuthHeaders()});
+            document.getElementById('schedule-result').textContent = JSON.stringify(res.data, null, 2);
+        } catch(e) { document.getElementById('schedule-result').textContent = e; }
+    }
+    
+    function logout() {
+        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        alert('로그아웃되었습니다.');
+        window.location.href = '/';
+    }
+    </script>
+</body>
+</html>
