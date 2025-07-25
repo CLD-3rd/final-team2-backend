@@ -4,6 +4,7 @@ import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.domain.UserChatRoom;
 import com.goteego.chat.domain.enumerate.ChatType;
 import com.goteego.chat.dto.ChatRoomDto;
+import com.goteego.chat.dto.DirectChatRoomDto;
 import com.goteego.chat.repository.ChatRoomRepository;
 import com.goteego.chat.repository.UserChatRoomRepository;
 import com.goteego.global.error.exception.ErrorCode;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -74,23 +76,34 @@ public class ChatRoomService {
     /**
      * 자신이 속한 채팅방 조회
      */
-    public List<ChatRoomDto> findMyChatRooms(Long currentUserId) {
-        List<UserChatRoom> userChatRooms = userChatRoomRepository.findByUserId(currentUserId);
+    public List<DirectChatRoomDto> findMyChatRooms(Long currentUserId) {
+        List<UserChatRoom> userChatRooms =
+                userChatRoomRepository.findChatRoomsWithParticipantsByUserId(currentUserId);
 
         return userChatRooms.stream()
                 .map(ucr -> {
                     ChatRoom room = ucr.getChatRoom();
-                    ChatRoomDto dto = new ChatRoomDto(room, currentUserId);
-
-                    // 1:1 채팅이면 상대방 이름을 채팅방 이름으로 설정
                     if (room.getType() == ChatType.DIRECT) {
-                        room.getParticipants().stream()
-                                .filter(participant -> !participant.getUser().getId().equals(currentUserId))
+                        // 상대방 정보 추출
+                        User otherUser = room.getParticipants().stream()
+                                .filter(p -> !p.getUser().getId().equals(currentUserId))
                                 .findFirst()
-                                .ifPresent(otherParticipant -> dto.setName(otherParticipant.getUser().getNickname()));
+                                .map(UserChatRoom::getUser)
+                                .orElseThrow(() -> new IllegalStateException("채팅방에 상대방이 없습니다."));
+
+                        return new DirectChatRoomDto(
+                                room.getRoomId(),
+                                otherUser.getNickname(),  // name 필드에 상대방 닉네임
+                                ChatType.DIRECT,
+                                otherUser.getId(),       // otherUserId
+                                otherUser.getOauthInfo().getOauthEmail()  // otherUserEmail
+                        );
+                    } else {
+                        return null; // 그룹 채팅은 일단 null 처리 (추후 구현)
                     }
-                    return dto;
-                }).collect(Collectors.toList());
+                })
+                .filter(Objects::nonNull) // null 제거
+                .collect(Collectors.toList());
     }
 
     // 요청 수락이 된 상태인지 확인

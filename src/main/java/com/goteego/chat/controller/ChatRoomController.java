@@ -3,6 +3,7 @@ package com.goteego.chat.controller;
 
 import com.goteego.chat.dto.ChatMessageDto;
 import com.goteego.chat.dto.ChatRoomDto;
+import com.goteego.chat.dto.DirectChatRoomDto;
 import com.goteego.chat.service.ChatRoomService;
 import com.goteego.chat.service.ChatService;
 import com.goteego.user.domain.User;
@@ -44,7 +45,7 @@ public class ChatRoomController {
     @GetMapping("/my-rooms")
     public ResponseEntity<?> getMyChatRooms(@AuthenticationPrincipal User user) {
         Long currentUserId = user.getId();
-        List<ChatRoomDto> myChatRooms = chatRoomService.findMyChatRooms(currentUserId);
+        List<DirectChatRoomDto> myChatRooms = chatRoomService.findMyChatRooms(currentUserId);
         return ResponseEntity.ok(myChatRooms);
     }
     //================================================================//
