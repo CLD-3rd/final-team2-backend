@@ -3,9 +3,11 @@ package com.goteego.travel.controller;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.service.ScheduleService;
+import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,16 +31,15 @@ public class ScheduleController {
      * 
      * @param page 페이지 번호
      * @param size 페이지 크기
-     * @param authorization 인증 헤더 (Bearer 토큰)
      * @return 내가 관련된 여행 게시글 목록
      */
     @GetMapping("/mine")
     public ResponseEntity<List<TravelPost>> getMySchedule(
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        
-        Long currentUserId = extractUserIdFromToken(authorization);
+            @AuthenticationPrincipal User user) {
+
+        Long currentUserId = user.getId();
         List<TravelPost> schedules = scheduleService.getMySchedules(currentUserId, page, size);
         
         log.info("내 일정 조회 - userId: {}, page: {}, size: {}, totalCount: {}", 
@@ -62,9 +63,9 @@ public class ScheduleController {
             @PathVariable("travelPostId") Long travelPostId,
             @PathVariable("userId") Long userId,
             @RequestBody ParticipantStatusRequest requestDto,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        
-        Long currentUserId = extractUserIdFromToken(authorization);
+            @AuthenticationPrincipal User user) {
+
+        Long currentUserId = user.getId();
         
         ParticipationApplication application = scheduleService.updateParticipantStatus(
             travelPostId, 
