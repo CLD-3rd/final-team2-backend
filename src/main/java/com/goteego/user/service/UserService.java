@@ -3,13 +3,18 @@ package com.goteego.user.service;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
+import com.goteego.user.dto.UserDto;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
 
     private final UserRepository userRepository;
@@ -20,4 +25,19 @@ public class UserService {
                 .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
         user.setRefreshToken(newToken); // setter 필요
     }
+
+    public List<UserDto> findAll() {
+        List<User> findUsers = userRepository.findAll();
+        return findUsers.stream()
+                .map(user -> new UserDto(user.getId(), user.getOauthInfo().getOauthEmail()))
+                .collect(Collectors.toList());
+    }
+
+    public List<UserDto> findAllExcludingMe(Long excludeId) {
+        return userRepository.findAll().stream()
+                .filter(user -> !user.getId().equals(excludeId)) // 자신 제외
+                .map(user -> new UserDto(user.getId(), user.getOauthInfo().getOauthEmail()))
+                .collect(Collectors.toList());
+    }
+
 }

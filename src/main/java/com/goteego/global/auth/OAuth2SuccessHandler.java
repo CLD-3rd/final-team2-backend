@@ -61,6 +61,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         log.info("✅ [OAuth2SuccessHandler] Token 쿠키로 전송 완료");
 
         // ✅ 리디렉션
-        response.sendRedirect("/");
+        response.sendRedirect("/dashboard.html");
     }
 }
