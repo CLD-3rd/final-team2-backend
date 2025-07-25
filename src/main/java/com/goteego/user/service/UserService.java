@@ -25,7 +25,7 @@ public class UserService {
                 .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
         user.setRefreshToken(newToken); // setter 필요
     }
-<<<<<<< HEAD
+
     
     /**
      * 사용자 정보 조회
@@ -39,7 +39,7 @@ public class UserService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
     }
-=======
+
 
     public List<UserDto> findAll() {
         List<User> findUsers = userRepository.findAll();
@@ -55,5 +55,4 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
->>>>>>> e5318ed6a1a9c57536bdbc926f72821bd1a1b9e2
 }

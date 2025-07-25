@@ -5,10 +5,12 @@ import com.goteego.travel.dto.TravelPostResponseDto;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.travel.service.ScheduleService;
 import com.goteego.recommendation.service.RecommendationService;
+import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -39,7 +41,6 @@ public class TravelPostController {
      * @param postType 게시글 타입 (BEFORE/NOW)
      * @param page 페이지 번호
      * @param size 페이지 크기
-     * @param authorization 인증 헤더 (Bearer 토큰)
      * @return 페이징된 여행 게시글 목록 (유사도 점수 포함)
      */
     @GetMapping
@@ -47,9 +48,10 @@ public class TravelPostController {
             @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
+            @AuthenticationPrincipal User user) {
         
-        Long currentUserId = extractUserIdFromToken(authorization);
+//        Long currentUserId = extractUserIdFromToken(authorization);
+        Long currentUserId = user.getId();
         TravelPost.PostType type = TravelPost.PostType.valueOf(postType.toUpperCase());
         
         PageResponseDto<TravelPostResponseDto> travelPosts = travelPostService.getTravelPosts(type, page, size, currentUserId);
@@ -79,16 +81,16 @@ public class TravelPostController {
      * 여행 게시글 생성
      * 
      * @param requestDto 게시글 생성 요청 데이터
-     * @param authorization 인증 헤더
      * @return 생성된 여행 게시글
      */
     @PostMapping("/requests")
     public ResponseEntity<TravelPost> createTravelPost(
             @RequestBody TravelPostCreateRequest requestDto,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
+            @AuthenticationPrincipal User user) {
         
-        Long currentUserId = extractUserIdFromToken(authorization);
-        
+//        Long currentUserId = extractUserIdFromToken(authorization);
+
+        Long currentUserId = user.getId();
         TravelPost travelPost = travelPostService.createTravelPost(
             currentUserId,
             requestDto.getTitle(),
@@ -112,17 +114,16 @@ public class TravelPostController {
      * 
      * @param travelPostId 게시글 ID
      * @param requestDto 게시글 수정 요청 데이터
-     * @param authorization 인증 헤더
      * @return 수정된 여행 게시글
      */
     @PutMapping("/{travelPostId}")
     public ResponseEntity<TravelPost> updateTravelPost(
             @PathVariable("travelPostId") Long travelPostId,
             @RequestBody TravelPostUpdateRequest requestDto,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        
-        Long currentUserId = extractUserIdFromToken(authorization);
-        
+            @AuthenticationPrincipal User user) {
+
+        Long currentUserId = user.getId();
+
         TravelPost travelPost = travelPostService.updateTravelPost(
             travelPostId,
             currentUserId,
@@ -146,15 +147,14 @@ public class TravelPostController {
      * 여행 게시글 삭제
      * 
      * @param travelPostId 게시글 ID
-     * @param authorization 인증 헤더
      * @return 삭제 결과 메시지
      */
     @DeleteMapping("/{travelPostId}")
     public ResponseEntity<String> deleteTravelPost(
             @PathVariable("travelPostId") Long travelPostId,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        
-        Long currentUserId = extractUserIdFromToken(authorization);
+            @AuthenticationPrincipal User user) {
+
+        Long currentUserId = user.getId();
         
         String result = travelPostService.deleteTravelPost(travelPostId, currentUserId);
         
@@ -167,15 +167,14 @@ public class TravelPostController {
      * 여행 게시글 참가 신청
      * 
      * @param travelPostId 여행 게시글 ID
-     * @param authorization 인증 헤더 (Bearer 토큰)
      * @return 참가 신청 응답
      */
     @PostMapping("/requests/{travelPostId}")
     public ResponseEntity<ParticipationApplicationResponseDto> joinTravelPost(
             @PathVariable("travelPostId") Long travelPostId,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        
-        Long currentUserId = extractUserIdFromToken(authorization);
+            @AuthenticationPrincipal User user) {
+
+        Long currentUserId = user.getId();
         
         ParticipationApplicationResponseDto response = travelPostService.joinTravelPost(travelPostId, currentUserId);
         
