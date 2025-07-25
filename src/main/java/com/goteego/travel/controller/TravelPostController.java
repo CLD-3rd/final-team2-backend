@@ -1,6 +1,7 @@
 package com.goteego.travel.controller;
 
 import com.goteego.travel.domain.TravelPost;
+import com.goteego.travel.dto.TravelPostResponseDto;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.travel.service.ScheduleService;
 import com.goteego.recommendation.service.RecommendationService;
@@ -12,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import com.goteego.travel.dto.PageResponseDto;
+import com.goteego.travel.dto.ParticipationApplicationResponseDto;
+import com.goteego.global.jwt.JwtTokenProvider;
 
 /**
  * 여행 게시글 컨트롤러
@@ -27,6 +31,7 @@ public class TravelPostController {
     private final TravelPostService travelPostService;
     private final ScheduleService scheduleService;
     private final RecommendationService recommendationService;
+    private final JwtTokenProvider jwtTokenProvider;
     
     /**
      * 여행 게시글 목록 조회 (벡터 유사도 기반)
@@ -38,7 +43,7 @@ public class TravelPostController {
      * @return 페이징된 여행 게시글 목록 (유사도 점수 포함)
      */
     @GetMapping
-    public ResponseEntity<Page<TravelPost>> getTravelPosts(
+    public ResponseEntity<PageResponseDto<TravelPostResponseDto>> getTravelPosts(
             @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
@@ -47,7 +52,7 @@ public class TravelPostController {
         Long currentUserId = extractUserIdFromToken(authorization);
         TravelPost.PostType type = TravelPost.PostType.valueOf(postType.toUpperCase());
         
-        Page<TravelPost> travelPosts = travelPostService.getTravelPosts(type, page, size, currentUserId);
+        PageResponseDto<TravelPostResponseDto> travelPosts = travelPostService.getTravelPosts(type, page, size, currentUserId);
         
         log.info("여행 게시글 목록 조회 - postType: {}, page: {}, size: {}, totalElements: {}", 
                 postType, page, size, travelPosts.getTotalElements());
@@ -159,24 +164,62 @@ public class TravelPostController {
     }
     
     /**
-     * 토큰에서 사용자 ID 추출 (Mock 구현)
+     * 여행 게시글 참가 신청
+     * 
+     * @param travelPostId 여행 게시글 ID
+     * @param authorization 인증 헤더 (Bearer 토큰)
+     * @return 참가 신청 응답
+     */
+    @PostMapping("/requests/{travelPostId}")
+    public ResponseEntity<ParticipationApplicationResponseDto> joinTravelPost(
+            @PathVariable("travelPostId") Long travelPostId,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        
+        Long currentUserId = extractUserIdFromToken(authorization);
+        
+        ParticipationApplicationResponseDto response = travelPostService.joinTravelPost(travelPostId, currentUserId);
+        
+        log.info("참가 신청 - travelPostId: {}, userId: {}, applicationId: {}", 
+                travelPostId, currentUserId, response.getApplicationId());
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 토큰에서 사용자 ID 추출
      * 
      * @param authorization 인증 헤더
      * @return 사용자 ID
      */
     private Long extractUserIdFromToken(String authorization) {
-        // TODO: 추후 OAuth2/JWT 구현 시 실제 토큰 파싱 로직으로 대체
+        log.info("=== extractUserIdFromToken 시작 ===");
+        log.info("authorization: {}", authorization);
+        
         if (authorization == null || authorization.isEmpty()) {
-            return 1L; // Mock 사용자 ID
+            log.warn("Authorization 헤더가 없습니다.");
+            throw new IllegalArgumentException("Authorization 헤더가 필요합니다.");
         }
         
         if (authorization.startsWith("Bearer ")) {
             String token = authorization.substring(7);
-            // TODO: JWT 토큰에서 사용자 ID 추출
-            return 1L; // Mock 사용자 ID
+            log.info("JWT 토큰: {}", token);
+            try {
+                if (jwtTokenProvider.validateToken(token)) {
+                    Long userId = jwtTokenProvider.getUserId(token);
+                    log.info("토큰에서 추출한 사용자 ID: {}", userId);
+                    return userId;
+                } else {
+                    log.warn("유효하지 않은 JWT 토큰입니다.");
+                    throw new IllegalArgumentException("유효하지 않은 JWT 토큰입니다.");
+                }
+            } catch (Exception e) {
+                log.error("토큰 파싱 중 오류 발생: {}", e.getMessage());
+                throw new IllegalArgumentException("토큰 파싱 중 오류가 발생했습니다.");
+            }
         }
         
-        return 1L; // Mock 사용자 ID
+        log.warn("올바르지 않은 Authorization 헤더 형식입니다.");
+        throw new IllegalArgumentException("올바르지 않은 Authorization 헤더 형식입니다.");
     }
     
     /**

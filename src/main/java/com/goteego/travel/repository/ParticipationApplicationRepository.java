@@ -82,4 +82,15 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
     @Query("SELECT COUNT(pa) FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId AND pa.status = :status")
     Long countByTravelPostIdAndStatus(@Param("travelPostId") Long travelPostId, 
                                      @Param("status") ParticipationApplication.Status status);
+    
+    /**
+     * 중복 신청 확인
+     * 
+     * @param travelPostId 여행 게시글 ID
+     * @param userId 사용자 ID
+     * @return 중복 신청 여부
+     */
+    @Query("SELECT COUNT(pa) > 0 FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId AND pa.userId = :userId")
+    boolean existsByTravelPostIdAndUserId(@Param("travelPostId") Long travelPostId, 
+                                         @Param("userId") Long userId);
 } 

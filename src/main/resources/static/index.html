@@ -1,12 +1,46 @@
-<!-- src/main/resources/static/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>GotEEgo</title>
+    <title>GotEEgo - 여행 동행 매칭</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-<h1>OAuth2 로그인</h1>
-<a href="/oauth2/authorization/google">🔐 구글 로그인</a>
+    <div class="container">
+        <h1>🚀 GotEEgo</h1>
+        <p>여행 동행 매칭 플랫폼</p>
+        
+        <div>
+            <a href="/oauth2/authorization/google" class="btn">Google로 로그인</a>
+            <a href="/oauth2/authorization/kakao" class="btn">Kakao로 로그인</a>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <a href="/test.html" class="btn">API 테스트</a>
+        </div>
+    </div>
 </body>
-</html>
+</html> 

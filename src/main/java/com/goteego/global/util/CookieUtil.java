@@ -22,7 +22,7 @@ public class CookieUtil {
     public static Cookie createCookieForLocal(String name, String value, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setPath("/");
-        cookie.setHttpOnly(true);
+        cookie.setHttpOnly(false); // JavaScript에서 접근 가능하도록 false로 설정
         cookie.setSecure(false);
         cookie.setMaxAge(maxAge);
         cookie.setAttribute("SameSite", "Lax");

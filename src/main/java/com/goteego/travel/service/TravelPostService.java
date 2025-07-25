@@ -2,10 +2,16 @@ package com.goteego.travel.service;
 
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.ParticipationApplication;
+import com.goteego.travel.dto.TravelPostResponseDto;
+import com.goteego.travel.dto.PageResponseDto;
+import com.goteego.travel.dto.ParticipationApplicationResponseDto;
 import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
 import com.goteego.recommendation.domain.UserEmbedding;
 import com.goteego.recommendation.repository.UserEmbeddingRepository;
+import com.goteego.recommendation.service.RecommendationService;
+import com.goteego.user.domain.User;
+import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,6 +25,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.goteego.user.domain.OauthInfo;
+import com.goteego.user.domain.UserRole;
 
 /**
  * 여행 게시글 서비스
@@ -34,6 +42,8 @@ public class TravelPostService {
     private final TravelPostRepository travelPostRepository;
     private final ParticipationApplicationRepository participationApplicationRepository;
     private final UserEmbeddingRepository userEmbeddingRepository;
+    private final RecommendationService recommendationService;
+    private final UserService userService;
     
     /**
      * 여행 게시글 목록 조회 (벡터 유사도 기반 정렬)
@@ -44,9 +54,95 @@ public class TravelPostService {
      * @param currentUserId 현재 로그인한 사용자 ID
      * @return 페이징된 여행 게시글 목록 (유사도 점수 포함)
      */
-    public Page<TravelPost> getTravelPosts(TravelPost.PostType postType, int page, int size, Long currentUserId) {
+    public PageResponseDto<TravelPostResponseDto> getTravelPosts(TravelPost.PostType postType, int page, int size, Long currentUserId) {
         Pageable pageable = PageRequest.of(page, size);
-        return travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, currentUserId, pageable);
+        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, currentUserId, pageable);
+        
+        // 실제 유사도 계산을 포함한 DTO 변환
+        List<TravelPostResponseDto> content = travelPostPage.getContent().stream()
+                .map(travelPost -> convertToDto(travelPost, currentUserId))
+                .collect(Collectors.toList());
+        
+        return PageResponseDto.<TravelPostResponseDto>builder()
+                .content(content)
+                .pageable(PageResponseDto.PageableDto.builder()
+                        .pageNumber(page)
+                        .pageSize(size)
+                        .build())
+                .totalElements(travelPostPage.getTotalElements())
+                .totalPages(travelPostPage.getTotalPages())
+                .build();
+    }
+    
+    /**
+     * TravelPost를 DTO로 변환 (유사도 계산 포함)
+     */
+    private TravelPostResponseDto convertToDto(TravelPost travelPost, Long currentUserId) {
+        // 실제 사용자 정보 조회 (예외 처리 추가)
+        String nickname;
+        try {
+            User user = userService.getUserById(travelPost.getUserId());
+            nickname = user.getNickname();
+        } catch (Exception e) {
+            log.warn("사용자 정보 조회 실패 - userId: {}, error: {}", travelPost.getUserId(), e.getMessage());
+            nickname = "알 수 없는 사용자";
+        }
+        
+        // 실제 벡터 유사도 계산
+        Double similarity = calculateUserSimilarity(currentUserId, travelPost.getUserId());
+        
+        return TravelPostResponseDto.from(travelPost, currentUserId, nickname, similarity);
+    }
+    
+    /**
+     * 두 사용자 간의 벡터 유사도 계산
+     * 
+     * @param currentUserId 현재 로그인한 사용자 ID
+     * @param targetUserId 대상 사용자 ID (게시글 작성자)
+     * @return 유사도 점수 (0~1 사이, 높을수록 유사함)
+     */
+    private Double calculateUserSimilarity(Long currentUserId, Long targetUserId) {
+        if (currentUserId == null || currentUserId.equals(targetUserId)) {
+            return 1.0; // 자기 자신과의 유사도는 1.0
+        }
+        
+        try {
+            log.debug("=== 유사도 계산 시작 ===");
+            log.debug("currentUserId: {}, targetUserId: {}", currentUserId, targetUserId);
+            
+            // 현재 사용자의 임베딩 조회
+            Optional<UserEmbedding> currentUserEmbedding = userEmbeddingRepository.findByUserId(currentUserId);
+            
+            if (currentUserEmbedding.isEmpty()) {
+                log.warn("현재 사용자 임베딩이 없어서 기본값 0.5 반환");
+                return 0.5;
+            }
+            
+            // 한 번의 쿼리로 모든 유사도 계산
+            List<Object[]> similarities = userEmbeddingRepository.calculateAllSimilarities(
+                currentUserEmbedding.get().getUserEmbedding(),
+                currentUserId
+            );
+            
+            // targetUserId에 해당하는 유사도 찾기
+            for (Object[] result : similarities) {
+                Long userId = (Long) result[0];
+                Double distance = (Double) result[1];
+                Double similarity = (Double) result[2];
+                
+                if (userId.equals(targetUserId)) {
+                    log.debug("찾은 유사도 - userId: {}, distance: {}, similarity: {}", userId, distance, similarity);
+                    return similarity;
+                }
+            }
+            
+            log.warn("대상 사용자 임베딩이 없어서 기본값 0.5 반환");
+            return 0.5;
+            
+        } catch (Exception e) {
+            log.error("유사도 계산 중 에러 발생: {}", e.getMessage(), e);
+            return 0.5;
+        }
     }
     
     /**
@@ -253,6 +349,68 @@ public class TravelPostService {
         participationApplicationRepository.updateStatusByTravelPostIdAndUserId(travelPostId, participantUserId, newStatus);
         
         return application;
+    }
+    
+    /**
+     * 여행 게시글 참가 신청
+     * 
+     * @param travelPostId 여행 게시글 ID
+     * @param currentUserId 현재 로그인한 사용자 ID
+     * @return 참가 신청 응답 DTO
+     */
+    @Transactional
+    public ParticipationApplicationResponseDto joinTravelPost(Long travelPostId, Long currentUserId) {
+        // 1. 여행 게시글 존재 확인
+        TravelPost travelPost = getTravelPostDetail(travelPostId);
+        
+        // 2. 자기 자신의 게시글에는 신청 불가
+        if (travelPost.getUserId().equals(currentUserId)) {
+            throw new RuntimeException("자신의 게시글에는 참가 신청할 수 없습니다.");
+        }
+        
+        // 3. 중복 신청 방지
+        if (participationApplicationRepository.existsByTravelPostIdAndUserId(travelPostId, currentUserId)) {
+            throw new RuntimeException("이미 참가 신청한 게시글입니다.");
+        }
+        
+        // 4. 모집 마감 여부 확인
+        Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(
+            travelPostId, ParticipationApplication.Status.APPROVED);
+        
+        if (approvedCount >= travelPost.getRecuitLimit()) {
+            throw new RuntimeException("모집 인원이 마감되었습니다.");
+        }
+        
+        // 5. 참가 신청 생성
+        ParticipationApplication application = ParticipationApplication.builder()
+                .travelPostId(travelPostId)
+                .userId(currentUserId)
+                .status(ParticipationApplication.Status.PENDING)
+                .build();
+        
+        ParticipationApplication savedApplication = participationApplicationRepository.save(application);
+        
+        // 6. 사용자 정보 조회 (예외 처리 추가)
+        User user;
+        try {
+            user = userService.getUserById(currentUserId);
+        } catch (Exception e) {
+            log.warn("사용자 정보 조회 실패 - userId: {}, error: {}", currentUserId, e.getMessage());
+            // 기본 사용자 정보로 대체
+            user = User.builder()
+                    .nickname("알 수 없는 사용자")
+                    .profileImgUrl("")
+                    .role(UserRole.USER)
+                    .oauthInfo(OauthInfo.builder().build())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+        }
+        
+        log.info("참가 신청 생성 - travelPostId: {}, userId: {}, applicationId: {}", 
+                travelPostId, currentUserId, savedApplication.getId());
+        
+        return ParticipationApplicationResponseDto.from(savedApplication, user);
     }
     
     /**

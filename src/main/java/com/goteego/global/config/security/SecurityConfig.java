@@ -25,6 +25,10 @@ public class SecurityConfig {
             "/",
             "/favicon.ico",
             "/api/public/**",
+            "/api/travel-posts/**",  // 임시 추가
+            "/api/schedule/**",      // 임시 추가
+            "/api/users/**",         // 임시 추가
+            "/api/recommendation/**", // 임시 추가
             "/error",
             "/index.html",
             "/oauth2/**",
