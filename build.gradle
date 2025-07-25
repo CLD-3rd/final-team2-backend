@@ -34,7 +34,19 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+<<<<<<< HEAD
     compileOnly 'org.projectlombok:lombok:1.18.30'
+=======
+
+    // WebSocket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.security:spring-security-messaging'
+
+    // MongoDB
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
+    compileOnly 'org.projectlombok:lombok'
+>>>>>>> e5318ed6a1a9c57536bdbc926f72821bd1a1b9e2
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     
     // Database

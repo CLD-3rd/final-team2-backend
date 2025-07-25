@@ -19,15 +19,29 @@ public class CookieUtil {
     }
 
     // ✅ 쿠키 생성 (로컬 개발환경)
-    public static Cookie createCookieForLocal(String name, String value, int maxAge) {
+//    public static Cookie createCookieForLocal(String name, String value, int maxAge) {
+//        Cookie cookie = new Cookie(name, value);
+//        cookie.setPath("/");
+//        cookie.setHttpOnly(true);
+//        cookie.setSecure(false);
+//        cookie.setMaxAge(maxAge);
+//        cookie.setAttribute("SameSite", "Lax");
+//        return cookie;
+//    }
+
+    // [confirm]
+        public static Cookie createCookieForLocal(String name, String value, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setPath("/");
-        cookie.setHttpOnly(false); // JavaScript에서 접근 가능하도록 false로 설정
+        cookie.setHttpOnly(false);
         cookie.setSecure(false);
         cookie.setMaxAge(maxAge);
         cookie.setAttribute("SameSite", "Lax");
         return cookie;
     }
+
+
+
 
     // ✅ 쿠키 조회
     public static Cookie getCookie(HttpServletRequest request, String name) {
