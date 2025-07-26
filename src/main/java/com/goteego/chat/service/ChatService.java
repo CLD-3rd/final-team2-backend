@@ -80,7 +80,7 @@ public class ChatService {
         log.info("sender id = {}", sender.getId());
 
         // 2. 채팅방 존재 여부 확인 (선택적)
-        chatRoomRepository.findById(Long.valueOf(roomId))
+        chatRoomRepository.findByRoomId(roomId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.CHATROOM_NOT_FOUND));
         log.info("Group Chat - sender id = {}", sender.getId());
 
