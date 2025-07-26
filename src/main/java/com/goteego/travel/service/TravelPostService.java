@@ -2,6 +2,8 @@ package com.goteego.travel.service;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.repository.ChatRoomRepository;
+import com.goteego.chat.service.ChatRoomService;
+import com.goteego.chat.service.ChatService;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.travel.domain.TravelPost;
@@ -49,7 +51,7 @@ public class TravelPostService {
     private final ParticipationApplicationRepository participationApplicationRepository;
     private final UserEmbeddingRepository userEmbeddingRepository;
     private final UserService userService;
-    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRoomService chatRoomService;
     
     /**
      * 여행 게시글 목록 조회 (벡터 유사도 기반 정렬)
@@ -162,11 +164,13 @@ public class TravelPostService {
     @Transactional
     public TravelPostResponseDto registerTravelPost(User user, TravelPostCreateRequest request) {
 
-        ChatRoom groupRoom = ChatRoom.createGroupRoom(user.getNickname());
-        
+        // 채팅방 생성 및 저장 (ChatRoomService에게 책임 위임)
+        ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(user, user.getNickname());
+
+        // 게시글 생성
         TravelPost travelPost = TravelPost.builder()
                 .user(user)
-                .chatRoom(groupRoom)
+                .chatRoom(groupChatRoom)
                 .title(request.getTitle())
                 .content(request.getContent())
                 .startTime(request.getStartTime())
@@ -177,9 +181,7 @@ public class TravelPostService {
                 .isAddRecruit(request.getIsAddRecruit())
                 .build();
 
-        groupRoom.addParticipant(user);
-        ChatRoom savedRoom = chatRoomRepository.save(groupRoom);
-
+        // 게시글 저장
         TravelPost savedTravelPost = travelPostRepository.save(travelPost);
 
         return TravelPostResponseDto.from(savedTravelPost, user.getId(), user.getNickname(), 0.5);

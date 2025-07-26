@@ -1,5 +1,6 @@
 package com.goteego.travel.service;
 
+import com.goteego.chat.service.ChatRoomService;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.travel.domain.TravelPost;
@@ -35,6 +36,7 @@ public class ScheduleService {
     private final TravelPostRepository travelPostRepository;
     private final ParticipationApplicationRepository participationApplicationRepository;
     private final UserService userService;
+    private final ChatRoomService chatRoomService;
     
     /**
      * 내 일정 조회 (작성자이거나 참여자인 게시글)
@@ -69,7 +71,7 @@ public class ScheduleService {
 
     
     /**
-     * 참가자 상태 변경 (승인/거절)
+     * 참가자 상태 변경 (승인/거절) -> 승인 시, 게시글 채팅방에 초대
      */
     @Transactional
     public ParticipationApplicationResponseDto updateParticipantStatus(Long travelPostId, Long participantUserId,
@@ -100,9 +102,23 @@ public class ScheduleService {
         
         // 4. 상태 변경
         participationApplication.updateStatus(newStatus);
+        participationApplicationRepository.flush(); // 명시적 flush
 
-        // 5. DTO 변환
+        // 5. 승인된 경우 채팅방에 추가
+        if (newStatus == ParticipationStatus.APPROVED) {
+            try {
+                chatRoomService.addUserToGroupChatRoom(
+                        travelPost.getChatRoom().getRoomId(),
+                        participantUserId
+                );
+                log.info("참가자 {}를 채팅방 {}에 추가했습니다.", participantUserId, travelPost.getChatRoom().getRoomId());
+            } catch (Exception e) {
+                log.error("채팅방 추가 실패 - roomId: {}, userId: {}",
+                        travelPost.getChatRoom().getRoomId(), participantUserId, e);
+            }
+        }
 
+        // 6. DTO 변환
         return ParticipationApplicationResponseDto.from(participationApplication, participant);
     }
 

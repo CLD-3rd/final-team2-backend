@@ -30,7 +30,7 @@ public class TravelPost extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;
 

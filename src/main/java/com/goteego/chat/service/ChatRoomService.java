@@ -3,20 +3,23 @@ package com.goteego.chat.service;
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.domain.UserChatRoom;
 import com.goteego.chat.domain.enumerate.ChatType;
+import com.goteego.chat.dto.chatroom.ChatParticipantsDto;
 import com.goteego.chat.dto.chatroom.DirectChatRoomDto;
+import com.goteego.chat.dto.chatroom.GroupChatRoomDto;
 import com.goteego.chat.repository.ChatRoomRepository;
 import com.goteego.chat.repository.UserChatRoomRepository;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.travel.repository.ParticipationApplicationRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,6 +30,12 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
     private final UserChatRoomRepository userChatRoomRepository;
+    private final ParticipationApplicationRepository participationApplicationRepository;
+
+
+    /******************************************************************************************
+     **************************************** 1:1 채팅방  **************************************
+     *****************************************************************************************/
 
     // 1:1 채팅방 생성 또는 조회
     @Transactional
@@ -35,7 +44,7 @@ public class ChatRoomService {
         validateUsers(currentUserId, otherUserId);
 
         return chatRoomRepository.findDirectChatRoomByUsers(currentUserId, otherUserId)
-                .map(room -> toDto(room, currentUserId))
+                .map(room -> toDirectChatRoomDto(room, currentUserId))
                 .orElseGet(() -> createNewDirectChatRoom(currentUserId, otherUserId));
     }
 
@@ -46,7 +55,7 @@ public class ChatRoomService {
     }
 
     // Entity → DTO 변환
-    private DirectChatRoomDto toDto(ChatRoom room, Long currentUserId) {
+    private DirectChatRoomDto toDirectChatRoomDto(ChatRoom room, Long currentUserId) {
         User otherUser = room.getParticipants().stream()
                 .filter(p -> !p.getUser().getId().equals(currentUserId))
                 .findFirst()
@@ -73,75 +82,76 @@ public class ChatRoomService {
         ChatRoom savedRoom = chatRoomRepository.save(directRoom);
         log.info("새로운 채팅방 생성 - roomId: {}, 생성자: {}", savedRoom.getRoomId(), currentUser.getNickname());
 
-        return toDto(savedRoom, currentUserId);
+        return toDirectChatRoomDto(savedRoom, currentUserId);
     }
 
-
-    /**
-     * 자신이 속한 채팅방 조회
-     */
-    public List<DirectChatRoomDto> findMyChatRooms(Long currentUserId) {
+    // 자신이 속한 1:1 채팅방 조회
+    public List<DirectChatRoomDto> findMyDirectChatRooms(Long currentUserId) {
         return userChatRoomRepository.findChatRoomsWithParticipantsByUserId(currentUserId)
                 .stream()
-                .map(ucr -> ucr.getChatRoom())
+                .map(UserChatRoom::getChatRoom)
                 .filter(room -> room.getType() == ChatType.DIRECT)
-                .map(room -> toDto(room, currentUserId)) // toDto 재사용
+                .map(room -> toDirectChatRoomDto(room, currentUserId))
                 .collect(Collectors.toList());
     }
 
-    // 요청 수락이 된 상태인지 확인
-    public boolean canUserJoinChatRoom(String roomId, Long userId) {
-        return userChatRoomRepository.existsByChatRoom_RoomIdAndUser_Id(roomId, userId);
+
+    /******************************************************************************************
+     ***************************************** 그룹 채팅방  ************************************
+     *****************************************************************************************/
+
+    // 그룹 채팅방 생성 또는 조회 (여행 게시글 작성 시, 자동 그룹 채팅방 생성)
+    @Transactional
+    public ChatRoom createGroupChatRoomForTravelPost(User author, String roomName) {
+
+        ChatRoom groupRoom = ChatRoom.createGroupRoom(roomName + "의 여행 채팅방");
+        groupRoom.addParticipant(author);
+
+        ChatRoom savedRoom = chatRoomRepository.save(groupRoom);
+        log.info("여행 게시글용 그룹 채팅방 생성 - roomId: {}, 생성자: {}", savedRoom.getRoomId(), author.getNickname());
+
+        return savedRoom;
     }
 
-    //========================================================================//
-//
-//    @Transactional
-//    public void addUserToGroupChat(String roomId, Long userId) {
-//
-//        // 수락된 사용자인지 검증
-//        validateUserCanJoinGroupChat(roomId, userId);
-//
-//        ChatRoom chatRoom = getChatRoomById(roomId);
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-//
-//        chatRoom.addParticipant(user);
-//
-//        // 채팅방에 입장 메시지 보내기
-//        ChatMessageDto messageDto = new ChatMessageDto(
-//                MessageType.ENTER,
-//                roomId,
-//                userId,
-//                user.getUsername(),
-//                user.getUsername() + "님이 그룹에 참여했습니다.",
-//                LocalDateTime.now()
-//        );
-//        saveMessage(messageDto);
-//
-//        // WebSocket을 통해 새 참여자 정보 브로드캐스트 하는 과정임 (이거 여기서 /topic/public 했는데 API 명세서때 좀 생각해봐야 할 듯? 알람 이름도 정해야해서)
-//        messagingTemplate.convertAndSend("/topic/public/" + roomId, messageDto);
-//    }
-//
-//    ========================================================================//
-//
-//        public void validateUserCanJoinGroupChat(String roomId, Long userId) {
-//        ChatRoom chatRoom = chatRoomRepository.findByRoomId(roomId)
-//                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
-//
-//        // 작성자는 무조건 입장 허용
-//        TravelPost travelPost = travelPostRepository.findByChatRoom(chatRoom)
-//                .orElseThrow(() -> new IllegalStateException("채팅방에 연결된 게시글이 없습니다."));
-//
-//        if (travelPost.getAuthor().getId().equals(userId)) {
-//            return;
-//        }
-//
-//        boolean isApproved = participationApplicationRepository.existsByTravelPost_ChatRoom_RoomIdAndRequester_IdAndStatus(roomId, userId, ParticipationStatus.APPROVED);
-//
-//        if (!isApproved) {
-//            throw new IllegalStateException("채팅방 입장 권한이 없습니다. 요청이 수락되지 않았습니다.");
-//        }
-//    }
+    // Entity → DTO 변환
+    private GroupChatRoomDto toGroupDto(ChatRoom room, Long currentUserId) {
+        return GroupChatRoomDto.builder()
+                .roomId(room.getRoomId())
+                .type(room.getType())
+                .participants(room.getParticipants().stream()
+                        .map(ChatParticipantsDto::from)
+                        .collect(Collectors.toList()))
+                .groupName(room.getName())
+                .unreadCount(0)
+                .build();
+    }
+
+    // 그룹 채팅방에 사용자 추가 (참여 요청 승인 시 호출)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void addUserToGroupChatRoom(String roomId, Long userId) {
+
+        // 수락된 사용자인지 검증
+        if (userChatRoomRepository.existsByChatRoom_RoomIdAndUser_Id(roomId, userId)) {
+            return; // 이미 참여 중이면 무시
+        }
+
+        ChatRoom chatRoom = chatRoomRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.CHATROOM_NOT_FOUND));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+
+        chatRoom.addParticipant(user);
+    }
+
+    // 자신이 속한 그룹 채팅방 조회
+    public List<GroupChatRoomDto> findMyGroupChatRooms(Long currentUserId) {
+        return userChatRoomRepository.findChatRoomsWithParticipantsByUserId(currentUserId)
+                .stream()
+                .map(UserChatRoom::getChatRoom)
+                .filter(room -> room.getType() == ChatType.GROUP)
+                .map(room -> toGroupDto(room, currentUserId))
+                .collect(Collectors.toList());
+    }
 
 }

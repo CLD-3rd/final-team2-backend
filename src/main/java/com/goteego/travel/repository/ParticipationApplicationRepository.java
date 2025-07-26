@@ -79,4 +79,8 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
     @Query("SELECT COUNT(pa) > 0 FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId AND pa.user.id = :userId")
     boolean existsByTravelPostIdAndUserId(@Param("travelPostId") Long travelPostId, 
                                          @Param("userId") Long userId);
+
+
+    boolean existsByTravelPost_ChatRoom_RoomIdAndUser_IdAndStatus(String roomId, Long userId, ParticipationStatus status);
+
 } 

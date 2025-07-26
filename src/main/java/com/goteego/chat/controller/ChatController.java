@@ -36,7 +36,7 @@ public class ChatController {
     public void sendDirectMessage(@Payload GroupMessageRequest groupMessageRequest, @DestinationVariable String roomId, Principal principal) {
         log.info("principal name = {}", principal.getName());
         Long senderId = Long.parseLong(principal.getName());
-//        chatService.sendGroupMessage(roomId, groupMessageRequest, senderId);
+        chatService.sendGroupMessage(roomId, groupMessageRequest, senderId);
     }
 
 }
