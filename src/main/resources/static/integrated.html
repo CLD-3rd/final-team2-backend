@@ -435,11 +435,9 @@
     // ===== 일정관리 API =====
     async function loadScheduleData() {
         try {
-            // 내 일정 로드
             const scheduleRes = await axios.get('/api/schedule/mine', {headers: getAuthHeaders()});
             displaySchedules(scheduleRes.data);
 
-            // 첫 번째 일정이 있으면 해당 일정의 참여자/신청자 정보도 로드
             if (scheduleRes.data && scheduleRes.data.length > 0) {
                 const firstSchedule = scheduleRes.data[0];
                 await loadParticipantData(firstSchedule.travelPostId || firstSchedule.id);
@@ -477,13 +475,16 @@
 
     async function loadParticipantData(postId) {
         try {
-            // 신청자 정보만 로드 (참가자 정보는 신청자 정보에서 필터링)
-            const applicationsRes = await axios.get(`/api/schedule/${postId}/applications`, {headers: getAuthHeaders()});
+            const [participantsRes, applicationsRes] = await Promise.all([
+                axios.get(`/api/schedule/${postId}/participants`, {headers: getAuthHeaders()}),
+                axios.get(`/api/schedule/${postId}/applications`, {headers: getAuthHeaders()})
+            ]);
 
-            displayParticipantManagement(null, applicationsRes.data, postId);
+            displayParticipantManagement(participantsRes.data, applicationsRes.data, postId);
         } catch(e) {
             console.error('참여자 데이터 로드 실패:', e);
-            document.getElementById('participant-management').innerHTML = '참여자 데이터 로드 실패: ' + e;
+            document.getElementById('participant-management').innerHTML =
+                `<div class="error" style="color: #dc3545;">참여자 데이터 로드 실패: ${e.response?.data?.message || e.message}</div>`;
         }
     }
 
@@ -491,8 +492,8 @@
         const container = document.getElementById('participant-management');
         container.innerHTML = '';
 
-        // 승인된 참가자 목록 (APPROVED 상태만)
-        const approvedParticipants = applications ? applications.filter(app => app.status === 'APPROVED') : [];
+        // 승인된 참가자 목록
+        const approvedParticipants = participants || [];
         if (approvedParticipants.length > 0) {
             const participantsDiv = document.createElement('div');
             participantsDiv.innerHTML = '<h4>✅ 승인된 참가자</h4>';
@@ -501,11 +502,10 @@
                 const div = document.createElement('div');
                 div.className = 'participant-item';
                 div.innerHTML = `
-                    <p><strong>${participant.userEmail || participant.userId || '사용자'}</strong></p>
-                    <p>상태: ${participant.status}</p>
-                    <p>신청일: ${participant.requestedAt || 'N/A'}</p>
+                    <p><strong>${participant.participantNickname || participant.userId || '사용자'}</strong></p>
+                    <p>상태: ${participant.status || 'APPROVED'}</p>
                     <div class="action-buttons">
-                        <button onclick="updateParticipantStatus(${postId}, ${participant.userId}, 'REJECTED')" class="reject">
+                        <button onclick="updateParticipantStatus(${postId}, ${participant.userId || participant.participantId}, 'REJECTED')" class="reject">
                             참여 취소
                         </button>
                     </div>
@@ -515,7 +515,7 @@
             container.appendChild(participantsDiv);
         }
 
-        // 대기 중인 신청자 목록 (PENDING 상태만)
+        // 대기 중인 신청자 목록
         const pendingApplications = applications ? applications.filter(app => app.status === 'PENDING') : [];
         if (pendingApplications.length > 0) {
             const applicationsDiv = document.createElement('div');
@@ -525,13 +525,13 @@
                 const div = document.createElement('div');
                 div.className = 'application-item';
                 div.innerHTML = `
-                    <p><strong>${application.userEmail || application.userId || '사용자'}</strong></p>
-                    <p>신청일: ${application.requestedAt || 'N/A'}</p>
+                    <p><strong>${application.participantNickname || application.userId || '사용자'}</strong></p>
+                    <p>신청일: ${application.createdAt || application.requestedAt || 'N/A'}</p>
                     <div class="action-buttons">
-                        <button onclick="updateParticipantStatus(${postId}, ${application.userId}, 'APPROVED')" class="approve">
+                        <button onclick="updateParticipantStatus(${postId}, ${application.participantId || application.userId}, 'APPROVED')" class="approve">
                             승인
                         </button>
-                        <button onclick="updateParticipantStatus(${postId}, ${application.userId}, 'REJECTED')" class="reject">
+                        <button onclick="updateParticipantStatus(${postId}, ${application.participantId || application.userId}, 'REJECTED')" class="reject">
                             거절
                         </button>
                     </div>
@@ -541,7 +541,7 @@
             container.appendChild(applicationsDiv);
         }
 
-        // 거절된 신청자 목록 (REJECTED 상태)
+        // 거절된 신청자 목록
         const rejectedApplications = applications ? applications.filter(app => app.status === 'REJECTED') : [];
         if (rejectedApplications.length > 0) {
             const rejectedDiv = document.createElement('div');
@@ -552,8 +552,8 @@
                 div.className = 'application-item';
                 div.style.borderLeftColor = '#dc3545';
                 div.innerHTML = `
-                    <p><strong>${application.userEmail || application.userId || '사용자'}</strong></p>
-                    <p>신청일: ${application.requestedAt || 'N/A'}</p>
+                    <p><strong>${application.participantNickname || application.userId || '사용자'}</strong></p>
+                    <p>신청일: ${application.createdAt || application.requestedAt || 'N/A'}</p>
                     <p>상태: ${application.status}</p>
                 `;
                 rejectedDiv.appendChild(div);
@@ -567,22 +567,41 @@
     }
 
     async function updateParticipantStatus(postId, userId, status) {
-        try {
-            const res = await axios.put(`/api/schedule/${postId}/participants/${userId}`,
-                {status}, {headers: getAuthHeaders()});
+        // 유효성 검사 강화
+        if (!postId || !userId || userId === 'undefined') {
+            alert('유효하지 않은 요청입니다. postId 또는 userId가 없습니다.');
+            return;
+        }
 
-            // 상태 변경 후 데이터 새로고침
+        try {
+            const res = await axios.put(
+                `/api/schedule/${postId}/participants/${userId}`,
+                { status: status },
+                { headers: getAuthHeaders() }
+            );
+
+            // 성공 시 UI 업데이트
             await loadParticipantData(postId);
 
-            // 결과 표시
-            document.getElementById('schedule-result').textContent = JSON.stringify(res.data, null, 2);
-
             // 성공 메시지
-            const statusText = status === 'APPROVED' ? '승인' : '거절';
+            const statusText = status === 'APPROVED' ? '승인' : status === 'REJECTED' ? '거절' : '상태 변경';
             alert(`${statusText} 처리되었습니다.`);
-        } catch(e) {
-            console.error('상태 변경 실패:', e);
-            document.getElementById('schedule-result').textContent = '상태 변경 실패: ' + e;
+
+            // 결과 로그
+            document.getElementById('schedule-result').textContent =
+                `상태 변경 성공: ${JSON.stringify(res.data, null, 2)}`;
+        } catch (error) {
+            console.error('상태 변경 실패:', error);
+
+            let errorMessage = '상태 변경에 실패했습니다.';
+            if (error.response) {
+                errorMessage = error.response.data.message || errorMessage;
+            }
+
+            document.getElementById('schedule-result').textContent =
+                `상태 변경 실패: ${errorMessage}`;
+
+            alert(errorMessage);
         }
     }
 
@@ -717,3 +736,6 @@
 </script>
 </body>
 </html>
+
+
+

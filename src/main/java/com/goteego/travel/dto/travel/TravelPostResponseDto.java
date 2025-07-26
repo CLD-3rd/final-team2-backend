@@ -1,4 +1,4 @@
-package com.goteego.travel.dto;
+package com.goteego.travel.dto.travel;
 
 import com.goteego.travel.domain.TravelPost;
 import lombok.Data;
@@ -25,7 +25,7 @@ public class TravelPostResponseDto {
     private String nickname;
     private LocalDate startTime;
     private LocalDate endTime;
-    private Integer recuitLimit;
+    private Integer recruitLimit;
     private Long viewCount;
     private Boolean isAddRecruit;
     private LocalDateTime createdAt;
@@ -38,11 +38,11 @@ public class TravelPostResponseDto {
         return TravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
-                .userId(travelPost.getUserId())
+                .userId(travelPost.getUser().getId())
                 .nickname(nickname)
                 .startTime(travelPost.getStartTime())
                 .endTime(travelPost.getEndTime())
-                .recuitLimit(travelPost.getRecuitLimit())
+                .recruitLimit(travelPost.getRecruitLimit())
                 .viewCount(travelPost.getViewCount())
                 .isAddRecruit(travelPost.getIsAddRecruit())
                 .createdAt(travelPost.getCreatedAt())
