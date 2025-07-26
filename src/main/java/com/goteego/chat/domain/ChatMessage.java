@@ -2,8 +2,7 @@ package com.goteego.chat.domain;
 
 import com.goteego.chat.domain.enumerate.MessageType;
 import com.goteego.chat.dto.message.DirectMessageResponse;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import com.goteego.chat.dto.message.GroupMessageResponse;
 import jakarta.persistence.Id;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -41,7 +40,7 @@ public class ChatMessage {
         return message;
     }
 
-    public DirectMessageResponse toDto() {
+    public DirectMessageResponse toDirectMessageDto() {
         return new DirectMessageResponse(
                 this.roomId,
                 this.senderId,
@@ -50,6 +49,17 @@ public class ChatMessage {
                 this.timestamp,
                 this.type
                 );
+    }
+
+    public GroupMessageResponse toGroupMessageDto() {
+        return new GroupMessageResponse(
+                this.roomId,
+                this.senderId,
+                this.senderName,
+                this.content,
+                this.timestamp,
+                this.type
+        );
     }
 
 }

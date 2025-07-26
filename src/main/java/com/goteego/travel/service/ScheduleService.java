@@ -1,9 +1,17 @@
 package com.goteego.travel.service;
 
+import com.goteego.chat.service.ChatRoomService;
+import com.goteego.global.error.exception.ErrorCode;
+import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.ParticipationApplication;
+import com.goteego.travel.domain.enumerate.ParticipationStatus;
+import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
+import com.goteego.travel.dto.travel.TravelPostResponseDto;
 import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
+import com.goteego.user.domain.User;
+import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 일정 관리 서비스
@@ -26,16 +35,13 @@ public class ScheduleService {
     
     private final TravelPostRepository travelPostRepository;
     private final ParticipationApplicationRepository participationApplicationRepository;
+    private final UserService userService;
+    private final ChatRoomService chatRoomService;
     
     /**
      * 내 일정 조회 (작성자이거나 참여자인 게시글)
-     * 
-     * @param userId 사용자 ID
-     * @param page 페이지 번호
-     * @param size 페이지 크기
-     * @return 내가 관련된 여행 게시글 목록
      */
-    public List<TravelPost> getMySchedules(Long userId, int page, int size) {
+    public List<TravelPostResponseDto> getMySchedules(Long userId, int page, int size) {
         List<TravelPost> allSchedules = travelPostRepository.findMySchedules(userId);
         
         // 페이징 처리
@@ -45,79 +51,114 @@ public class ScheduleService {
         if (start >= allSchedules.size()) {
             return List.of();
         }
-        
-        return allSchedules.subList(start, end);
+
+        List<TravelPost> pagedSchedules = allSchedules.subList(start, end);
+
+        return pagedSchedules.stream()
+                .map(tp -> TravelPostResponseDto.from(
+                        tp,
+                        tp.getUser().getId(),
+                        tp.getUser().getNickname(),
+                        null // similarity는 이 컨텍스트에선 필요 없다면 null
+                ))
+                .collect(Collectors.toList());
     }
+
+
+
+
+    //======================================================준형===================================================//
+
     
     /**
-     * 특정 게시글의 참여자 목록 조회 (REJECTED 제외)
-     * 
-     * @param postId 게시글 ID
-     * @return 참여자 정보 목록 [user_id, nickname, status]
-     */
-    public List<Object[]> getParticipants(Long postId) {
-        return travelPostRepository.findParticipantsByPostId(postId);
-    }
-    
-    /**
-     * 참가자 상태 변경 (승인/거절)
-     * 
-     * @param travelPostId 여행 게시글 ID
-     * @param participantUserId 참가자 사용자 ID
-     * @param newStatus 변경할 상태
-     * @param currentUserId 현재 사용자 ID (권한 확인용)
-     * @return 참가자 상태 변경 결과
-     * @throws RuntimeException 권한 없음, 게시글 없음, 참가 신청 없음 등의 경우
+     * 참가자 상태 변경 (승인/거절) -> 승인 시, 게시글 채팅방에 초대
      */
     @Transactional
-    public ParticipationApplication updateParticipantStatus(Long travelPostId, Long participantUserId, 
-                                                          ParticipationApplication.Status newStatus, Long currentUserId) {
-        
+    public ParticipationApplicationResponseDto updateParticipantStatus(Long travelPostId, Long participantUserId,
+                                                            ParticipationStatus newStatus, Long currentUserId) {
+
+        User participant = userService.getUserById(participantUserId);
+
         // 1. 권한 확인 - 작성자인지 확인
-        Optional<TravelPost> travelPostOpt = travelPostRepository.findById(travelPostId);
-        if (travelPostOpt.isEmpty()) {
-            throw new RuntimeException("Travel post not found with id: " + travelPostId);
-        }
-        
-        TravelPost travelPost = travelPostOpt.get();
+        TravelPost travelPost = travelPostRepository.findById(travelPostId).orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
+
         if (!travelPost.isAuthor(currentUserId)) {
-            throw new RuntimeException("Only the author can update participant status");
+            throw new RuntimeException("오직 게시글 작성자만 참가 요청을 처리할 수 있습니다.");
         }
         
         // 2. 참여 신청 조회
-        Optional<ParticipationApplication> applicationOpt = participationApplicationRepository
-                .findByTravelPostIdAndUserId(travelPostId, participantUserId);
-        if (applicationOpt.isEmpty()) {
-            throw new RuntimeException("Participation application not found");
-        }
-        
-        ParticipationApplication application = applicationOpt.get();
+        ParticipationApplication participationApplication = participationApplicationRepository
+                                                            .findByTravelPostIdAndUserId(travelPostId, participantUserId).orElseThrow(() ->
+                                                            new NotFoundException(ErrorCode.APPLICATION_NOT_FOUND));
+
         
         // 3. 상태 변경 가능 여부 확인
-        if (newStatus == ParticipationApplication.Status.APPROVED && !application.canBeApproved()) {
-            throw new RuntimeException("Application cannot be approved in current status: " + application.getStatus());
+        if (newStatus == ParticipationStatus.APPROVED && !participationApplication.canBeApproved()) {
+            throw new RuntimeException("Application cannot be approved in current status: " + participationApplication.getStatus());
         }
-        if (newStatus == ParticipationApplication.Status.REJECTED && !application.canBeRejected()) {
-            throw new RuntimeException("Application cannot be rejected in current status: " + application.getStatus());
+        if (newStatus == ParticipationStatus.REJECTED && !participationApplication.canBeRejected()) {
+            throw new RuntimeException("Application cannot be rejected in current status: " + participationApplication.getStatus());
         }
         
         // 4. 상태 변경
-        application.updateStatus(newStatus);
-        participationApplicationRepository.updateStatusByTravelPostIdAndUserId(travelPostId, participantUserId, newStatus);
-        
-        return application;
+        participationApplication.updateStatus(newStatus);
+        participationApplicationRepository.flush(); // 명시적 flush
+
+        // 5. 승인된 경우 채팅방에 추가
+        if (newStatus == ParticipationStatus.APPROVED) {
+            try {
+                chatRoomService.addUserToGroupChatRoom(
+                        travelPost.getChatRoom().getRoomId(),
+                        participantUserId
+                );
+                log.info("참가자 {}를 채팅방 {}에 추가했습니다.", participantUserId, travelPost.getChatRoom().getRoomId());
+            } catch (Exception e) {
+                log.error("채팅방 추가 실패 - roomId: {}, userId: {}",
+                        travelPost.getChatRoom().getRoomId(), participantUserId, e);
+            }
+        }
+
+        // 6. DTO 변환
+        return ParticipationApplicationResponseDto.from(participationApplication, participant);
     }
-    
+
+
     /**
-     * 특정 게시글의 승인된 참가자 수 조회
-     * 
-     * @param travelPostId 여행 게시글 ID
-     * @return 승인된 참가자 수
+     * 특정 게시글의 참여자 목록 조회 (REJECTED 제외)
      */
-    public Long getApprovedParticipantCount(Long travelPostId) {
-        return participationApplicationRepository.countByTravelPostIdAndStatus(
-            travelPostId, ParticipationApplication.Status.APPROVED);
+    public List<ParticipationApplicationResponseDto> getParticipants(Long postId) {
+
+        List<ParticipationApplication> participationApplicationList = travelPostRepository.findNonRejectedByPostId(postId);
+
+        return participationApplicationList.stream()
+                .map(application -> ParticipationApplicationResponseDto.from(application, application.getUser()))
+                .collect(Collectors.toList());
     }
+
+    /**
+     * 특정 게시글의 모든 참가 신청 조회
+     */
+    public List<ParticipationApplicationResponseDto> getParticipationApplications(Long travelPostId) {
+
+        List<ParticipationApplication> participationApplicationList = participationApplicationRepository.findByTravelPostId(travelPostId);
+
+        return participationApplicationList.stream()
+                .map(application -> ParticipationApplicationResponseDto.from(application, application.getUser()))
+                .collect(Collectors.toList());
+    }
+
+    //===========================================================================================================//
+
+
+
+
+
+
+
+
+    //====================================================재신=====================================================//
+
+
     
     /**
      * 특정 게시글의 대기 중인 참가자 수 조회
@@ -127,18 +168,19 @@ public class ScheduleService {
      */
     public Long getPendingParticipantCount(Long travelPostId) {
         return participationApplicationRepository.countByTravelPostIdAndStatus(
-            travelPostId, ParticipationApplication.Status.PENDING);
+            travelPostId, ParticipationStatus.PENDING);
     }
-    
+
     /**
-     * 특정 게시글의 모든 참가 신청 조회
-     * 
+     * 특정 게시글의 승인된 참가자 수 조회
+     *
      * @param travelPostId 여행 게시글 ID
-     * @return 참가 신청 목록
+     * @return 승인된 참가자 수
      */
-    public List<ParticipationApplication> getParticipationApplications(Long travelPostId) {
-        return participationApplicationRepository.findByTravelPostId(travelPostId);
+    public Long getApprovedParticipantCount(Long travelPostId) {
+        return participationApplicationRepository.countByTravelPostIdAndStatus(travelPostId, ParticipationStatus.APPROVED);
     }
+
     
     /**
      * 특정 게시글의 승인된 참가 신청 조회

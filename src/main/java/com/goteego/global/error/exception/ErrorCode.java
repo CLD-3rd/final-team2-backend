@@ -32,8 +32,13 @@ public enum ErrorCode {
 
     // 채팅 관련
     CHATROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방이 존재하지 않습니다."),
-    INVALID_CHAT(HttpStatus.BAD_REQUEST, "자신과는 채팅할 수 없습니다.")
-    ;
+    INVALID_CHAT(HttpStatus.BAD_REQUEST, "자신과는 채팅할 수 없습니다."),
+
+    // 게시글 관련
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글이 존재하지 않습니다."),
+
+    // 참여 요청 관련
+    APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "참여 요청이 존재하지 않습니다.");
 
     private final HttpStatus status;
     private final String message;

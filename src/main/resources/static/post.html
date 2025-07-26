@@ -2,10 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>GotEEgo 통합 테스트</title>
+    <title>GotEEgo 게시판</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -67,29 +65,6 @@
             color: #e0e0e0;
         }
         .section { margin-bottom: 30px; }
-        .chat-box {
-            border: 1px solid #555;
-            padding: 15px;
-            margin: 10px 0;
-            background: #2d2d2d;
-            border-radius: 8px;
-        }
-        .messages {
-            height: 200px;
-            overflow-y: scroll;
-            border: 1px solid #555;
-            padding: 15px;
-            margin: 10px 0;
-            background: #1a1a1a;
-            border-radius: 6px;
-        }
-        .user-list, .chat-room-list {
-            border: 1px solid #555;
-            padding: 15px;
-            margin: 10px 0;
-            background: #2d2d2d;
-            border-radius: 6px;
-        }
         .status {
             padding: 15px;
             background: #2d2d2d;
@@ -151,12 +126,13 @@
     </style>
 </head>
 <body>
-<h1>🚀 GotEEgo 통합 테스트</h1>
+<h1>✈️ GotEEgo 여행 게시판</h1>
 
 <!-- 로그인 상태 및 로그아웃 -->
 <div class="status">
     <button onclick="logout()">로그아웃</button>
     <span id="login-status">로그인 상태 확인 중...</span>
+    <button onclick="location.href='chat.html'" style="float:right;">채팅으로 이동</button>
 </div>
 
 <!-- 사용자 API 섹션 -->
@@ -212,78 +188,8 @@
     <pre id="schedule-result"></pre>
 </fieldset>
 
-<!-- 채팅 API 섹션 -->
-<fieldset>
-    <legend>💬 채팅</legend>
-    <div class="chat-tabs">
-        <button class="tab-button active" onclick="showChatTab('direct')">1:1 채팅</button>
-        <button class="tab-button" onclick="showChatTab('group')">그룹 채팅</button>
-    </div>
-
-    <div id="direct-chat-tab" class="chat-tab-content">
-        <button onclick="loadUsers()">유저 목록 불러오기</button>
-        <button onclick="loadDirectChatRooms()">1:1 채팅방 보기</button>
-
-        <div class="section">
-            <h3>👤 전체 유저 목록</h3>
-            <div id="user-list" class="user-list"></div>
-        </div>
-
-        <div class="section">
-            <h3>💬 1:1 채팅방 목록</h3>
-            <div id="direct-chat-room-list" class="chat-room-list"></div>
-        </div>
-    </div>
-
-    <div id="group-chat-tab" class="chat-tab-content" style="display:none;">
-        <button onclick="loadGroupChatRooms()">그룹 채팅방 보기</button>
-
-        <div class="section">
-            <h3>👥 그룹 채팅방 목록</h3>
-            <div id="group-chat-room-list" class="chat-room-list"></div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>📨 채팅창</h3>
-        <div id="chat-box" class="chat-box" style="display: none;">
-            <div id="messages" class="messages"></div>
-            <input type="text" id="messageInput" placeholder="메시지를 입력하세요" style="width: 70%;" />
-            <button onclick="sendMessage()">보내기</button>
-        </div>
-    </div>
-</fieldset>
-
-<style>
-    /* 추가된 CSS */
-    .chat-tabs {
-        display: flex;
-        margin-bottom: 15px;
-        border-bottom: 1px solid #444;
-    }
-    .tab-button {
-        padding: 8px 16px;
-        background: #3a3a3a;
-        border: none;
-        border-radius: 4px 4px 0 0;
-        cursor: pointer;
-        margin-right: 5px;
-    }
-    .tab-button.active {
-        background: #007bff;
-        color: white;
-    }
-    .chat-tab-content {
-        padding: 10px;
-    }
-</style>
-
 <script>
     // 전역 변수
-    let stompClient = null;
-    let currentRoomId = null;
-    let recipientId = null;
-
     function getAuthHeaders() {
         return {
             'Content-Type': 'application/json'
@@ -627,93 +533,6 @@
         }
     }
 
-    // ===== 채팅 API =====
-    async function loadUsers() {
-        try {
-            const res = await axios.get('/api/users', {headers: getAuthHeaders()});
-            const users = res.data;
-            const container = document.getElementById('user-list');
-            container.innerHTML = '';
-
-            users.forEach(user => {
-                const div = document.createElement('div');
-                div.innerHTML = `${user.email}
-                    <button onclick="startDirectChat(${user.id})">[1:1 채팅 시작]</button>`;
-                container.appendChild(div);
-            });
-        } catch(e) {
-            console.error('유저 목록 로드 실패:', e);
-            document.getElementById('user-list').innerHTML = '유저 목록 로드 실패: ' + e;
-        }
-    }
-
-
-
-    async function startDirectChat(otherUserId) {
-        try {
-            const res = await axios.post(`/api/chat/direct/${otherUserId}`, {}, {headers: getAuthHeaders()});
-            const room = res.data;
-            recipientId = room.otherUserId;
-            enterChatRoom(room.roomId, room.otherUserId);
-        } catch (e) {
-            alert('채팅방 생성에 실패했습니다');
-            console.error(e);
-        }
-    }
-
-    async function enterChatRoom(roomId, otherUserId) {
-        currentRoomId = roomId;
-        recipientId = otherUserId;
-        document.getElementById('chat-box').style.display = 'block';
-        document.getElementById('messages').innerHTML = '';
-
-        try {
-            const res = await axios.get(`/api/chat/rooms/${roomId}/messages`, {headers: getAuthHeaders()});
-            res.data.forEach(msg => {
-                appendMessage(`${msg.senderName}: ${msg.content}`);
-            });
-        } catch(e) {
-            console.error('메시지 로드 실패:', e);
-        }
-
-        connectWebSocket();
-    }
-
-    function connectWebSocket() {
-        if (stompClient) stompClient.disconnect();
-
-        const socket = new SockJS('/ws');
-        stompClient = Stomp.over(socket);
-
-        const token = getCookie('accessToken');
-
-        stompClient.connect(
-            {
-                Authorization: 'Bearer ' + token
-            },
-            async () => {
-                stompClient.subscribe('/user/queue/messages', (message) => {
-                    const msg = JSON.parse(message.body);
-                    if (msg.roomId === currentRoomId) {
-                        appendMessage(`${msg.senderName}: ${msg.content}`);
-                    }
-                });
-            },
-            (error) => {
-                console.error("❌ WebSocket 연결 실패", error);
-            }
-        );
-    }
-
-
-    function appendMessage(msg) {
-        const messagesDiv = document.getElementById('messages');
-        const div = document.createElement('div');
-        div.textContent = msg;
-        messagesDiv.appendChild(div);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
     // ===== 공통 함수 =====
     function logout() {
         document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
@@ -721,209 +540,6 @@
         alert('로그아웃되었습니다.');
         window.location.href = '/';
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    function showChatTab(tabName) {
-        // 모든 탭 버튼과 콘텐츠 비활성화
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelectorAll('.chat-tab-content').forEach(content => {
-            content.style.display = 'none';
-        });
-
-        // 선택한 탭 활성화
-        document.querySelector(`.tab-button[onclick="showChatTab('${tabName}')"]`).classList.add('active');
-        document.getElementById(`${tabName}-chat-tab`).style.display = 'block';
-    }
-
-    // 1:1 채팅방 목록 조회
-    async function loadDirectChatRooms() {
-        try {
-            const res = await axios.get('/api/chat/my-rooms/direct', {headers: getAuthHeaders()});
-            const rooms = res.data;
-            const container = document.getElementById('direct-chat-room-list');
-            container.innerHTML = '';
-
-            if (rooms.length === 0) {
-                container.innerHTML = '<p>1:1 채팅방이 없습니다.</p>';
-                return;
-            }
-
-            rooms.forEach(room => {
-                const div = document.createElement('div');
-                div.className = 'chat-room-item';
-                div.innerHTML = `
-                <p><strong>${room.otherUserNickname || '알 수 없는 사용자'}</strong> (${room.otherUserEmail})</p>
-                <button onclick="enterDirectChatRoom('${room.roomId}', ${room.otherUserId})">입장</button>
-            `;
-                container.appendChild(div);
-            });
-        } catch(e) {
-            console.error('1:1 채팅방 목록 조회 실패:', e);
-            document.getElementById('direct-chat-room-list').innerHTML =
-                '<p style="color:red">1:1 채팅방 목록 조회 실패</p>';
-        }
-    }
-
-    // 그룹 채팅방 목록 조회
-    async function loadGroupChatRooms() {
-        try {
-            const res = await axios.get('/api/chat/my-rooms/group', {headers: getAuthHeaders()});
-            const rooms = res.data;
-            const container = document.getElementById('group-chat-room-list');
-            container.innerHTML = '';
-
-            if (rooms.length === 0) {
-                container.innerHTML = '<p>참여 중인 그룹 채팅방이 없습니다.</p>';
-                return;
-            }
-
-            rooms.forEach(room => {
-                const div = document.createElement('div');
-                div.className = 'chat-room-item';
-                div.innerHTML = `
-                <p><strong>${room.groupName || '그룹 채팅방'}</strong></p>
-                <p>참여자: ${room.participants.length}명</p>
-                <button onclick="enterGroupChatRoom('${room.roomId}')">입장</button>
-            `;
-                container.appendChild(div);
-            });
-        } catch(e) {
-            console.error('그룹 채팅방 목록 조회 실패:', e);
-            document.getElementById('group-chat-room-list').innerHTML =
-                '<p style="color:red">그룹 채팅방 목록 조회 실패</p>';
-        }
-    }
-
-    // 1:1 채팅방 입장
-    async function enterDirectChatRoom(roomId, otherUserId) {
-        currentRoomId = roomId;
-        recipientId = otherUserId;
-        document.getElementById('chat-box').style.display = 'block';
-        document.getElementById('messages').innerHTML = '';
-
-        try {
-            const res = await axios.get(`/api/chat/rooms/${roomId}/messages`, {headers: getAuthHeaders()});
-            res.data.forEach(msg => {
-                appendMessage(`${msg.senderName}: ${msg.content}`);
-            });
-        } catch(e) {
-            console.error('메시지 로드 실패:', e);
-        }
-
-        connectDirectWebSocket();
-    }
-
-    // 그룹 채팅방 입장
-    async function enterGroupChatRoom(roomId) {
-        currentRoomId = roomId;
-        recipientId = null; // 그룹 채팅은 recipientId 없음
-        document.getElementById('chat-box').style.display = 'block';
-        document.getElementById('messages').innerHTML = '';
-
-        try {
-            const res = await axios.get(`/api/chat/rooms/${roomId}/messages`, {headers: getAuthHeaders()});
-            res.data.forEach(msg => {
-                appendMessage(`${msg.senderName}: ${msg.content}`);
-            });
-        } catch(e) {
-            console.error('메시지 로드 실패:', e);
-        }
-
-        connectGroupWebSocket(roomId);
-    }
-
-    // 1:1 채팅 웹소켓 연결
-    function connectDirectWebSocket() {
-        if (stompClient) stompClient.disconnect();
-
-        const socket = new SockJS('/ws');
-        stompClient = Stomp.over(socket);
-
-        stompClient.connect(
-            { Authorization: 'Bearer ' + getCookie('accessToken') },
-            () => {
-                stompClient.subscribe('/user/queue/messages', (message) => {
-                    const msg = JSON.parse(message.body);
-                    if (msg.roomId === currentRoomId) {
-                        appendMessage(`${msg.senderName}: ${msg.content}`);
-                    }
-                });
-            },
-            (error) => {
-                console.error("1:1 채팅 연결 실패", error);
-            }
-        );
-    }
-
-    // 그룹 채팅 웹소켓 연결
-    function connectGroupWebSocket(roomId) {
-        if (stompClient) stompClient.disconnect();
-
-        const socket = new SockJS('/ws');
-        stompClient = Stomp.over(socket);
-
-        stompClient.connect(
-            { Authorization: 'Bearer ' + getCookie('accessToken') },
-            () => {
-                stompClient.subscribe(`/sub/chat/room/${roomId}`, (message) => {
-                    const msg = JSON.parse(message.body);
-                    appendMessage(`${msg.senderName}: ${msg.content}`);
-                });
-            },
-            (error) => {
-                console.error("그룹 채팅 연결 실패", error);
-            }
-        );
-    }
-
-    // 메시지 전송 (타입에 따라 분기)
-    function sendMessage() {
-        const input = document.getElementById('messageInput');
-        const content = input.value;
-        if (!content || !currentRoomId) return;
-
-        if (recipientId) { // 1:1 채팅
-            const message = {
-                roomId: currentRoomId,
-                content: content,
-                recipientId: recipientId,
-                type: "TALK"
-            };
-            stompClient.send(`/pub/chat.direct.send/${currentRoomId}`, {}, JSON.stringify(message));
-        } else { // 그룹 채팅
-            const message = {
-                roomId: currentRoomId,
-                content: content,
-                type: "TALK"
-            };
-            stompClient.send(`/pub/chat.group.send/${currentRoomId}`, {}, JSON.stringify(message));
-        }
-
-        input.value = '';
-    }
 </script>
 </body>
 </html>
-
-
-
