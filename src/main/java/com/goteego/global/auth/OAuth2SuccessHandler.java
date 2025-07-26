@@ -62,7 +62,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         // ✅ 리디렉션
 //        response.sendRedirect("/dashboard.html");
-        response.sendRedirect("/integrated.html");
+        response.sendRedirect("/post.html");
 
     }
 }
