@@ -2,198 +2,436 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>GotEEgo 게시판</title>
+    <title>GotEEgo 여행 게시판</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="/js/websocket.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
-            background: #1a1a1a;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
         fieldset {
-            margin-bottom: 20px;
-            border: 1px solid #444;
-            padding: 15px;
-            background: #2d2d2d;
-            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 2px solid #444;
+            padding: 20px;
+            background: rgba(45, 45, 45, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
         legend {
             font-weight: bold;
             color: #00d4ff;
-            font-size: 16px;
+            font-size: 18px;
+            padding: 0 10px;
         }
         button {
             margin: 5px;
-            padding: 8px 12px;
-            background: #007bff;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
+            font-weight: 500;
         }
         button:hover {
-            background: #0056b3;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.4);
         }
-        button.approve { background: #28a745; }
-        button.approve:hover { background: #1e7e34; }
-        button.reject { background: #dc3545; }
-        button.reject:hover { background: #c82333; }
-        input, select {
+        button.approve { 
+            background: linear-gradient(135deg, #28a745, #1e7e34); 
+        }
+        button.approve:hover { 
+            background: linear-gradient(135deg, #1e7e34, #155724); 
+        }
+        button.reject { 
+            background: linear-gradient(135deg, #dc3545, #c82333); 
+        }
+        button.reject:hover { 
+            background: linear-gradient(135deg, #c82333, #a71e2a); 
+        }
+        button.test { 
+            background: linear-gradient(135deg, #ffc107, #e0a800); 
+            color: #212529;
+        }
+        button.test:hover { 
+            background: linear-gradient(135deg, #e0a800, #d39e00); 
+        }
+        input, select, textarea {
             margin: 5px;
-            padding: 8px;
-            border: 1px solid #555;
-            border-radius: 4px;
-            background: #3a3a3a;
+            padding: 10px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background: rgba(58, 58, 58, 0.9);
             color: #e0e0e0;
+            transition: all 0.3s ease;
         }
-        input:focus, select:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #00d4ff;
-            box-shadow: 0 0 5px rgba(0,212,255,0.3);
+            box-shadow: 0 0 8px rgba(0,212,255,0.4);
+            background: rgba(58, 58, 58, 1);
         }
         pre {
-            background: #2a2a2a;
-            padding: 15px;
-            border-radius: 6px;
-            max-height: 300px;
+            background: rgba(42, 42, 42, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #444;
+            border: 1px solid #555;
             color: #e0e0e0;
+            font-size: 13px;
+            line-height: 1.4;
         }
         .section { margin-bottom: 30px; }
         .status {
-            padding: 15px;
-            background: #2d2d2d;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #555;
+            padding: 20px;
+            background: rgba(45, 45, 45, 0.9);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 2px solid #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .schedule-container {
-            display: flex;
-            gap: 20px;
-            margin-top: 15px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-top: 20px;
         }
-        .schedule-left {
-            flex: 2;
-            background: #2d2d2d;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #555;
-        }
-        .schedule-right {
-            flex: 1;
-            background: #2d2d2d;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #555;
+        .schedule-left, .schedule-right {
+            background: rgba(45, 45, 45, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #555;
         }
         .schedule-item {
-            background: #3a3a3a;
-            padding: 10px;
-            margin: 8px 0;
-            border-radius: 6px;
-            border-left: 4px solid #007bff;
+            background: rgba(58, 58, 58, 0.9);
+            padding: 15px;
+            margin: 12px 0;
+            border-radius: 10px;
+            border-left: 5px solid #007bff;
+            transition: all 0.3s ease;
+        }
+        .schedule-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
         }
         .participant-item {
-            background: #3a3a3a;
-            padding: 10px;
-            margin: 8px 0;
-            border-radius: 6px;
+            background: rgba(58, 58, 58, 0.9);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
             border-left: 4px solid #28a745;
         }
         .application-item {
-            background: #3a3a3a;
-            padding: 10px;
-            margin: 8px 0;
-            border-radius: 6px;
+            background: rgba(58, 58, 58, 0.9);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
             border-left: 4px solid #ffc107;
         }
-        h1 { color: #00d4ff; text-align: center; margin-bottom: 30px; }
-        h3 { color: #00d4ff; margin-bottom: 15px; }
+        h1 { 
+            color: #00d4ff; 
+            text-align: center; 
+            margin-bottom: 30px; 
+            font-size: 2.5em;
+            text-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+        }
+        h3 { 
+            color: #00d4ff; 
+            margin-bottom: 15px; 
+            font-size: 1.3em;
+        }
+        h4 {
+            color: #e0e0e0;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
         .action-buttons {
             display: flex;
-            gap: 5px;
-            margin-top: 8px;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
         }
         .action-buttons button {
-            padding: 4px 8px;
+            padding: 6px 12px;
             font-size: 12px;
+        }
+        .notification-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            z-index: 1000;
+        }
+        .notification {
+            background: linear-gradient(135deg, #007bff, #00d4ff);
+            color: white;
+            padding: 18px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .notification:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .notification-content {
+            font-size: 14px;
+        }
+        .notification-sender {
+            font-size: 12px;
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+        .notification-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00d4ff;
+            font-weight: 500;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-recruiting {
+            background: #28a745;
+            color: white;
+        }
+        .status-completed {
+            background: #6c757d;
+            color: white;
+        }
+        .status-before {
+            background: #17a2b8;
+            color: white;
+        }
+        .status-now {
+            background: #fd7e14;
+            color: white;
+        }
+        .test-section {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .error-message {
+            background: rgba(220, 53, 69, 0.2);
+            border: 2px solid #dc3545;
+            color: #f8d7da;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .success-message {
+            background: rgba(40, 167, 69, 0.2);
+            border: 2px solid #28a745;
+            color: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-<h1>✈️ GotEEgo 여행 게시판</h1>
+<div class="container">
+    <h1>✈️ GotEEgo 여행 게시판</h1>
 
-<!-- 로그인 상태 및 로그아웃 -->
-<div class="status">
-    <button onclick="logout()">로그아웃</button>
-    <span id="login-status">로그인 상태 확인 중...</span>
-    <button onclick="location.href='chat.html'" style="float:right;">채팅으로 이동</button>
-</div>
-
-<!-- 사용자 API 섹션 -->
-<fieldset>
-    <legend>👤 사용자 API</legend>
-    <button onclick="getCurrentUser()">내 정보</button>
-    <button onclick="getUserProfile()">프로필</button>
-    <button onclick="getUserStats()">통계</button>
-    <pre id="user-result"></pre>
-</fieldset>
-
-<!-- 여행 게시판 API 섹션 -->
-<fieldset>
-    <legend>✈️ 여행 게시판</legend>
-    <button onclick="getTravelPosts()">게시글 목록</button>
-    <input type="number" id="travelPostId" placeholder="게시글ID" style="width:80px;">
-    <button onclick="getTravelPostDetail()">상세</button>
-    <button onclick="joinTravelPost()">참여신청</button>
-    <br><br>
-    <form id="createTravelPostForm" onsubmit="createTravelPost(event)">
-        <input placeholder="제목" id="tp-title" required>
-        <input placeholder="내용" id="tp-content" required>
-        <input type="date" id="tp-start" required>
-        <input type="date" id="tp-end" required>
-        <input type="number" id="tp-limit" placeholder="인원" required style="width:60px;">
-        <select id="tp-type" required>
-            <option value="BEFORE">사전</option>
-            <option value="NOW">현지</option>
-        </select>
-        <input placeholder="이미지URL" id="tp-img">
-        <label><input type="checkbox" id="tp-add">추가모집</label>
-        <button type="submit">작성</button>
-    </form>
-    <pre id="travel-result"></pre>
-</fieldset>
-
-<!-- 일정관리 API 섹션 -->
-<fieldset>
-    <legend>📅 일정관리</legend>
-    <button onclick="loadScheduleData()">내 일정 새로고침</button>
-
-    <div class="schedule-container">
-        <div class="schedule-left">
-            <h3>📋 내 일정 목록</h3>
-            <div id="schedule-list"></div>
+    <!-- 로그인 상태 및 네비게이션 -->
+    <div class="status">
+        <div>
+            <button onclick="logout()">로그아웃</button>
+            <span id="login-status">로그인 상태 확인 중...</span>
         </div>
-        <div class="schedule-right">
-            <h3>👥 신청자/참여자 관리</h3>
-            <div id="participant-management"></div>
+        <div>
+            <button onclick="location.href='chat.html'" style="margin-right: 10px;">채팅으로 이동</button>
+            <button onclick="location.href='index.html'" class="test">메인으로 이동</button>
         </div>
     </div>
 
-    <pre id="schedule-result"></pre>
-</fieldset>
+    <!-- API 테스트 섹션 -->
+    <div class="test-section">
+        <h3>🧪 API 테스트 도구</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>PostType 선택:</label>
+                <select id="test-postType" onchange="updateTestButtons()">
+                    <option value="BEFORE">사전 여행 (BEFORE)</option>
+                    <option value="NOW">현지 여행 (NOW)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>페이지 크기:</label>
+                <input type="number" id="test-pageSize" value="5" min="1" max="20">
+            </div>
+        </div>
+        <button onclick="testGetTravelPosts()" class="test">게시글 목록 테스트</button>
+        <button onclick="testGetCurrentUser()" class="test">내 정보 테스트</button>
+        <button onclick="testGetMySchedules()" class="test">내 일정 테스트</button>
+        <pre id="test-result"></pre>
+    </div>
+
+    <!-- 사용자 API 섹션 -->
+    <fieldset>
+        <legend>👤 사용자 API</legend>
+        <button onclick="getCurrentUser()">내 정보</button>
+        <button onclick="getUserProfile()">프로필</button>
+        <button onclick="getUserStats()">통계</button>
+        <pre id="user-result"></pre>
+    </fieldset>
+
+    <!-- 여행 게시판 API 섹션 -->
+    <fieldset>
+        <legend>✈️ 여행 게시판</legend>
+        <div class="form-row">
+            <div class="form-group">
+                <label>게시글 타입:</label>
+                <select id="postType-select" onchange="getTravelPosts()">
+                    <option value="BEFORE">사전 여행 (BEFORE)</option>
+                    <option value="NOW">현지 여행 (NOW)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>페이지 크기:</label>
+                <input type="number" id="pageSize-input" value="10" min="1" max="20" onchange="getTravelPosts()">
+            </div>
+        </div>
+        <button onclick="getTravelPosts()">게시글 목록 새로고침</button>
+        <input type="number" id="travelPostId" placeholder="게시글ID" style="width:100px;">
+        <button onclick="getTravelPostDetail()">상세</button>
+        <button onclick="joinTravelPost()">참여신청</button>
+        
+        <div style="margin-top: 20px;">
+            <h4>📝 새 게시글 작성</h4>
+            <form id="createTravelPostForm" onsubmit="createTravelPost(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>제목:</label>
+                        <input placeholder="제목" id="tp-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>게시글 타입:</label>
+                        <select id="tp-type" required>
+                            <option value="BEFORE">사전 여행</option>
+                            <option value="NOW">현지 여행</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>내용:</label>
+                    <textarea placeholder="내용" id="tp-content" required style="width: 100%; height: 80px; resize: vertical;"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>시작 날짜:</label>
+                        <input type="date" id="tp-start" required>
+                    </div>
+                    <div class="form-group">
+                        <label>종료 날짜:</label>
+                        <input type="date" id="tp-end" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>모집 인원:</label>
+                        <input type="number" id="tp-limit" placeholder="인원" required min="1" style="width:100px;">
+                    </div>
+                    <div class="form-group">
+                        <label>이미지 URL:</label>
+                        <input placeholder="이미지URL" id="tp-img">
+                    </div>
+                </div>
+                <button type="submit">게시글 작성</button>
+            </form>
+        </div>
+        <pre id="travel-result"></pre>
+    </fieldset>
+
+    <!-- 일정관리 API 섹션 -->
+    <fieldset>
+        <legend>📅 일정관리</legend>
+        <button onclick="loadScheduleData()">내 일정 새로고침</button>
+
+        <div class="schedule-container">
+            <div class="schedule-left">
+                <h3>📋 내 일정 목록</h3>
+                <div id="schedule-list"></div>
+            </div>
+            <div class="schedule-right">
+                <h3>👥 신청자/참여자 관리</h3>
+                <div id="participant-management"></div>
+            </div>
+        </div>
+
+        <pre id="schedule-result"></pre>
+    </fieldset>
+</div>
 
 <script>
     // 전역 변수
+    let currentPostType = 'BEFORE';
+    let currentPageSize = 10;
+
     function getAuthHeaders() {
-        return {
+        const accessToken = getCookie('accessToken');
+        const headers = {
             'Content-Type': 'application/json'
         };
+        
+        if (accessToken) {
+            headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+        
+        return headers;
     }
 
     // 쿠키에서 특정 값 가져오기
@@ -214,9 +452,87 @@
         const accessToken = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
         document.getElementById('login-status').textContent = accessToken ? '로그인됨' : '로그인 필요';
 
+        // WebSocketManager 초기화 (알림 핸들러 등록)
+        if (typeof initWebSocketManager === 'function') {
+            initWebSocketManager(handleNotification);
+        }
+
         // 페이지 로드 시 자동으로 일정 데이터 로드
         if (accessToken) {
             loadScheduleData();
+            getTravelPosts();
+        }
+
+        // 날짜 기본값 설정
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        document.getElementById('tp-start').value = today.toISOString().split('T')[0];
+        document.getElementById('tp-end').value = tomorrow.toISOString().split('T')[0];
+    };
+
+    function handleNotification(notification) {
+        const container = document.getElementById('notificationContainer') ||
+            document.createElement('div');
+
+        if (!document.getElementById('notificationContainer')) {
+            container.id = 'notificationContainer';
+            container.className = 'notification-container';
+            document.body.appendChild(container);
+        }
+
+        const notiElement = document.createElement('div');
+        notiElement.className = 'notification';
+        notiElement.innerHTML = `
+        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+        <div class="notification-title">${notification.title}</div>
+        <div class="notification-content">${notification.content}</div>
+        <div class="notification-sender">From: ${notification.senderName}</div>
+    `;
+
+        container.appendChild(notiElement);
+
+        // 5초 후 자동으로 사라지게 설정
+        setTimeout(() => {
+            notiElement.style.opacity = '0';
+            setTimeout(() => notiElement.remove(), 300);
+        }, 5000);
+    }
+
+    // ===== API 테스트 함수들 =====
+    function updateTestButtons() {
+        const postType = document.getElementById('test-postType').value;
+        currentPostType = postType;
+    }
+
+    async function testGetTravelPosts() {
+        const postType = document.getElementById('test-postType').value;
+        const pageSize = document.getElementById('test-pageSize').value;
+        
+        try {
+            const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
+            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
+        } catch(e) {
+            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
+        }
+    }
+
+    async function testGetCurrentUser() {
+        try {
+            const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
+            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
+        } catch(e) {
+            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
+        }
+    }
+
+    async function testGetMySchedules() {
+        try {
+            const res = await axios.get('/api/schedule/mine?page=0&size=5', {headers: getAuthHeaders()});
+            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
+        } catch(e) {
+            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
         }
     }
 
@@ -225,29 +541,40 @@
         try {
             const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
             document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { document.getElementById('user-result').textContent = e; }
+        } catch(e) { 
+            document.getElementById('user-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
     }
 
     async function getUserProfile() {
         try {
             const res = await axios.get('/api/users/profile', {headers: getAuthHeaders()});
             document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { document.getElementById('user-result').textContent = e; }
+        } catch(e) { 
+            document.getElementById('user-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
     }
 
     async function getUserStats() {
         try {
             const res = await axios.get('/api/users/stats', {headers: getAuthHeaders()});
             document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { document.getElementById('user-result').textContent = e; }
+        } catch(e) { 
+            document.getElementById('user-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
     }
 
     // ===== 여행 게시판 API =====
     async function getTravelPosts() {
+        const postType = document.getElementById('postType-select').value;
+        const pageSize = document.getElementById('pageSize-input').value;
+        
         try {
-            const res = await axios.get('/api/travel-posts', {headers: getAuthHeaders()});
+            const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
             displayTravelPosts(res.data.content || res.data);
-        } catch(e) { document.getElementById('travel-result').textContent = e; }
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
     }
 
     function displayTravelPosts(posts) {
@@ -255,25 +582,36 @@
         container.innerHTML = '';
 
         if (!posts || posts.length === 0) {
-            container.innerHTML = '<p>등록된 게시글이 없습니다.</p>';
+            container.innerHTML = '<div class="success-message">📝 등록된 게시글이 없습니다.</div>';
             return;
         }
 
         posts.forEach(post => {
             const div = document.createElement('div');
             div.className = 'schedule-item';
+            
+            const postTypeBadge = post.postType === 'BEFORE' ? 
+                '<span class="status-badge status-before">사전여행</span>' : 
+                '<span class="status-badge status-now">현지여행</span>';
+            
+            const recruitmentBadge = post.recruitmentStatus === '모집중' ? 
+                '<span class="status-badge status-recruiting">모집중</span>' : 
+                '<span class="status-badge status-completed">모집완료</span>';
+            
             div.innerHTML = `
                 <h4>${post.title || '제목 없음'}</h4>
-                <p><strong>작성자:</strong> ${post.userEmail || post.userId || 'N/A'}</p>
+                <p><strong>작성자:</strong> ${post.nickname || post.userEmail || 'N/A'}</p>
                 <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
-                <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
-                <p><strong>모집인원:</strong> ${post.recuitLimit || 'N/A'}명</p>
-                <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
+                <p><strong>타입:</strong> ${postTypeBadge}</p>
+                <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
+                <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
+                <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
+                <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
                 <div class="action-buttons">
-                    <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
+                    <button onclick="joinTravelPost(${post.travelPostId || post.id})" class="approve">
                         참여 신청
                     </button>
-                    <button onclick="getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
+                    <button onclick="getTravelPostDetail(${post.travelPostId || post.id})" class="test">
                         상세 보기
                     </button>
                 </div>
@@ -283,23 +621,36 @@
     }
 
     async function getTravelPostDetail(postId) {
-        if (!postId) return alert('게시글ID 입력');
+        if (!postId) {
+            postId = document.getElementById('travelPostId').value;
+            if (!postId) return alert('게시글ID를 입력해주세요');
+        }
+        
         try {
             const res = await axios.get(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
             const post = res.data;
 
             const container = document.getElementById('travel-result');
+            const postTypeBadge = post.postType === 'BEFORE' ? 
+                '<span class="status-badge status-before">사전여행</span>' : 
+                '<span class="status-badge status-now">현지여행</span>';
+            
+            const recruitmentBadge = post.isAddRecruit ? 
+                '<span class="status-badge status-recruiting">모집중</span>' : 
+                '<span class="status-badge status-completed">모집완료</span>';
+            
             container.innerHTML = `
                 <div class="schedule-item">
                     <h3>📋 게시글 상세 정보</h3>
                     <h4>${post.title || '제목 없음'}</h4>
-                    <p><strong>작성자:</strong> ${post.userEmail || post.userId || 'N/A'}</p>
+                    <p><strong>작성자:</strong> ${post.user?.nickname || post.userEmail || 'N/A'}</p>
                     <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
-                    <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
-                    <p><strong>모집인원:</strong> ${post.recuitLimit || 'N/A'}명</p>
-                    <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
+                    <p><strong>타입:</strong> ${postTypeBadge}</p>
+                    <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
+                    <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
                     <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
                     <p><strong>생성일:</strong> ${post.createdAt || 'N/A'}</p>
+                    <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
                     <div class="action-buttons">
                         <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
                             참여 신청
@@ -307,11 +658,17 @@
                     </div>
                 </div>
             `;
-        } catch(e) { document.getElementById('travel-result').textContent = e; }
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
     }
 
     async function joinTravelPost(postId) {
-        if (!postId) return alert('게시글ID 입력');
+        if (!postId) {
+            postId = document.getElementById('travelPostId').value;
+            if (!postId) return alert('게시글ID를 입력해주세요');
+        }
+        
         try {
             const res = await axios.post(`/api/travel-posts/requests/${postId}`, {}, {headers: getAuthHeaders()});
 
@@ -322,7 +679,7 @@
                     <h3>✅ 참여 신청 완료!</h3>
                     <p><strong>신청 ID:</strong> ${res.data.applicationId || 'N/A'}</p>
                     <p><strong>상태:</strong> ${res.data.status || 'PENDING'}</p>
-                    <p><strong>신청일:</strong> ${res.data.requestedAt || new Date().toLocaleString()}</p>
+                    <p><strong>신청일:</strong> ${res.data.createdAt || new Date().toLocaleString()}</p>
                     <p>참여 신청이 성공적으로 완료되었습니다. 작성자의 승인을 기다려주세요.</p>
                 </div>
             `;
@@ -334,9 +691,10 @@
 
         } catch(e) {
             document.getElementById('travel-result').innerHTML = `
-                <div class="schedule-item" style="border-left-color: #dc3545;">
+                <div class="error-message">
                     <h3>❌ 참여 신청 실패</h3>
-                    <p>${e}</p>
+                    <p><strong>에러 메시지:</strong> ${e.response?.data?.message || e.message}</p>
+                    <p><strong>상태 코드:</strong> ${e.response?.status || 'N/A'}</p>
                 </div>
             `;
         }
@@ -349,21 +707,41 @@
             content: document.getElementById('tp-content').value,
             startTime: document.getElementById('tp-start').value,
             endTime: document.getElementById('tp-end').value,
-            recuitLimit: parseInt(document.getElementById('tp-limit').value),
+            recruitLimit: parseInt(document.getElementById('tp-limit').value),
             postType: document.getElementById('tp-type').value,
-            imageUrl: document.getElementById('tp-img').value,
-            isAddRecruit: document.getElementById('tp-add').checked
+            imageUrl: document.getElementById('tp-img').value || null,
+            isAddRecruit: true
         };
+        
         try {
             const res = await axios.post('/api/travel-posts/requests', data, {headers: getAuthHeaders()});
-            document.getElementById('travel-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { document.getElementById('travel-result').textContent = e; }
+            document.getElementById('travel-result').innerHTML = `
+                <div class="success-message">
+                    <h3>✅ 게시글 작성 완료!</h3>
+                    <p><strong>게시글 ID:</strong> ${res.data.travelPostId}</p>
+                    <p><strong>제목:</strong> ${res.data.title}</p>
+                    <p>게시글이 성공적으로 작성되었습니다.</p>
+                </div>
+            `;
+            
+            // 폼 초기화
+            document.getElementById('createTravelPostForm').reset();
+            
+            // 게시글 목록 새로고침
+            setTimeout(() => {
+                getTravelPosts();
+                loadScheduleData();
+            }, 1000);
+            
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
     }
 
     // ===== 일정관리 API =====
     async function loadScheduleData() {
         try {
-            const scheduleRes = await axios.get('/api/schedule/mine', {headers: getAuthHeaders()});
+            const scheduleRes = await axios.get('/api/schedule/mine?page=0&size=10', {headers: getAuthHeaders()});
             displaySchedules(scheduleRes.data);
 
             if (scheduleRes.data && scheduleRes.data.length > 0) {
@@ -372,7 +750,7 @@
             }
         } catch(e) {
             console.error('일정 데이터 로드 실패:', e);
-            document.getElementById('schedule-result').textContent = '일정 데이터 로드 실패: ' + e;
+            document.getElementById('schedule-result').innerHTML = `<div class="error-message">❌ 일정 데이터 로드 실패: ${e.response?.data?.message || e.message}</div>`;
         }
     }
 
@@ -381,18 +759,28 @@
         container.innerHTML = '';
 
         if (!schedules || schedules.length === 0) {
-            container.innerHTML = '<p>등록된 일정이 없습니다.</p>';
+            container.innerHTML = '<div class="success-message">📝 등록된 일정이 없습니다.</div>';
             return;
         }
 
         schedules.forEach(schedule => {
             const div = document.createElement('div');
             div.className = 'schedule-item';
+            
+            const postTypeBadge = schedule.postType === 'BEFORE' ? 
+                '<span class="status-badge status-before">사전여행</span>' : 
+                '<span class="status-badge status-now">현지여행</span>';
+            
+            const recruitmentBadge = schedule.recruitmentStatus === '모집중' ? 
+                '<span class="status-badge status-recruiting">모집중</span>' : 
+                '<span class="status-badge status-completed">모집완료</span>';
+            
             div.innerHTML = `
                 <h4>${schedule.title || '제목 없음'}</h4>
                 <p><strong>기간:</strong> ${schedule.startTime || 'N/A'} ~ ${schedule.endTime || 'N/A'}</p>
-                <p><strong>상태:</strong> ${schedule.postType || 'N/A'}</p>
-                <p><strong>모집인원:</strong> ${schedule.recuitLimit || 'N/A'}명</p>
+                <p><strong>타입:</strong> ${postTypeBadge}</p>
+                <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
+                <p><strong>모집인원:</strong> ${schedule.recruitLimit || 'N/A'}명</p>
                 <button onclick="loadParticipantData(${schedule.travelPostId || schedule.id})" class="approve">
                     참여자 관리
                 </button>
@@ -412,7 +800,7 @@
         } catch(e) {
             console.error('참여자 데이터 로드 실패:', e);
             document.getElementById('participant-management').innerHTML =
-                `<div class="error" style="color: #dc3545;">참여자 데이터 로드 실패: ${e.response?.data?.message || e.message}</div>`;
+                `<div class="error-message">❌ 참여자 데이터 로드 실패: ${e.response?.data?.message || e.message}</div>`;
         }
     }
 
@@ -490,12 +878,11 @@
         }
 
         if (approvedParticipants.length === 0 && pendingApplications.length === 0 && rejectedApplications.length === 0) {
-            container.innerHTML = '<p>참여자나 신청자가 없습니다.</p>';
+            container.innerHTML = '<div class="success-message">📝 참여자나 신청자가 없습니다.</div>';
         }
     }
 
     async function updateParticipantStatus(postId, userId, status) {
-        // 유효성 검사 강화
         if (!postId || !userId || userId === 'undefined') {
             alert('유효하지 않은 요청입니다. postId 또는 userId가 없습니다.');
             return;
@@ -516,8 +903,12 @@
             alert(`${statusText} 처리되었습니다.`);
 
             // 결과 로그
-            document.getElementById('schedule-result').textContent =
-                `상태 변경 성공: ${JSON.stringify(res.data, null, 2)}`;
+            document.getElementById('schedule-result').innerHTML = `
+                <div class="success-message">
+                    <h3>✅ 상태 변경 성공</h3>
+                    <pre>${JSON.stringify(res.data, null, 2)}</pre>
+                </div>
+            `;
         } catch (error) {
             console.error('상태 변경 실패:', error);
 
@@ -526,8 +917,12 @@
                 errorMessage = error.response.data.message || errorMessage;
             }
 
-            document.getElementById('schedule-result').textContent =
-                `상태 변경 실패: ${errorMessage}`;
+            document.getElementById('schedule-result').innerHTML = `
+                <div class="error-message">
+                    <h3>❌ 상태 변경 실패</h3>
+                    <p>${errorMessage}</p>
+                </div>
+            `;
 
             alert(errorMessage);
         }

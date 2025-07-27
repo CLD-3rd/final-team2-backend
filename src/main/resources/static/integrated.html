@@ -144,6 +144,48 @@
             gap: 5px;
             margin-top: 8px;
         }
+        
+        /* 게시판 탭 스타일 */
+        .board-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #444;
+        }
+        .board-tab-content {
+            padding: 10px;
+        }
+        .create-post-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2d2d2d;
+            border-radius: 8px;
+            border: 1px solid #555;
+        }
+        .api-response-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2d2d2d;
+            border-radius: 8px;
+            border: 1px solid #555;
+        }
+        .api-response-section pre {
+            max-height: 300px;
+            font-size: 11px;
+            line-height: 1.4;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .api-response-section h3 {
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+        .success-response {
+            border-left: 4px solid #28a745;
+        }
+        .error-response {
+            border-left: 4px solid #dc3545;
+        }
         .action-buttons button {
             padding: 4px 8px;
             font-size: 12px;
@@ -171,26 +213,50 @@
 <!-- 여행 게시판 API 섹션 -->
 <fieldset>
     <legend>✈️ 여행 게시판</legend>
-    <button onclick="getTravelPosts()">게시글 목록</button>
-    <input type="number" id="travelPostId" placeholder="게시글ID" style="width:80px;">
-    <button onclick="getTravelPostDetail()">상세</button>
-    <button onclick="joinTravelPost()">참여신청</button>
-    <br><br>
-    <form id="createTravelPostForm" onsubmit="createTravelPost(event)">
-        <input placeholder="제목" id="tp-title" required>
-        <input placeholder="내용" id="tp-content" required>
-        <input type="date" id="tp-start" required>
-        <input type="date" id="tp-end" required>
-        <input type="number" id="tp-limit" placeholder="인원" required style="width:60px;">
-        <select id="tp-type" required>
-            <option value="BEFORE">사전</option>
-            <option value="NOW">현지</option>
-        </select>
-        <input placeholder="이미지URL" id="tp-img">
-        <label><input type="checkbox" id="tp-add">추가모집</label>
-        <button type="submit">작성</button>
-    </form>
-    <pre id="travel-result"></pre>
+    
+    <!-- 게시판 탭 -->
+    <div class="board-tabs">
+        <button class="tab-button active" onclick="showBoardTab('before')">📋 사전 여행</button>
+        <button class="tab-button" onclick="showBoardTab('now')">🌍 현지 여행</button>
+    </div>
+
+    <!-- 사전 여행 게시판 -->
+    <div id="before-board-tab" class="board-tab-content">
+        <h3>📋 사전 여행 게시판</h3>
+        <button onclick="getTravelPosts('BEFORE')">사전 여행 목록</button>
+        <div id="before-travel-result"></div>
+    </div>
+
+    <!-- 현지 여행 게시판 -->
+    <div id="now-board-tab" class="board-tab-content" style="display:none;">
+        <h3>🌍 현지 여행 게시판</h3>
+        <button onclick="getTravelPosts('NOW')">현지 여행 목록</button>
+        <div id="now-travel-result"></div>
+    </div>
+
+    <!-- 게시글 작성 폼 -->
+    <div class="create-post-section">
+        <h3>✏️ 게시글 작성</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
+            💡 현재 활성화된 탭에 따라 게시글 타입이 자동 설정됩니다.
+        </p>
+        <form id="createTravelPostForm" onsubmit="createTravelPost(event)">
+            <input placeholder="제목" id="tp-title" required>
+            <input placeholder="내용" id="tp-content" required>
+            <input type="date" id="tp-start" required>
+            <input type="date" id="tp-end" required>
+            <input type="number" id="tp-limit" placeholder="인원" required style="width:60px;">
+            <input type="hidden" id="tp-type">
+            <input placeholder="이미지URL" id="tp-img">
+            <button type="submit">작성</button>
+        </form>
+    </div>
+
+    <!-- API 응답 표시 영역 -->
+    <div class="api-response-section">
+        <h3>📡 API 응답</h3>
+        <pre id="travel-result"></pre>
+    </div>
 </fieldset>
 
 <!-- 일정관리 API 섹션 -->
@@ -308,6 +374,9 @@
         const accessToken = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
         document.getElementById('login-status').textContent = accessToken ? '로그인됨' : '로그인 필요';
 
+        // 기본 탭 설정 (사전 여행)
+        document.getElementById('tp-type').value = 'BEFORE';
+
         // 페이지 로드 시 자동으로 일정 데이터 로드
         if (accessToken) {
             loadScheduleData();
@@ -341,15 +410,37 @@
     }
 
     // ===== 여행 게시판 API =====
-    async function getTravelPosts() {
+    async function getTravelPosts(postType = 'BEFORE') {
         try {
-            const res = await axios.get('/api/travel-posts', {headers: getAuthHeaders()});
-            displayTravelPosts(res.data.content || res.data);
-        } catch(e) { document.getElementById('travel-result').textContent = e; }
+            const res = await axios.get(`/api/travel-posts?postType=${postType}`, {headers: getAuthHeaders()});
+            
+            // API 응답 표시 (성공)
+            const responseElement = document.getElementById('travel-result');
+            responseElement.className = 'success-response';
+            responseElement.textContent = `✅ 성공 응답 (${new Date().toLocaleTimeString()}):\n${JSON.stringify(res.data, null, 2)}`;
+            
+            // 게시글 목록 표시
+            const containerId = postType === 'BEFORE' ? 'before-travel-result' : 'now-travel-result';
+            displayTravelPosts(res.data.content || res.data, containerId);
+        } catch(e) { 
+            // 상세한 에러 정보 표시
+            const errorInfo = {
+                message: e.message,
+                status: e.response?.status,
+                statusText: e.response?.statusText,
+                data: e.response?.data,
+                url: e.config?.url,
+                method: e.config?.method,
+                timestamp: new Date().toISOString()
+            };
+            const responseElement = document.getElementById('travel-result');
+            responseElement.className = 'error-response';
+            responseElement.textContent = `❌ 에러 응답 (${new Date().toLocaleTimeString()}):\n${JSON.stringify(errorInfo, null, 2)}`;
+        }
     }
 
-    function displayTravelPosts(posts) {
-        const container = document.getElementById('travel-result');
+    function displayTravelPosts(posts, containerId = 'travel-result') {
+        const container = document.getElementById(containerId);
         container.innerHTML = '';
 
         if (!posts || posts.length === 0) {
@@ -372,21 +463,25 @@
             filteredPosts.forEach(post => {
                 const div = document.createElement('div');
                 div.className = 'schedule-item';
+                div.style.cursor = 'pointer';
+                div.onclick = () => getTravelPostDetail(post.id || post.travelPostId);
                 div.innerHTML = `
                     <h4>${post.title || '제목 없음'}</h4>
                     <p><strong>작성자:</strong> ${post.user ? post.user.nickname : 'N/A'}</p>
                     <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
                     <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
                     <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
+                    <p><strong>모집상태:</strong> <span style="color: ${post.isAddRecruit ? '#28a745' : '#dc3545'}">${post.recruitmentStatus || (post.isAddRecruit ? '🟢 모집중' : '🔴 모집완료')}</span></p>
                     <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
                     <div class="action-buttons">
-                        <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
+                        <button onclick="event.stopPropagation(); joinTravelPost(${post.id || post.travelPostId})" class="approve">
                             참여 신청
                         </button>
-                        <button onclick="getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
+                        <button onclick="event.stopPropagation(); getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
                             상세 보기
                         </button>
                     </div>
+                    <p style="color: #666; font-size: 12px; margin-top: 5px;">💡 클릭하면 상세 페이지로 이동합니다</p>
                 `;
                 container.appendChild(div);
             });
@@ -396,21 +491,25 @@
             posts.forEach(post => {
                 const div = document.createElement('div');
                 div.className = 'schedule-item';
+                div.style.cursor = 'pointer';
+                div.onclick = () => getTravelPostDetail(post.id || post.travelPostId);
                 div.innerHTML = `
                     <h4>${post.title || '제목 없음'}</h4>
                     <p><strong>작성자:</strong> ${post.user ? post.user.nickname : 'N/A'}</p>
                     <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
                     <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
                     <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
+                    <p><strong>모집상태:</strong> <span style="color: ${post.isAddRecruit ? '#28a745' : '#dc3545'}">${post.recruitmentStatus || (post.isAddRecruit ? '🟢 모집중' : '🔴 모집완료')}</span></p>
                     <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
                     <div class="action-buttons">
-                        <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
+                        <button onclick="event.stopPropagation(); joinTravelPost(${post.id || post.travelPostId})" class="approve">
                             참여 신청
                         </button>
-                        <button onclick="getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
+                        <button onclick="event.stopPropagation(); getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
                             상세 보기
                         </button>
                     </div>
+                    <p style="color: #666; font-size: 12px; margin-top: 5px;">💡 클릭하면 상세 페이지로 이동합니다</p>
                 `;
                 container.appendChild(div);
             });
@@ -423,12 +522,20 @@
             const res = await axios.get(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
             const post = res.data;
             
+            // API 응답 표시 (성공)
+            const responseElement = document.getElementById('travel-result');
+            responseElement.className = 'success-response';
+            responseElement.textContent = `✅ 성공 응답 (${new Date().toLocaleTimeString()}):\n${JSON.stringify(res.data, null, 2)}`;
+            
             // 현재 사용자 정보 가져오기
             const userRes = await axios.get('/api/users/me', {headers: getAuthHeaders()});
             const currentUser = userRes.data;
             const isAuthor = post.user && post.user.id === currentUser.id;
 
-            const container = document.getElementById('travel-result');
+            // 상세 정보를 현재 활성화된 탭에 표시
+            const activeTab = document.querySelector('.board-tab-content:not([style*="display: none"])');
+            const container = activeTab.querySelector('[id$="-travel-result"]');
+            
             container.innerHTML = `
                 <div class="schedule-item">
                     <h3>📋 게시글 상세 정보</h3>
@@ -437,6 +544,7 @@
                     <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
                     <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
                     <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
+                    <p><strong>모집상태:</strong> <span style="color: ${post.isAddRecruit ? '#28a745' : '#dc3545'}">${post.recruitmentStatus || (post.isAddRecruit ? '🟢 모집중' : '🔴 모집완료')}</span></p>
                     <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
                     <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
                     <p><strong>생성일:</strong> ${post.createdAt || 'N/A'}</p>
@@ -446,19 +554,42 @@
                             <button onclick="showEditForm(${post.id || post.travelPostId})" class="approve">수정</button>
                             <button onclick="deleteTravelPost(${post.id || post.travelPostId})" class="reject">삭제</button>
                         ` : ''}
+                        <button onclick="goBackToList()" class="approve">목록으로 돌아가기</button>
                     </div>
                 </div>
             `;
-        } catch(e) { document.getElementById('travel-result').textContent = e; }
+        } catch(e) { 
+            // 상세한 에러 정보 표시
+            const errorInfo = {
+                message: e.message,
+                status: e.response?.status,
+                statusText: e.response?.statusText,
+                data: e.response?.data,
+                url: e.config?.url,
+                method: e.config?.method,
+                timestamp: new Date().toISOString()
+            };
+            document.getElementById('travel-result').textContent = `❌ 에러 응답:\n${JSON.stringify(errorInfo, null, 2)}`;
+        }
     }
 
     async function joinTravelPost(postId) {
         if (!postId) return alert('게시글ID 입력');
+        
+        // 요청 데이터 로깅
+        console.log('참여신청 요청:', { postId, headers: getAuthHeaders() });
+        
         try {
             const res = await axios.post(`/api/travel-posts/requests/${postId}`, {}, {headers: getAuthHeaders()});
 
+            // API 응답 표시 (성공)
+            const responseElement = document.getElementById('travel-result');
+            responseElement.className = 'success-response';
+            responseElement.textContent = `✅ 성공 응답 (${new Date().toLocaleTimeString()}):\n${JSON.stringify(res.data, null, 2)}`;
+
             // 성공 메시지 표시
-            const container = document.getElementById('travel-result');
+            const activeTab = document.querySelector('.board-tab-content:not([style*="display: none"])');
+            const container = activeTab.querySelector('[id$="-travel-result"]');
             container.innerHTML = `
                 <div class="schedule-item" style="border-left-color: #28a745;">
                     <h3>✅ 참여 신청 완료!</h3>
@@ -466,6 +597,9 @@
                     <p><strong>상태:</strong> ${res.data.status || 'PENDING'}</p>
                     <p><strong>신청일:</strong> ${res.data.requestedAt || new Date().toLocaleString()}</p>
                     <p>참여 신청이 성공적으로 완료되었습니다. 작성자의 승인을 기다려주세요.</p>
+                    <div class="action-buttons">
+                        <button onclick="goBackToList()" class="approve">목록으로 돌아가기</button>
+                    </div>
                 </div>
             `;
 
@@ -475,10 +609,43 @@
             }, 1000);
 
         } catch(e) {
-            document.getElementById('travel-result').innerHTML = `
+            // 상세한 에러 정보 로깅
+            console.error('참여신청 에러 상세:', {
+                message: e.message,
+                status: e.response?.status,
+                statusText: e.response?.statusText,
+                data: e.response?.data,
+                headers: e.response?.headers,
+                config: e.config
+            });
+
+            // API 에러 응답 표시 (상세)
+            const errorInfo = {
+                message: e.message,
+                status: e.response?.status,
+                statusText: e.response?.statusText,
+                data: e.response?.data,
+                url: e.config?.url,
+                method: e.config?.method,
+                timestamp: new Date().toISOString()
+            };
+            
+            document.getElementById('travel-result').textContent = `❌ 에러 응답:\n${JSON.stringify(errorInfo, null, 2)}`;
+            
+            const activeTab = document.querySelector('.board-tab-content:not([style*="display: none"])');
+            const container = activeTab.querySelector('[id$="-travel-result"]');
+            container.innerHTML = `
                 <div class="schedule-item" style="border-left-color: #dc3545;">
                     <h3>❌ 참여 신청 실패</h3>
-                    <p>${e}</p>
+                    <p><strong>에러 메시지:</strong> ${e.response?.data?.message || e.message}</p>
+                    <p><strong>상태 코드:</strong> ${e.response?.status || 'N/A'} ${e.response?.statusText || ''}</p>
+                    <p><strong>요청 URL:</strong> ${e.config?.url || 'N/A'}</p>
+                    <p><strong>요청 메서드:</strong> ${e.config?.method || 'N/A'}</p>
+                    ${e.response?.data?.timestamp ? `<p><strong>서버 시간:</strong> ${e.response.data.timestamp}</p>` : ''}
+                    <div class="action-buttons">
+                        <button onclick="goBackToList()" class="approve">목록으로 돌아가기</button>
+                        <button onclick="retryJoinTravelPost(${postId})" class="approve">다시 시도</button>
+                    </div>
                 </div>
             `;
         }
@@ -494,27 +661,54 @@
             recruitLimit: parseInt(document.getElementById('tp-limit').value),
             postType: document.getElementById('tp-type').value,
             imageUrl: document.getElementById('tp-img').value,
-            isAddRecruit: document.getElementById('tp-add').checked
+            isAddRecruit: false // 추가모집 기능 제거
         };
         try {
             const res = await axios.post('/api/travel-posts/requests', data, {headers: getAuthHeaders()});
-            document.getElementById('travel-result').innerHTML = `
+            
+            // API 응답 표시
+            document.getElementById('travel-result').textContent = JSON.stringify(res.data, null, 2);
+            
+            // 성공 메시지 표시
+            const activeTab = document.querySelector('.board-tab-content:not([style*="display: none"])');
+            const container = activeTab.querySelector('[id$="-travel-result"]');
+            container.innerHTML = `
                 <div class="schedule-item" style="border-left-color: #28a745;">
                     <h3>✅ 게시글 작성 완료!</h3>
                     <p><strong>제목:</strong> ${res.data.title}</p>
                     <p><strong>게시글 ID:</strong> ${res.data.travelPostId}</p>
                     <p>게시글이 성공적으로 작성되었습니다.</p>
+                    <div class="action-buttons">
+                        <button onclick="getTravelPosts('${data.postType}')" class="approve">목록 보기</button>
+                    </div>
                 </div>
             `;
             // 폼 초기화
             document.getElementById('createTravelPostForm').reset();
-            // 게시글 목록 새로고침
-            setTimeout(() => getTravelPosts(), 1000);
         } catch(e) { 
-            document.getElementById('travel-result').innerHTML = `
+            // 상세한 에러 정보 표시
+            const errorInfo = {
+                message: e.message,
+                status: e.response?.status,
+                statusText: e.response?.statusText,
+                data: e.response?.data,
+                url: e.config?.url,
+                method: e.config?.method,
+                requestData: data,
+                timestamp: new Date().toISOString()
+            };
+            document.getElementById('travel-result').textContent = `❌ 에러 응답:\n${JSON.stringify(errorInfo, null, 2)}`;
+            
+            const activeTab = document.querySelector('.board-tab-content:not([style*="display: none"])');
+            const container = activeTab.querySelector('[id$="-travel-result"]');
+            container.innerHTML = `
                 <div class="schedule-item" style="border-left-color: #dc3545;">
                     <h3>❌ 게시글 작성 실패</h3>
-                    <p>${e.response?.data?.message || e.message}</p>
+                    <p><strong>에러 메시지:</strong> ${e.response?.data?.message || e.message}</p>
+                    <p><strong>상태 코드:</strong> ${e.response?.status || 'N/A'} ${e.response?.statusText || ''}</p>
+                    <p><strong>요청 URL:</strong> ${e.config?.url || 'N/A'}</p>
+                    <p><strong>요청 메서드:</strong> ${e.config?.method || 'N/A'}</p>
+                    ${e.response?.data?.timestamp ? `<p><strong>서버 시간:</strong> ${e.response.data.timestamp}</p>` : ''}
                 </div>
             `;
         }
@@ -541,7 +735,6 @@
                             <option value="NOW" ${post.postType === 'NOW' ? 'selected' : ''}>현지</option>
                         </select>
                         <input placeholder="이미지URL" id="edit-img" value="${post.imageUrl || ''}">
-                        <label><input type="checkbox" id="edit-add" ${post.isAddRecruit ? 'checked' : ''}>추가모집</label>
                         <div class="action-buttons">
                             <button type="submit" class="approve">수정 완료</button>
                             <button type="button" onclick="getTravelPostDetail(${postId})" class="reject">취소</button>
@@ -570,7 +763,7 @@
             recruitLimit: parseInt(document.getElementById('edit-limit').value),
             postType: document.getElementById('edit-type').value,
             imageUrl: document.getElementById('edit-img').value,
-            isAddRecruit: document.getElementById('edit-add').checked
+            isAddRecruit: false // 추가모집 기능 제거
         };
         try {
             const res = await axios.put(`/api/travel-posts/${postId}`, data, {headers: getAuthHeaders()});
@@ -715,6 +908,7 @@
                 div.innerHTML = `
                     <p><strong>${participant.participantNickname || participant.userId || '사용자'}</strong></p>
                     <p>상태: ${participant.status || 'APPROVED'}</p>
+                    <p>신청일: ${participant.createdAt || 'N/A'}</p>
                     <div class="action-buttons">
                         <button onclick="updateParticipantStatus(${postId}, ${participant.userId || participant.participantId}, 'REJECTED')" class="reject">
                             참여 취소
@@ -738,6 +932,7 @@
                 div.innerHTML = `
                     <p><strong>${application.participantNickname || application.userId || '사용자'}</strong></p>
                     <p>신청일: ${application.createdAt || application.requestedAt || 'N/A'}</p>
+                    <p>신청 ID: ${application.applicationId || 'N/A'}</p>
                     <div class="action-buttons">
                         <button onclick="updateParticipantStatus(${postId}, ${application.participantId || application.userId}, 'APPROVED')" class="approve">
                             승인
@@ -765,6 +960,7 @@
                 div.innerHTML = `
                     <p><strong>${application.participantNickname || application.userId || '사용자'}</strong></p>
                     <p>신청일: ${application.createdAt || application.requestedAt || 'N/A'}</p>
+                    <p>신청 ID: ${application.applicationId || 'N/A'}</p>
                     <p>상태: ${application.status}</p>
                 `;
                 rejectedDiv.appendChild(div);
@@ -784,12 +980,19 @@
             return;
         }
 
+        console.log('참여자 상태 변경 요청:', { postId, userId, status });
+
         try {
             const res = await axios.put(
                 `/api/schedule/${postId}/participants/${userId}`,
                 { status: status },
                 { headers: getAuthHeaders() }
             );
+
+            // API 응답 표시 (성공)
+            const responseElement = document.getElementById('schedule-result');
+            responseElement.className = 'success-response';
+            responseElement.textContent = `✅ 상태 변경 성공 (${new Date().toLocaleTimeString()}):\n${JSON.stringify(res.data, null, 2)}`;
 
             // 성공 시 UI 업데이트
             await loadParticipantData(postId);
@@ -798,19 +1001,29 @@
             const statusText = status === 'APPROVED' ? '승인' : status === 'REJECTED' ? '거절' : '상태 변경';
             alert(`${statusText} 처리되었습니다.`);
 
-            // 결과 로그
-            document.getElementById('schedule-result').textContent =
-                `상태 변경 성공: ${JSON.stringify(res.data, null, 2)}`;
         } catch (error) {
             console.error('상태 변경 실패:', error);
+
+            // 상세한 에러 정보 표시
+            const errorInfo = {
+                message: error.message,
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                url: error.config?.url,
+                method: error.config?.method,
+                requestData: { postId, userId, status },
+                timestamp: new Date().toISOString()
+            };
+
+            const responseElement = document.getElementById('schedule-result');
+            responseElement.className = 'error-response';
+            responseElement.textContent = `❌ 상태 변경 실패 (${new Date().toLocaleTimeString()}):\n${JSON.stringify(errorInfo, null, 2)}`;
 
             let errorMessage = '상태 변경에 실패했습니다.';
             if (error.response) {
                 errorMessage = error.response.data.message || errorMessage;
             }
-
-            document.getElementById('schedule-result').textContent =
-                `상태 변경 실패: ${errorMessage}`;
 
             alert(errorMessage);
         }
@@ -942,6 +1155,52 @@
         // 선택한 탭 활성화
         document.querySelector(`.tab-button[onclick="showChatTab('${tabName}')"]`).classList.add('active');
         document.getElementById(`${tabName}-chat-tab`).style.display = 'block';
+    }
+
+    // 게시판 탭 전환
+    function showBoardTab(tabName) {
+        // 모든 탭 버튼과 콘텐츠 비활성화
+        document.querySelectorAll('.board-tabs .tab-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelectorAll('.board-tab-content').forEach(content => {
+            content.style.display = 'none';
+        });
+
+        // 선택한 탭 활성화
+        document.querySelector(`.board-tabs .tab-button[onclick="showBoardTab('${tabName}')"]`).classList.add('active');
+        document.getElementById(`${tabName}-board-tab`).style.display = 'block';
+        
+        // postType 자동 설정
+        const postType = tabName === 'before' ? 'BEFORE' : 'NOW';
+        document.getElementById('tp-type').value = postType;
+        
+        // 해당 탭의 게시글 목록 로드
+        if (tabName === 'before') {
+            getTravelPosts('BEFORE');
+        } else if (tabName === 'now') {
+            getTravelPosts('NOW');
+        }
+    }
+
+    // 목록으로 돌아가기
+    function goBackToList() {
+        const activeTab = document.querySelector('.board-tab-content:not([style*="display: none"])');
+        const container = activeTab.querySelector('[id$="-travel-result"]');
+        container.innerHTML = '';
+        
+        // 현재 활성화된 탭에 따라 목록 다시 로드
+        if (activeTab.id === 'before-board-tab') {
+            getTravelPosts('BEFORE');
+        } else if (activeTab.id === 'now-board-tab') {
+            getTravelPosts('NOW');
+        }
+    }
+
+    // 참여신청 다시 시도
+    function retryJoinTravelPost(postId) {
+        console.log('참여신청 다시 시도:', postId);
+        joinTravelPost(postId);
     }
 
     // 1:1 채팅방 목록 조회

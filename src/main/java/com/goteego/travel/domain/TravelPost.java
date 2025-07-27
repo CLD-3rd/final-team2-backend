@@ -129,4 +129,19 @@ public class TravelPost extends BaseEntity {
         return this.viewCount == 0; // 간단한 예시, 실제로는 참가자 수 확인 필요
     }
 
+    // 모집 상태 확인 (모집 중인지 완료인지)
+    public boolean isRecruiting() {
+        return this.isAddRecruit;
+    }
+
+    // 모집 상태 업데이트
+    public void updateRecruitStatus(boolean isRecruiting) {
+        this.isAddRecruit = isRecruiting;
+    }
+
+    // 모집 완료 여부 확인 (참가자 수 기반)
+    public boolean isRecruitmentFull(int approvedParticipantCount) {
+        return approvedParticipantCount >= this.recruitLimit;
+    }
+
 } 

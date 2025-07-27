@@ -32,7 +32,7 @@ public class TravelPostCreateRequest {
     @Min(value = 1, message = "모집 인원은 1명 이상이어야 합니다")
     private Integer recruitLimit; // recuitLimit -> recruitLimit로 오타 수정
     
-    @Pattern(regexp = "^(BEFORE|AFTER)$", message = "게시글 타입은 BEFORE 또는 AFTER여야 합니다")
+    @Pattern(regexp = "^(BEFORE|NOW)$", message = "게시글 타입은 BEFORE 또는 NOW여야 합니다")
     private String postType;
     
     private Boolean isAddRecruit;

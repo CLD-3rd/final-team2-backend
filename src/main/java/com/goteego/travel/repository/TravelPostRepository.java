@@ -18,12 +18,12 @@ import java.util.Optional;
 public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     
     /**
-     * 게시글 타입별 목록 조회 (현재 사용자 제외)
+     * 게시글 타입별 목록 조회 (현재 사용자 제외) - N+1 문제 해결을 위한 JOIN FETCH
      */
-    @Query("SELECT tp FROM TravelPost tp WHERE tp.postType = :postType And tp.user.id != :currentUserId ORDER BY tp.createdAt DESC")
-    Page<TravelPost> findByPostTypeOrderByCreatedAtDesc(@Param("postType") PostType postType,
-                                                        @Param("currentUserId") Long currentUserId,
-                                                        Pageable pageable);
+    @Query("SELECT tp FROM TravelPost tp JOIN FETCH tp.user WHERE tp.postType = :postType AND tp.user.id != :currentUserId ORDER BY tp.createdAt DESC")
+    Page<TravelPost> findByPostTypeOrderByCreatedAtDescWithUser(@Param("postType") PostType postType,
+                                                               @Param("currentUserId") Long currentUserId,
+                                                               Pageable pageable);
     
     /**
      * 게시글 타입 별 개수 조회 (현재 사용자 제외)
@@ -69,10 +69,7 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     void deleteUserReviews(@Param("postId") Long postId);
     
     /**
-     * 내 일정 조회 (작성자이거나 참여자인 게시글)
-     * 
-     * @param userId 사용자 ID
-     * @return 내가 관련된 여행 게시글 목록
+     * 내 일정 조회 (작성자이거나 참여자인 게시글) - N+1 문제 해결을 위한 JOIN FETCH
      */
     @Query(value = """
         SELECT DISTINCT tp.* FROM travel_posts tp
@@ -81,6 +78,18 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
         ORDER BY tp.start_time ASC
         """, nativeQuery = true)
     List<TravelPost> findMySchedules(@Param("userId") Long userId);
+
+    /**
+     * 내 일정 조회 (작성자이거나 참여자인 게시글) - N+1 문제 해결을 위한 JOIN FETCH
+     */
+    @Query("""
+        SELECT DISTINCT tp FROM TravelPost tp 
+        JOIN FETCH tp.user 
+        LEFT JOIN ParticipationApplication pa ON tp.id = pa.travelPost.id 
+        WHERE tp.user.id = :userId OR pa.user.id = :userId 
+        ORDER BY tp.startTime ASC
+        """)
+    List<TravelPost> findMySchedulesWithUser(@Param("userId") Long userId);
     
     /**
      * 특정 게시글의 참여자 목록 조회 (REJECTED 제외)

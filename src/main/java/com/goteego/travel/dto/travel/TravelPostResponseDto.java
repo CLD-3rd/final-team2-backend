@@ -28,6 +28,7 @@ public class TravelPostResponseDto {
     private Integer recruitLimit;
     private Long viewCount;
     private Boolean isAddRecruit;
+    private String recruitmentStatus; // 모집상태 (모집중/모집완료)
     private LocalDateTime createdAt;
     private Double similarity; // 유사도 점수
     
@@ -45,6 +46,7 @@ public class TravelPostResponseDto {
                 .recruitLimit(travelPost.getRecruitLimit())
                 .viewCount(travelPost.getViewCount())
                 .isAddRecruit(travelPost.getIsAddRecruit())
+                .recruitmentStatus(travelPost.getIsAddRecruit() ? "모집중" : "모집완료")
                 .createdAt(travelPost.getCreatedAt())
                 .similarity(similarity)
                 .build();

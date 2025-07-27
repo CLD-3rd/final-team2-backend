@@ -42,7 +42,7 @@ public class ScheduleService {
      * 내 일정 조회 (작성자이거나 참여자인 게시글)
      */
     public List<TravelPostResponseDto> getMySchedules(Long userId, int page, int size) {
-        List<TravelPost> allSchedules = travelPostRepository.findMySchedules(userId);
+        List<TravelPost> allSchedules = travelPostRepository.findMySchedulesWithUser(userId);
         
         // 페이징 처리
         int start = page * size;
@@ -118,7 +118,10 @@ public class ScheduleService {
             }
         }
 
-        // 6. DTO 변환
+        // 6. 모집 상태 업데이트
+        updateRecruitmentStatus(travelPost);
+
+        // 7. DTO 변환
         return ParticipationApplicationResponseDto.from(participationApplication, participant);
     }
 
@@ -244,5 +247,25 @@ public class ScheduleService {
         Optional<ParticipationApplication> applicationOpt = participationApplicationRepository
                 .findByTravelPostIdAndUserId(travelPostId, userId);
         return applicationOpt.isPresent();
+    }
+
+    /**
+     * 모집 상태 업데이트
+     * 승인된 참가자 수를 확인하여 모집 완료 여부를 결정
+     * 
+     * @param travelPost 여행 게시글
+     */
+    private void updateRecruitmentStatus(TravelPost travelPost) {
+        Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(
+            travelPost.getId(), ParticipationStatus.APPROVED);
+        
+        // 승인된 참가자 수가 모집 인원에 도달하면 모집 완료
+        boolean isRecruiting = approvedCount < travelPost.getRecruitLimit();
+        travelPost.updateRecruitStatus(isRecruiting);
+        
+        travelPostRepository.save(travelPost);
+        
+        log.info("모집 상태 업데이트 - travelPostId: {}, approvedCount: {}, recruitLimit: {}, isRecruiting: {}", 
+                travelPost.getId(), approvedCount, travelPost.getRecruitLimit(), isRecruiting);
     }
 } 

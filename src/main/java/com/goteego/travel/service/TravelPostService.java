@@ -1,9 +1,7 @@
 package com.goteego.travel.service;
 
 import com.goteego.chat.domain.ChatRoom;
-import com.goteego.chat.repository.ChatRoomRepository;
 import com.goteego.chat.service.ChatRoomService;
-import com.goteego.chat.service.ChatService;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.global.error.exception.BusinessException;
@@ -31,9 +29,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import com.goteego.user.domain.OauthInfo;
@@ -63,12 +61,10 @@ public class TravelPostService {
     public PageResponseDto<TravelPostResponseDto> getTravelPosts(PostType postType, int page, int size, Long currentUserId) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, currentUserId, pageable);
+        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDescWithUser(postType, currentUserId, pageable);
         
-        // 실제 유사도 계산을 포함한 DTO 변환
-        List<TravelPostResponseDto> content = travelPostPage.getContent().stream()
-                .map(travelPost -> convertToDto(travelPost, currentUserId))
-                .collect(Collectors.toList());
+        // N+1 문제 해결: 한 번에 모든 유사도 계산
+        List<TravelPostResponseDto> content = convertToDtoList(travelPostPage.getContent(), currentUserId);
         
         return PageResponseDto.<TravelPostResponseDto>builder()
                 .content(content)
@@ -81,65 +77,14 @@ public class TravelPostService {
                 .build();
     }
     
-    // 내부 메서드 -> TravelPost를 DTO로 변환 (유사도 계산 포함)
-    private TravelPostResponseDto convertToDto(TravelPost travelPost, Long currentUserId) {
-        // 실제 사용자 정보 조회 (예외 처리 추가)
-
-        User author = userService.getUserById(travelPost.getUser().getId());
-        Long authorId = author.getId();
-        String authorNickname = author.getNickname();
 
 
-        // 실제 벡터 유사도 계산
-        Double similarity = calculateUserSimilarity(currentUserId, authorId);
-
-        // 반환용 DTO 변환
-        return TravelPostResponseDto.from(travelPost, currentUserId, authorNickname, similarity);
-    }
 
 
-    // 내부 메서드 -> 두 사용자 간의 벡터 유사도 계산
-    private Double calculateUserSimilarity(Long currentUserId, Long targetUserId) {
-        if (currentUserId == null || currentUserId.equals(targetUserId)) {
-            return 1.0; // 자기 자신과의 유사도는 1.0
-        }
-        
-        try {
-            log.debug("=== 유사도 계산 시작 ===");
-            log.debug("currentUserId: {}, targetUserId: {}", currentUserId, targetUserId);
-            
-            // 현재 사용자의 임베딩 조회
-            Optional<UserEmbedding> currentUserEmbedding = userEmbeddingRepository.findByUserId(currentUserId);
-            
-            if (currentUserEmbedding.isEmpty()) {
-                log.warn("현재 사용자 임베딩이 없어서 기본값 0.5 반환");
-                return 0.5;
-            }
 
 
-            // 한 번의 쿼리로 모든 유사도 계산
-            List<Object[]> similarities = userEmbeddingRepository.calculateAllSimilarities(currentUserEmbedding.get().getUserEmbedding(), currentUserId);
-            
-            // targetUserId에 해당하는 유사도 찾기
-            for (Object[] result : similarities) {
-                Long userId = (Long) result[0];
-                Double distance = (Double) result[1];
-                Double similarity = (Double) result[2];
-                
-                if (userId.equals(targetUserId)) {
-                    log.debug("찾은 유사도 - userId: {}, distance: {}, similarity: {}", userId, distance, similarity);
-                    return similarity;
-                }
-            }
-            
-            log.warn("대상 사용자 임베딩이 없어서 기본값 0.5 반환");
-            return 0.5;
-            
-        } catch (Exception e) {
-            log.error("유사도 계산 중 에러 발생: {}", e.getMessage(), e);
-            return 0.5;
-        }
-    }
+
+
 
 
     /**
@@ -221,44 +166,7 @@ public class TravelPostService {
         return ParticipationApplicationResponseDto.from(savedApplication, user);
     }
 
-    // 내부 로직
-    private void validateJoinTravelPost(TravelPost travelPost, User currentUser) {
-        Long travelPostId = travelPost.getId();
-        Long currentUserId = currentUser.getId();
 
-        // 자기 자신의 게시글에는 신청 불가
-        if (travelPost.getUser().getId().equals(currentUserId)) {
-            throw new BusinessException(ErrorCode.SELF_APPLICATION_NOT_ALLOWED);
-        }
-
-        // 중복 신청 방지
-        if (participationApplicationRepository.existsByTravelPostIdAndUserId(travelPostId, currentUserId)) {
-            throw new BusinessException(ErrorCode.ALREADY_APPLIED);
-        }
-
-        // 모집 마감 여부 확인
-        Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(travelPostId, ParticipationStatus.APPROVED);
-        if (approvedCount >= travelPost.getRecruitLimit()) {
-            throw new BusinessException(ErrorCode.RECRUITMENT_FULL);
-        }
-    }
-
-    // 내부 로직
-    private User getSafeUserInfo(Long userId) {
-        try {
-            return userService.getUserById(userId);
-        } catch (Exception e) {
-            log.warn("사용자 정보 조회 실패 - userId: {}, error: {}", userId, e.getMessage());
-            return User.builder()
-                    .nickname("알 수 없는 사용자")
-                    .profileImgUrl("")
-                    .role(UserRole.USER)
-                    .oauthInfo(OauthInfo.builder().build())
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-        }
-    }
 
 
     // =====================================================준형======================================================= //
@@ -292,19 +200,6 @@ public class TravelPostService {
         return travelPostRepository.save(travelPost);
     }
 
-    // 내부 로직 - 권한 확인 및 게시글 조회
-    private TravelPost findTravelPostWithAuthorization(Long travelPostId, Long userId) {
-        TravelPost travelPost = travelPostRepository.findById(travelPostId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
-        
-        // 권한 확인 - 작성자만 수정 가능
-        if (!travelPost.isAuthor(userId)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_POST_UPDATE);
-        }
-        
-        return travelPost;
-    }
-    
     /**
      * 여행 게시글 삭제
      */
@@ -321,7 +216,81 @@ public class TravelPostService {
         return "게시글이 성공적으로 삭제되었습니다. (ID: " + travelPostId + ")";
     }
 
-    // 내부 로직 - 삭제 권한 확인 및 게시글 조회
+    // =====================================================내부 로직======================================================= //
+
+    /**
+     * 참가 신청 검증 로직
+     * - 자기 자신의 게시글 신청 방지
+     * - 중복 신청 방지  
+     * - 모집 마감 여부 확인
+     */
+    private void validateJoinTravelPost(TravelPost travelPost, User currentUser) {
+        Long travelPostId = travelPost.getId();
+        Long currentUserId = currentUser.getId();
+
+        // 자기 자신의 게시글에는 신청 불가
+        if (travelPost.getUser().getId().equals(currentUserId)) {
+            throw new BusinessException(ErrorCode.SELF_APPLICATION_NOT_ALLOWED);
+        }
+
+        // 중복 신청 방지
+        if (participationApplicationRepository.existsByTravelPostIdAndUserId(travelPostId, currentUserId)) {
+            throw new BusinessException(ErrorCode.ALREADY_APPLIED);
+        }
+
+        // 모집 마감 여부 확인
+        Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(travelPostId, ParticipationStatus.APPROVED);
+        if (approvedCount >= travelPost.getRecruitLimit()) {
+            // 모집 완료 상태로 업데이트
+            travelPost.updateRecruitStatus(false);
+            travelPostRepository.save(travelPost);
+            throw new BusinessException(ErrorCode.RECRUITMENT_FULL);
+        }
+    }
+
+    /**
+     * 안전한 사용자 정보 조회
+     * - 조회 실패 시 기본 사용자 객체 반환
+     */
+    private User getSafeUserInfo(Long userId) {
+        try {
+            return userService.getUserById(userId);
+        } catch (Exception e) {
+            log.warn("사용자 정보 조회 실패 - userId: {}, error: {}", userId, e.getMessage());
+            return User.builder()
+                    .nickname("알 수 없는 사용자")
+                    .profileImgUrl("")
+                    .role(UserRole.USER)
+                    .oauthInfo(OauthInfo.builder().build())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+        }
+    }
+
+    /**
+     * 수정 권한 확인 및 게시글 조회
+     * - 게시글 존재 여부 확인
+     * - 작성자 권한 확인
+     */
+    private TravelPost findTravelPostWithAuthorization(Long travelPostId, Long userId) {
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
+        
+        // 권한 확인 - 작성자만 수정 가능
+        if (!travelPost.isAuthor(userId)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_POST_UPDATE);
+        }
+        
+        return travelPost;
+    }
+
+    /**
+     * 삭제 권한 확인 및 게시글 조회
+     * - 게시글 존재 여부 확인
+     * - 작성자 권한 확인
+     * - 삭제 가능 여부 확인
+     */
     private TravelPost findTravelPostForDeletion(Long travelPostId, Long userId) {
         TravelPost travelPost = travelPostRepository.findById(travelPostId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
@@ -339,10 +308,91 @@ public class TravelPostService {
         return travelPost;
     }
 
-    // 내부 로직 - 관련 데이터 삭제
+    /**
+     * 관련 데이터 삭제
+     * - 참가 신청 데이터 삭제
+     * - 사용자 리뷰 데이터 삭제
+     */
     private void deleteRelatedData(Long travelPostId) {
         travelPostRepository.deleteParticipationApplications(travelPostId);
         travelPostRepository.deleteUserReviews(travelPostId);
+    }
+
+    /**
+     * N+1 문제 해결: 리스트 전체를 한 번에 처리
+     * - 모든 작성자 ID 수집
+     * - 배치 유사도 계산
+     * - DTO 변환
+     */
+    private List<TravelPostResponseDto> convertToDtoList(List<TravelPost> travelPosts, Long currentUserId) {
+        if (travelPosts.isEmpty()) {
+            return List.of();
+        }
+        
+        // 모든 작성자 ID 수집
+        List<Long> authorIds = travelPosts.stream()
+                .map(tp -> tp.getUser().getId())
+                .distinct()
+                .collect(Collectors.toList());
+        
+        // 한 번에 모든 유사도 계산
+        Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
+        
+        // DTO 변환
+        return travelPosts.stream()
+                .map(tp -> {
+                    Long authorId = tp.getUser().getId();
+                    String authorNickname = tp.getUser().getNickname();
+                    Double similarity = similarityMap.getOrDefault(authorId, 0.5);
+                    return TravelPostResponseDto.from(tp, currentUserId, authorNickname, similarity);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * N+1 문제 해결: 여러 사용자에 대한 유사도를 한 번에 계산
+     * - 현재 사용자 임베딩 조회
+     * - 배치 유사도 계산
+     * - 결과를 Map으로 변환
+     */
+    private Map<Long, Double> calculateSimilaritiesForUsers(Long currentUserId, List<Long> targetUserIds) {
+        if (currentUserId == null || targetUserIds.isEmpty()) {
+            return Map.of();
+        }
+        
+        try {
+            log.debug("=== 다중 유사도 계산 시작 ===");
+            log.debug("currentUserId: {}, targetUserIds: {}", currentUserId, targetUserIds);
+            
+            // 현재 사용자의 임베딩 조회
+            Optional<UserEmbedding> currentUserEmbedding = userEmbeddingRepository.findByUserId(currentUserId);
+            
+            if (currentUserEmbedding.isEmpty()) {
+                log.warn("현재 사용자 임베딩이 없어서 기본값 0.5 반환");
+                return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
+            }
+
+            // 한 번의 쿼리로 모든 유사도 계산
+            List<Object[]> similarities = userEmbeddingRepository.calculateAllSimilarities(currentUserEmbedding.get().getUserEmbedding(), currentUserId);
+            
+            // 결과를 Map으로 변환
+            Map<Long, Double> similarityMap = similarities.stream()
+                    .filter(result -> targetUserIds.contains((Long) result[0]))
+                    .collect(Collectors.toMap(
+                            result -> (Long) result[0],
+                            result -> (Double) result[2]
+                    ));
+            
+            // 누락된 사용자들에 대해 기본값 설정
+            targetUserIds.forEach(id -> similarityMap.putIfAbsent(id, 0.5));
+            
+            log.debug("계산된 유사도 맵: {}", similarityMap);
+            return similarityMap;
+            
+        } catch (Exception e) {
+            log.error("다중 유사도 계산 중 에러 발생: {}", e.getMessage(), e);
+            return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
+        }
     }
 
 
