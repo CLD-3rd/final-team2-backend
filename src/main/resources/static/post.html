@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <title>GotEEgo 게시판</title>
     <link rel="stylesheet" href="/css/post.css">
+    <link rel="stylesheet" href="/css/notification.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="/js/shared-websocket.js"></script>
 </head>
 <body>
 <h1>✈️ GotEEgo 여행 게시판</h1>
@@ -428,75 +430,34 @@
 
     <!-- 웹 소켓 초기화 -->
 
-    // 전역 변수 (모든 페이지에서 공유)
-    window.stompClient = null;
-    window.wsSessionId = null;
-
-    // 웹소켓 초기화 함수
-    function initWebSocket() {
-        console.log("post.html: 웹소켓 초기화 시도...");
-        if (window.stompClient && window.stompClient.connected) {
-            return;
-        }
-
-        const socket = new SockJS('/ws');
-        window.stompClient = Stomp.over(socket);
-
-        window.stompClient.connect(
-            { Authorization: 'Bearer ' + getCookie('accessToken') },
-            () => {
-                // 연결 성공 시 세션 ID 저장 (MPA에서 다른 페이지에서 재사용)
-                window.wsSessionId = 'user-' + Date.now();
-                localStorage.setItem('wsSessionId', window.wsSessionId);
-
-                // 공통 알림 구독
-                window.stompClient.subscribe('/user/queue/notifications', (message) => {
-                    const notification = JSON.parse(message.body);
-                    showNotification(notification);
-                });
-
-                console.log("WebSocket Connected!");
-            },
-            (error) => {
-                console.error("WebSocket 연결 실패:", error);
-            }
-        );
-    }
-
-    // 알림 표시 함수
+    // 공통 알림 표시 함수 (유지)
     function showNotification(notification) {
         const notificationDiv = document.createElement('div');
         notificationDiv.className = 'notification';
         notificationDiv.innerHTML = `
-            <strong>${notification.title || '새 알림'}</strong>
-            <p>${notification.content}</p>
-            <small>${new Date(notification.createdAt).toLocaleString()}</small>
-        `;
+        <strong>${notification.title || '새 알림'}</strong>
+        <p>${notification.content}</p>
+        <small>${new Date(notification.createdAt).toLocaleString()}</small>
+    `;
         document.body.appendChild(notificationDiv);
 
-        // 5초 후 자동 제거
-        setTimeout(() => {
-            notificationDiv.remove();
-        }, 5000);
+        setTimeout(() => notificationDiv.remove(), 5000);
     }
 
-    // 페이지 로드 시 웹소켓 초기화
-    window.onload = function() {
+    // 수정된 페이지 로드 함수
+    window.onload = async function() {
         const accessToken = getCookie('accessToken');
         document.getElementById('login-status').textContent = accessToken ? '로그인됨' : '로그인 필요';
 
         if (accessToken) {
-            initWebSocket();
-            loadScheduleData();
+            try {
+                await window.wsManager.connect(); // 공통 WebSocketManager 사용
+                loadScheduleData();
+            } catch (error) {
+                console.error("웹소켓 연결 실패:", error);
+            }
         }
     };
-
-    // 페이지 언로드 시 구독만 해제 (연결은 유지)
-    window.addEventListener('beforeunload', () => {
-        if (window.stompClient) {
-            window.stompClient.unsubscribe('notifications');
-        }
-    });
 
 </script>
 </body>
