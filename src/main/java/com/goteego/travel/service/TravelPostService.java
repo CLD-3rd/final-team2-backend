@@ -17,8 +17,7 @@ import com.goteego.travel.dto.PageResponseDto;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
 import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
-import com.goteego.recommendation.domain.UserEmbedding;
-import com.goteego.recommendation.repository.UserEmbeddingRepository;
+import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import com.goteego.user.domain.OauthInfo;
 import com.goteego.user.domain.UserRole;
@@ -50,7 +48,7 @@ public class TravelPostService {
     
     private final TravelPostRepository travelPostRepository;
     private final ParticipationApplicationRepository participationApplicationRepository;
-    private final UserEmbeddingRepository userEmbeddingRepository;
+    private final RecommendationService recommendationService;
     private final UserService userService;
     private final ChatRoomService chatRoomService;
     
@@ -351,48 +349,11 @@ public class TravelPostService {
 
     /**
      * N+1 문제 해결: 여러 사용자에 대한 유사도를 한 번에 계산
-     * - 현재 사용자 임베딩 조회
-     * - 배치 유사도 계산
+     * - RecommendationService의 배치 메서드 활용
      * - 결과를 Map으로 변환
      */
     private Map<Long, Double> calculateSimilaritiesForUsers(Long currentUserId, List<Long> targetUserIds) {
-        if (currentUserId == null || targetUserIds.isEmpty()) {
-            return Map.of();
-        }
-        
-        try {
-            log.debug("=== 다중 유사도 계산 시작 ===");
-            log.debug("currentUserId: {}, targetUserIds: {}", currentUserId, targetUserIds);
-            
-            // 현재 사용자의 임베딩 조회
-            Optional<UserEmbedding> currentUserEmbedding = userEmbeddingRepository.findByUserId(currentUserId);
-            
-            if (currentUserEmbedding.isEmpty()) {
-                log.warn("현재 사용자 임베딩이 없어서 기본값 0.5 반환");
-                return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
-            }
-
-            // 한 번의 쿼리로 모든 유사도 계산
-            List<Object[]> similarities = userEmbeddingRepository.calculateAllSimilarities(currentUserEmbedding.get().getUserEmbedding(), currentUserId);
-            
-            // 결과를 Map으로 변환
-            Map<Long, Double> similarityMap = similarities.stream()
-                    .filter(result -> targetUserIds.contains((Long) result[0]))
-                    .collect(Collectors.toMap(
-                            result -> (Long) result[0],
-                            result -> (Double) result[2]
-                    ));
-            
-            // 누락된 사용자들에 대해 기본값 설정
-            targetUserIds.forEach(id -> similarityMap.putIfAbsent(id, 0.5));
-            
-            log.debug("계산된 유사도 맵: {}", similarityMap);
-            return similarityMap;
-            
-        } catch (Exception e) {
-            log.error("다중 유사도 계산 중 에러 발생: {}", e.getMessage(), e);
-            return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
-        }
+        return recommendationService.calculateSimilaritiesForUsers(currentUserId, targetUserIds);
     }
 
 

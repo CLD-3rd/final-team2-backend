@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 추천 시스템 서비스
@@ -144,5 +146,55 @@ public class RecommendationService {
      */
     public List<UserEmbedding> getUserEmbeddings(List<Long> userIds) {
         return userEmbeddingRepository.findByUserIdIn(userIds);
+    }
+
+    /**
+     * 여러 사용자에 대한 유사도를 한 번에 계산 (배치 처리)
+     * 
+     * @param currentUserId 현재 사용자 ID
+     * @param targetUserIds 대상 사용자 ID 목록
+     * @return 사용자 ID와 유사도 점수의 Map
+     */
+    public Map<Long, Double> calculateSimilaritiesForUsers(Long currentUserId, List<Long> targetUserIds) {
+        if (currentUserId == null || targetUserIds.isEmpty()) {
+            return Map.of();
+        }
+        
+        try {
+            log.debug("=== 배치 유사도 계산 시작 ===");
+            log.debug("currentUserId: {}, targetUserIds: {}", currentUserId, targetUserIds);
+            
+            // 현재 사용자의 임베딩 조회
+            Optional<UserEmbedding> currentUserEmbedding = userEmbeddingRepository.findByUserId(currentUserId);
+            
+            if (currentUserEmbedding.isEmpty()) {
+                log.warn("현재 사용자 임베딩이 없어서 기본값 0.5 반환");
+                return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
+            }
+
+            // 한 번의 쿼리로 모든 유사도 계산
+            List<Object[]> similarities = userEmbeddingRepository.calculateAllSimilarities(
+                currentUserEmbedding.get().getUserEmbedding(), 
+                currentUserId
+            );
+            
+            // 결과를 Map으로 변환
+            Map<Long, Double> similarityMap = similarities.stream()
+                    .filter(result -> targetUserIds.contains((Long) result[0]))
+                    .collect(Collectors.toMap(
+                            result -> (Long) result[0],
+                            result -> (Double) result[2]
+                    ));
+            
+            // 누락된 사용자들에 대해 기본값 설정
+            targetUserIds.forEach(id -> similarityMap.putIfAbsent(id, 0.5));
+            
+            log.debug("계산된 유사도 맵: {}", similarityMap);
+            return similarityMap;
+            
+        } catch (Exception e) {
+            log.error("배치 유사도 계산 중 에러 발생: {}", e.getMessage(), e);
+            return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
+        }
     }
 } 
