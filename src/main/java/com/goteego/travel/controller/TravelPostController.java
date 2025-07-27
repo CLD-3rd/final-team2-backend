@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 
 @Slf4j
@@ -54,7 +55,7 @@ public class TravelPostController {
      * @return 생성된 여행 게시글
      */
     @PostMapping("/requests")
-    public ResponseEntity<TravelPostResponseDto> createTravelPost(@RequestBody TravelPostCreateRequest requestDto, @AuthenticationPrincipal User user) {
+    public ResponseEntity<TravelPostResponseDto> createTravelPost(@Valid @RequestBody TravelPostCreateRequest requestDto, @AuthenticationPrincipal User user) {
 
         User currentUser = userService.getUserById(user.getId());
         TravelPostResponseDto travelPostResponseDto = travelPostService.registerTravelPost(currentUser, requestDto);
@@ -126,23 +127,13 @@ public class TravelPostController {
     @PutMapping("/{travelPostId}")
     public ResponseEntity<TravelPost> updateTravelPost(
             @PathVariable("travelPostId") Long travelPostId,
-            @RequestBody TravelPostUpdateRequest requestDto,
+            @Valid @RequestBody TravelPostUpdateRequest requestDto,
             @AuthenticationPrincipal User user) {
 
         Long currentUserId = user.getId();
 
-        TravelPost travelPost = travelPostService.updateTravelPost(
-            travelPostId,
-            currentUserId,
-            requestDto.getTitle(),
-            requestDto.getContent(),
-            requestDto.getStartTime(),
-            requestDto.getEndTime(),
-            requestDto.getImageUrl(),
-            requestDto.getRecuitLimit(),
-            PostType.valueOf(requestDto.getPostType().toUpperCase()),
-            requestDto.getIsAddRecruit()
-        );
+        // 새로운 DTO 기반 메서드 사용
+        TravelPost travelPost = travelPostService.updateTravelPost(travelPostId, currentUserId, requestDto);
 
         log.info("여행 게시글 수정 - travelPostId: {}, title: {}, userId: {}",
                 travelPostId, travelPost.getTitle(), currentUserId);

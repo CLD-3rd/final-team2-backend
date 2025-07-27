@@ -6,12 +6,15 @@ import com.goteego.chat.service.ChatRoomService;
 import com.goteego.chat.service.ChatService;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.error.exception.BusinessException;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.domain.enumerate.ParticipationStatus;
 import com.goteego.travel.domain.enumerate.PostType;
+
 import com.goteego.travel.dto.travel.TravelPostCreateRequest;
 import com.goteego.travel.dto.travel.TravelPostResponseDto;
+import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.travel.dto.PageResponseDto;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
 import com.goteego.travel.repository.TravelPostRepository;
@@ -144,8 +147,8 @@ public class TravelPostService {
      */
     @Transactional
     public TravelPost getTravelPostDetail(Long postId) {
-
-        TravelPost travelPost = travelPostRepository.findById(postId).orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
+        TravelPost travelPost = travelPostRepository.findById(postId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
 
         // 조회수 증가
         travelPost.incrementViewCount();
@@ -176,7 +179,7 @@ public class TravelPostService {
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .imageUrl(request.getImageUrl())
-                .recruitLimit(request.getRecuitLimit())
+                .recruitLimit(request.getRecruitLimit())
                 .postType(PostType.valueOf(request.getPostType().toUpperCase()))
                 .isAddRecruit(request.getIsAddRecruit())
                 .build();
@@ -225,18 +228,18 @@ public class TravelPostService {
 
         // 자기 자신의 게시글에는 신청 불가
         if (travelPost.getUser().getId().equals(currentUserId)) {
-            throw new RuntimeException("자신의 게시글에는 참가 신청할 수 없습니다.");
+            throw new BusinessException(ErrorCode.SELF_APPLICATION_NOT_ALLOWED);
         }
 
         // 중복 신청 방지
         if (participationApplicationRepository.existsByTravelPostIdAndUserId(travelPostId, currentUserId)) {
-            throw new RuntimeException("이미 참가 신청한 게시글입니다.");
+            throw new BusinessException(ErrorCode.ALREADY_APPLIED);
         }
 
         // 모집 마감 여부 확인
         Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(travelPostId, ParticipationStatus.APPROVED);
         if (approvedCount >= travelPost.getRecruitLimit()) {
-            throw new RuntimeException("모집 인원이 마감되었습니다.");
+            throw new BusinessException(ErrorCode.RECRUITMENT_FULL);
         }
     }
 
@@ -280,27 +283,26 @@ public class TravelPostService {
      * 여행 게시글 수정
      */
     @Transactional
-    public TravelPost updateTravelPost(Long travelPostId, Long userId, String title, String content,
-                                       LocalDate startTime, LocalDate endTime, String imageUrl,
-                                       Integer recuitLimit, PostType postType, Boolean isAddRecruit) {
+    public TravelPost updateTravelPost(Long travelPostId, Long userId, TravelPostUpdateRequest request) {
+        TravelPost travelPost = findTravelPostWithAuthorization(travelPostId, userId);
+        
+        // 게시글 수정 (도메인 객체의 비즈니스 로직 활용)
+        travelPost.update(request);
+        
+        return travelPostRepository.save(travelPost);
+    }
 
-        Optional<TravelPost> travelPostOpt = travelPostRepository.findById(travelPostId);
-        
-        if (travelPostOpt.isEmpty()) {
-            throw new RuntimeException("Travel post not found with id: " + travelPostId);
-        }
-        
-        TravelPost travelPost = travelPostOpt.get();
+    // 내부 로직 - 권한 확인 및 게시글 조회
+    private TravelPost findTravelPostWithAuthorization(Long travelPostId, Long userId) {
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
         
         // 권한 확인 - 작성자만 수정 가능
         if (!travelPost.isAuthor(userId)) {
-            throw new RuntimeException("Only the author can update the travel post");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_POST_UPDATE);
         }
         
-        // 게시글 수정
-        travelPost.update(title, content, startTime, endTime, imageUrl, recuitLimit, postType, isAddRecruit);
-        
-        return travelPostRepository.save(travelPost);
+        return travelPost;
     }
     
     /**
@@ -308,27 +310,39 @@ public class TravelPostService {
      */
     @Transactional
     public String deleteTravelPost(Long travelPostId, Long userId) {
-        Optional<TravelPost> travelPostOpt = travelPostRepository.findById(travelPostId);
-        
-        if (travelPostOpt.isEmpty()) {
-            throw new RuntimeException("Travel post not found with id: " + travelPostId);
-        }
-        
-        TravelPost travelPost = travelPostOpt.get();
-        
-        // 권한 확인 - 작성자만 삭제 가능
-        if (!travelPost.isAuthor(userId)) {
-            throw new RuntimeException("Only the author can delete the travel post");
-        }
+        TravelPost travelPost = findTravelPostForDeletion(travelPostId, userId);
         
         // 참조 데이터 삭제
-        travelPostRepository.deleteParticipationApplications(travelPostId);
-        travelPostRepository.deleteUserReviews(travelPostId);
+        deleteRelatedData(travelPostId);
         
         // 게시글 삭제
         travelPostRepository.delete(travelPost);
         
         return "게시글이 성공적으로 삭제되었습니다. (ID: " + travelPostId + ")";
+    }
+
+    // 내부 로직 - 삭제 권한 확인 및 게시글 조회
+    private TravelPost findTravelPostForDeletion(Long travelPostId, Long userId) {
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
+        
+        // 권한 확인 - 작성자만 삭제 가능
+        if (!travelPost.isAuthor(userId)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_POST_DELETE);
+        }
+        
+        // 삭제 가능 여부 확인 (도메인 로직 활용)
+        if (!travelPost.canBeDeleted()) {
+            throw new BusinessException(ErrorCode.INVALID_POST_DATA);
+        }
+        
+        return travelPost;
+    }
+
+    // 내부 로직 - 관련 데이터 삭제
+    private void deleteRelatedData(Long travelPostId) {
+        travelPostRepository.deleteParticipationApplications(travelPostId);
+        travelPostRepository.deleteUserReviews(travelPostId);
     }
 
 

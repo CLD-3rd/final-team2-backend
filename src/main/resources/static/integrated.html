@@ -319,7 +319,11 @@
         try {
             const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
             document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { document.getElementById('user-result').textContent = e; }
+            return res.data;
+        } catch(e) { 
+            document.getElementById('user-result').textContent = e; 
+            throw e;
+        }
     }
 
     async function getUserProfile() {
@@ -353,26 +357,63 @@
             return;
         }
 
-        posts.forEach(post => {
-            const div = document.createElement('div');
-            div.className = 'schedule-item';
-            div.innerHTML = `
-                <h4>${post.title || '제목 없음'}</h4>
-                <p><strong>작성자:</strong> ${post.userEmail || post.userId || 'N/A'}</p>
-                <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
-                <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
-                <p><strong>모집인원:</strong> ${post.recuitLimit || 'N/A'}명</p>
-                <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
-                <div class="action-buttons">
-                    <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
-                        참여 신청
-                    </button>
-                    <button onclick="getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
-                        상세 보기
-                    </button>
-                </div>
-            `;
-            container.appendChild(div);
+        // 현재 사용자 정보 가져오기 (비동기로 처리)
+        getCurrentUser().then(currentUser => {
+            const filteredPosts = posts.filter(post => {
+                // 내가 작성한 게시글은 제외
+                return !(post.user && post.user.id === currentUser.id);
+            });
+
+            if (filteredPosts.length === 0) {
+                container.innerHTML = '<p>참여 가능한 게시글이 없습니다.</p>';
+                return;
+            }
+
+            filteredPosts.forEach(post => {
+                const div = document.createElement('div');
+                div.className = 'schedule-item';
+                div.innerHTML = `
+                    <h4>${post.title || '제목 없음'}</h4>
+                    <p><strong>작성자:</strong> ${post.user ? post.user.nickname : 'N/A'}</p>
+                    <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
+                    <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
+                    <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
+                    <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
+                    <div class="action-buttons">
+                        <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
+                            참여 신청
+                        </button>
+                        <button onclick="getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
+                            상세 보기
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }).catch(error => {
+            console.error('사용자 정보 조회 실패:', error);
+            // 사용자 정보 조회 실패 시 모든 게시글 표시
+            posts.forEach(post => {
+                const div = document.createElement('div');
+                div.className = 'schedule-item';
+                div.innerHTML = `
+                    <h4>${post.title || '제목 없음'}</h4>
+                    <p><strong>작성자:</strong> ${post.user ? post.user.nickname : 'N/A'}</p>
+                    <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
+                    <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
+                    <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
+                    <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
+                    <div class="action-buttons">
+                        <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
+                            참여 신청
+                        </button>
+                        <button onclick="getTravelPostDetail(${post.id || post.travelPostId})" class="approve">
+                            상세 보기
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
         });
     }
 
@@ -381,23 +422,30 @@
         try {
             const res = await axios.get(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
             const post = res.data;
+            
+            // 현재 사용자 정보 가져오기
+            const userRes = await axios.get('/api/users/me', {headers: getAuthHeaders()});
+            const currentUser = userRes.data;
+            const isAuthor = post.user && post.user.id === currentUser.id;
 
             const container = document.getElementById('travel-result');
             container.innerHTML = `
                 <div class="schedule-item">
                     <h3>📋 게시글 상세 정보</h3>
                     <h4>${post.title || '제목 없음'}</h4>
-                    <p><strong>작성자:</strong> ${post.userEmail || post.userId || 'N/A'}</p>
+                    <p><strong>작성자:</strong> ${post.user ? post.user.nickname : 'N/A'}</p>
                     <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
                     <p><strong>상태:</strong> ${post.postType || 'N/A'}</p>
-                    <p><strong>모집인원:</strong> ${post.recuitLimit || 'N/A'}명</p>
+                    <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
                     <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
                     <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
                     <p><strong>생성일:</strong> ${post.createdAt || 'N/A'}</p>
                     <div class="action-buttons">
-                        <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
-                            참여 신청
-                        </button>
+                        ${!isAuthor ? `<button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">참여 신청</button>` : ''}
+                        ${isAuthor ? `
+                            <button onclick="showEditForm(${post.id || post.travelPostId})" class="approve">수정</button>
+                            <button onclick="deleteTravelPost(${post.id || post.travelPostId})" class="reject">삭제</button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -443,15 +491,130 @@
             content: document.getElementById('tp-content').value,
             startTime: document.getElementById('tp-start').value,
             endTime: document.getElementById('tp-end').value,
-            recuitLimit: parseInt(document.getElementById('tp-limit').value),
+            recruitLimit: parseInt(document.getElementById('tp-limit').value),
             postType: document.getElementById('tp-type').value,
             imageUrl: document.getElementById('tp-img').value,
             isAddRecruit: document.getElementById('tp-add').checked
         };
         try {
             const res = await axios.post('/api/travel-posts/requests', data, {headers: getAuthHeaders()});
-            document.getElementById('travel-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { document.getElementById('travel-result').textContent = e; }
+            document.getElementById('travel-result').innerHTML = `
+                <div class="schedule-item" style="border-left-color: #28a745;">
+                    <h3>✅ 게시글 작성 완료!</h3>
+                    <p><strong>제목:</strong> ${res.data.title}</p>
+                    <p><strong>게시글 ID:</strong> ${res.data.travelPostId}</p>
+                    <p>게시글이 성공적으로 작성되었습니다.</p>
+                </div>
+            `;
+            // 폼 초기화
+            document.getElementById('createTravelPostForm').reset();
+            // 게시글 목록 새로고침
+            setTimeout(() => getTravelPosts(), 1000);
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `
+                <div class="schedule-item" style="border-left-color: #dc3545;">
+                    <h3>❌ 게시글 작성 실패</h3>
+                    <p>${e.response?.data?.message || e.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    // 게시글 수정 폼 표시
+    async function showEditForm(postId) {
+        try {
+            const res = await axios.get(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
+            const post = res.data;
+
+            const container = document.getElementById('travel-result');
+            container.innerHTML = `
+                <div class="schedule-item">
+                    <h3>✏️ 게시글 수정</h3>
+                    <form id="editTravelPostForm" onsubmit="updateTravelPost(event, ${postId})">
+                        <input placeholder="제목" id="edit-title" value="${post.title || ''}" required>
+                        <input placeholder="내용" id="edit-content" value="${post.content || ''}" required>
+                        <input type="date" id="edit-start" value="${post.startTime || ''}" required>
+                        <input type="date" id="edit-end" value="${post.endTime || ''}" required>
+                        <input type="number" id="edit-limit" placeholder="인원" value="${post.recruitLimit || ''}" required style="width:60px;">
+                        <select id="edit-type" required>
+                            <option value="BEFORE" ${post.postType === 'BEFORE' ? 'selected' : ''}>사전</option>
+                            <option value="NOW" ${post.postType === 'NOW' ? 'selected' : ''}>현지</option>
+                        </select>
+                        <input placeholder="이미지URL" id="edit-img" value="${post.imageUrl || ''}">
+                        <label><input type="checkbox" id="edit-add" ${post.isAddRecruit ? 'checked' : ''}>추가모집</label>
+                        <div class="action-buttons">
+                            <button type="submit" class="approve">수정 완료</button>
+                            <button type="button" onclick="getTravelPostDetail(${postId})" class="reject">취소</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `
+                <div class="schedule-item" style="border-left-color: #dc3545;">
+                    <h3>❌ 수정 폼 로드 실패</h3>
+                    <p>${e.response?.data?.message || e.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    // 게시글 수정
+    async function updateTravelPost(e, postId) {
+        e.preventDefault();
+        const data = {
+            title: document.getElementById('edit-title').value,
+            content: document.getElementById('edit-content').value,
+            startTime: document.getElementById('edit-start').value,
+            endTime: document.getElementById('edit-end').value,
+            recruitLimit: parseInt(document.getElementById('edit-limit').value),
+            postType: document.getElementById('edit-type').value,
+            imageUrl: document.getElementById('edit-img').value,
+            isAddRecruit: document.getElementById('edit-add').checked
+        };
+        try {
+            const res = await axios.put(`/api/travel-posts/${postId}`, data, {headers: getAuthHeaders()});
+            document.getElementById('travel-result').innerHTML = `
+                <div class="schedule-item" style="border-left-color: #28a745;">
+                    <h3>✅ 게시글 수정 완료!</h3>
+                    <p><strong>제목:</strong> ${res.data.title}</p>
+                    <p>게시글이 성공적으로 수정되었습니다.</p>
+                </div>
+            `;
+            // 게시글 목록 새로고침
+            setTimeout(() => getTravelPosts(), 1000);
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `
+                <div class="schedule-item" style="border-left-color: #dc3545;">
+                    <h3>❌ 게시글 수정 실패</h3>
+                    <p>${e.response?.data?.message || e.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    // 게시글 삭제
+    async function deleteTravelPost(postId) {
+        if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) return;
+        
+        try {
+            const res = await axios.delete(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
+            document.getElementById('travel-result').innerHTML = `
+                <div class="schedule-item" style="border-left-color: #28a745;">
+                    <h3>✅ 게시글 삭제 완료!</h3>
+                    <p>${res.data}</p>
+                </div>
+            `;
+            // 게시글 목록 새로고침
+            setTimeout(() => getTravelPosts(), 1000);
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `
+                <div class="schedule-item" style="border-left-color: #dc3545;">
+                    <h3>❌ 게시글 삭제 실패</h3>
+                    <p>${e.response?.data?.message || e.message}</p>
+                </div>
+            `;
+        }
     }
 
     // ===== 일정관리 API =====
@@ -486,10 +649,15 @@
                 <h4>${schedule.title || '제목 없음'}</h4>
                 <p><strong>기간:</strong> ${schedule.startTime || 'N/A'} ~ ${schedule.endTime || 'N/A'}</p>
                 <p><strong>상태:</strong> ${schedule.postType || 'N/A'}</p>
-                <p><strong>모집인원:</strong> ${schedule.recuitLimit || 'N/A'}명</p>
-                <button onclick="loadParticipantData(${schedule.travelPostId || schedule.id})" class="approve">
-                    참여자 관리
-                </button>
+                <p><strong>모집인원:</strong> ${schedule.recruitLimit || 'N/A'}명</p>
+                <p><strong>역할:</strong> ${schedule.isAuthor ? '📝 작성자' : '👥 참여자'}</p>
+                ${schedule.isAuthor ? `
+                    <button onclick="loadParticipantData(${schedule.travelPostId || schedule.id})" class="approve">
+                        참여자 관리
+                    </button>
+                ` : `
+                    <p style="color: #666; font-style: italic;">참여자로 등록된 일정입니다.</p>
+                `}
             `;
             container.appendChild(div);
         });
@@ -497,12 +665,28 @@
 
     async function loadParticipantData(postId) {
         try {
+            // 먼저 게시글 정보를 가져와서 권한 확인
+            const postRes = await axios.get(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
+            const post = postRes.data;
+            
+            // 현재 사용자 정보 가져오기
+            const userRes = await axios.get('/api/users/me', {headers: getAuthHeaders()});
+            const currentUser = userRes.data;
+            
+            const isAuthor = post.user && post.user.id === currentUser.id;
+            
+            if (!isAuthor) {
+                document.getElementById('participant-management').innerHTML = 
+                    `<div class="error" style="color: #dc3545;">⚠️ 작성자만 참여자 관리가 가능합니다.</div>`;
+                return;
+            }
+
             const [participantsRes, applicationsRes] = await Promise.all([
                 axios.get(`/api/schedule/${postId}/participants`, {headers: getAuthHeaders()}),
                 axios.get(`/api/schedule/${postId}/applications`, {headers: getAuthHeaders()})
             ]);
 
-            displayParticipantManagement(participantsRes.data, applicationsRes.data, postId);
+            displayParticipantManagement(participantsRes.data, applicationsRes.data, postId, isAuthor);
         } catch(e) {
             console.error('참여자 데이터 로드 실패:', e);
             document.getElementById('participant-management').innerHTML =
@@ -510,9 +694,14 @@
         }
     }
 
-    function displayParticipantManagement(participants, applications, postId) {
+    function displayParticipantManagement(participants, applications, postId, isAuthor) {
         const container = document.getElementById('participant-management');
         container.innerHTML = '';
+
+        if (!isAuthor) {
+            container.innerHTML = '<p style="color: #dc3545;">⚠️ 작성자만 참여자 관리가 가능합니다.</p>';
+            return;
+        }
 
         // 승인된 참가자 목록
         const approvedParticipants = participants || [];

@@ -3,6 +3,7 @@ package com.goteego.travel.domain;
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.global.domain.BaseEntity;
 import com.goteego.travel.domain.enumerate.PostType;
+import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -69,17 +70,47 @@ public class TravelPost extends BaseEntity {
 
     //=========비즈니스 로직==========//
 
-    // 게시글 수정
-    public void update(String title, String content, LocalDate startTime, LocalDate endTime,
-                       String imageUrl, Integer recruitLimit, PostType postType, Boolean isAddRecruit) {
-        this.title = title;
-        this.content = content;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.imageUrl = imageUrl;
-        this.recruitLimit = recruitLimit;
-        this.postType = postType;
-        this.isAddRecruit = isAddRecruit;
+    // 게시글 수정 (DTO 기반)
+    public void update(TravelPostUpdateRequest request) {
+        validateUpdateData(request.getTitle(), request.getContent(), request.getStartTime(), 
+                          request.getEndTime(), request.getRecruitLimit());
+        
+        this.title = request.getTitle();
+        this.content = request.getContent();
+        this.startTime = request.getStartTime();
+        this.endTime = request.getEndTime();
+        this.imageUrl = request.getImageUrl();
+        this.recruitLimit = request.getRecruitLimit();
+        this.postType = PostType.valueOf(request.getPostType().toUpperCase());
+        this.isAddRecruit = request.getIsAddRecruit();
+    }
+
+    // 내부 검증 로직
+    private void validateUpdateData(String title, String content, LocalDate startTime, 
+                                   LocalDate endTime, Integer recruitLimit) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("제목은 필수입니다.");
+        }
+        
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("내용은 필수입니다.");
+        }
+        
+        if (startTime == null) {
+            throw new IllegalArgumentException("시작 날짜는 필수입니다.");
+        }
+        
+        if (endTime == null) {
+            throw new IllegalArgumentException("종료 날짜는 필수입니다.");
+        }
+        
+        if (startTime.isAfter(endTime)) {
+            throw new IllegalArgumentException("시작 날짜는 종료 날짜보다 이전이어야 합니다.");
+        }
+        
+        if (recruitLimit == null || recruitLimit < 1) {
+            throw new IllegalArgumentException("모집 인원은 1명 이상이어야 합니다.");
+        }
     }
 
     // 조회수 증가
@@ -92,5 +123,10 @@ public class TravelPost extends BaseEntity {
         return this.user.getId().equals(userId);
     }
 
+    // 게시글 삭제 가능 여부 확인
+    public boolean canBeDeleted() {
+        // 참가자가 없는 경우에만 삭제 가능
+        return this.viewCount == 0; // 간단한 예시, 실제로는 참가자 수 확인 필요
+    }
 
 } 

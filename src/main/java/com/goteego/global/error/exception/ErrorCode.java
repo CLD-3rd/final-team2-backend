@@ -36,9 +36,15 @@ public enum ErrorCode {
 
     // 게시글 관련
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글이 존재하지 않습니다."),
+    UNAUTHORIZED_POST_UPDATE(HttpStatus.FORBIDDEN, "게시글 수정 권한이 없습니다."),
+    UNAUTHORIZED_POST_DELETE(HttpStatus.FORBIDDEN, "게시글 삭제 권한이 없습니다."),
+    INVALID_POST_DATA(HttpStatus.BAD_REQUEST, "잘못된 게시글 데이터입니다."),
 
     // 참여 요청 관련
-    APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "참여 요청이 존재하지 않습니다.");
+    APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "참여 요청이 존재하지 않습니다."),
+    ALREADY_APPLIED(HttpStatus.CONFLICT, "이미 참가 신청한 게시글입니다."),
+    RECRUITMENT_FULL(HttpStatus.CONFLICT, "모집 인원이 마감되었습니다."),
+    SELF_APPLICATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신의 게시글에는 참가 신청할 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
