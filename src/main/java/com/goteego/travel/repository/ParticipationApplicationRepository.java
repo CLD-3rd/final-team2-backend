@@ -1,6 +1,7 @@
 package com.goteego.travel.repository;
 
 import com.goteego.travel.domain.ParticipationApplication;
+import com.goteego.travel.domain.enumerate.ParticipationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -26,7 +27,7 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
      * @param userId 사용자 ID
      * @return 참가 신청 정보 (Optional - 없을 수 있음)
      */
-    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId AND pa.userId = :userId")
+    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId AND pa.user.id = :userId")
     Optional<ParticipationApplication> findByTravelPostIdAndUserId(@Param("travelPostId") Long travelPostId, 
                                                                   @Param("userId") Long userId);
     
@@ -36,7 +37,7 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
      * @param travelPostId 여행 게시글 ID
      * @return 참가 신청 목록
      */
-    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId")
+    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId")
     List<ParticipationApplication> findByTravelPostId(@Param("travelPostId") Long travelPostId);
     
     /**
@@ -45,7 +46,7 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
      * @param travelPostId 여행 게시글 ID
      * @return 승인된 참가 신청 목록
      */
-    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId AND pa.status = 'APPROVED'")
+    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId AND pa.status = 'APPROVED'")
     List<ParticipationApplication> findApprovedByTravelPostId(@Param("travelPostId") Long travelPostId);
     
     /**
@@ -54,23 +55,8 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
      * @param travelPostId 여행 게시글 ID
      * @return 대기 중인 참가 신청 목록
      */
-    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId AND pa.status = 'PENDING'")
+    @Query("SELECT pa FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId AND pa.status = 'PENDING'")
     List<ParticipationApplication> findPendingByTravelPostId(@Param("travelPostId") Long travelPostId);
-    
-    /**
-     * 참가 신청 상태 변경
-     * 작성자가 참가 신청을 승인하거나 거절할 때 사용
-     * 
-     * @param travelPostId 여행 게시글 ID
-     * @param userId 참가 신청한 사용자 ID
-     * @param status 변경할 상태 (APPROVED 또는 REJECTED)
-     */
-    @Modifying
-    @Transactional
-    @Query("UPDATE ParticipationApplication pa SET pa.status = :status WHERE pa.travelPostId = :travelPostId AND pa.userId = :userId")
-    void updateStatusByTravelPostIdAndUserId(@Param("travelPostId") Long travelPostId, 
-                                            @Param("userId") Long userId, 
-                                            @Param("status") ParticipationApplication.Status status);
     
     /**
      * 특정 여행 게시글의 참가 신청 개수 조회
@@ -79,9 +65,9 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
      * @param status 참가 신청 상태
      * @return 해당 상태의 참가 신청 개수
      */
-    @Query("SELECT COUNT(pa) FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId AND pa.status = :status")
+    @Query("SELECT COUNT(pa) FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId AND pa.status = :status")
     Long countByTravelPostIdAndStatus(@Param("travelPostId") Long travelPostId, 
-                                     @Param("status") ParticipationApplication.Status status);
+                                     @Param("status") ParticipationStatus status);
     
     /**
      * 중복 신청 확인
@@ -90,7 +76,13 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
      * @param userId 사용자 ID
      * @return 중복 신청 여부
      */
-    @Query("SELECT COUNT(pa) > 0 FROM ParticipationApplication pa WHERE pa.travelPostId = :travelPostId AND pa.userId = :userId")
+    @Query("SELECT COUNT(pa) > 0 FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId AND pa.user.id = :userId")
     boolean existsByTravelPostIdAndUserId(@Param("travelPostId") Long travelPostId, 
                                          @Param("userId") Long userId);
+
+
+
+
+    boolean existsByTravelPost_ChatRoom_RoomIdAndUser_IdAndStatus(String roomId, Long userId, ParticipationStatus status);
+
 } 

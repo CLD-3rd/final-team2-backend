@@ -1,11 +1,9 @@
 package com.goteego.user.controller;
 
-import com.goteego.user.domain.CustomOAuth2User;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;

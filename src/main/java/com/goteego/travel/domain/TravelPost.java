@@ -1,5 +1,10 @@
 package com.goteego.travel.domain;
 
+import com.goteego.chat.domain.ChatRoom;
+import com.goteego.global.domain.BaseEntity;
+import com.goteego.travel.domain.enumerate.PostType;
+import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
+import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -11,116 +16,135 @@ import org.springframework.data.annotation.LastModifiedDate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * 여행 게시글 도메인 엔티티
- * 사용자가 작성한 여행 모집 게시글을 나타내는 도메인 객체
- */
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "travel_posts")
-public class TravelPost {
+public class TravelPost extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "travel_post_id")
     private Long id;
-    
-    @Column(name = "user_id")
-    private Long userId;
-    
-    @Column(name = "chat_room_id")
-    private Long chatRoomId;
-    
-    @Column(nullable = false, length = 200)
-    private String title;
-    
-    @Column(columnDefinition = "TEXT")
-    private String content;
-    
-    @Column(name = "start_time")
-    private LocalDate startTime;
-    
-    @Column(name = "end_time")
-    private LocalDate endTime;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "chat_room_id")
+    private ChatRoom chatRoom;
+
     @Column(name = "image_url", length = 500)
     private String imageUrl;
-    
-    @Column(name = "recuit_limit")
-    private Integer recuitLimit;
-    
-    @Column(name = "view_count")
-    private Long viewCount = 0L;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "post_type")
     private PostType postType;
-    
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-    
-    @LastModifiedDate
-    @Column(name = "modified_at")
-    private LocalDateTime modifiedAt;
-    
-    @Column(name = "is_add_recruit")
+
+    private String title;
+    private String content;
+    private String location;
+    private LocalDate startTime;
+    private LocalDate endTime;
+    private Integer recruitLimit;
+    private Long viewCount = 0L;
     private Boolean isAddRecruit = false;
-    
-    /**
-     * 여행 게시글 타입 열거형
-     */
-    public enum PostType {
-        /** 사전 모집 */
-        BEFORE, 
-        /** 현지 모집 */
-        NOW
-    }
+
     
     @Builder
-    public TravelPost(Long userId, Long chatRoomId, String title, String content, 
+    public TravelPost(User user, ChatRoom chatRoom, String title, String content,
                      LocalDate startTime, LocalDate endTime, String imageUrl, 
-                     Integer recuitLimit, PostType postType, Boolean isAddRecruit) {
-        this.userId = userId;
-        this.chatRoomId = chatRoomId;
+                     Integer recruitLimit, PostType postType, Boolean isAddRecruit, String location) {
+        this.user = user;
+        this.chatRoom = chatRoom;
         this.title = title;
         this.content = content;
         this.startTime = startTime;
         this.endTime = endTime;
         this.imageUrl = imageUrl;
-        this.recuitLimit = recuitLimit;
+        this.recruitLimit = recruitLimit;
         this.postType = postType;
         this.isAddRecruit = isAddRecruit;
+        this.location = location;
     }
-    
-    /**
-     * 조회수 증가
-     */
+
+
+    //=========비즈니스 로직==========//
+
+    // 게시글 수정 (DTO 기반)
+    public void update(TravelPostUpdateRequest request) {
+        validateUpdateData(request.getTitle(), request.getContent(), request.getStartTime(), 
+                          request.getEndTime(), request.getRecruitLimit());
+        
+        this.title = request.getTitle();
+        this.content = request.getContent();
+        this.startTime = request.getStartTime();
+        this.endTime = request.getEndTime();
+        this.imageUrl = request.getImageUrl();
+        this.recruitLimit = request.getRecruitLimit();
+        this.postType = PostType.valueOf(request.getPostType().toUpperCase());
+        this.isAddRecruit = request.getIsAddRecruit();
+        this.location = request.getLocation();
+    }
+
+    // 내부 검증 로직
+    private void validateUpdateData(String title, String content, LocalDate startTime, 
+                                   LocalDate endTime, Integer recruitLimit) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("제목은 필수입니다.");
+        }
+        
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("내용은 필수입니다.");
+        }
+        
+        if (startTime == null) {
+            throw new IllegalArgumentException("시작 날짜는 필수입니다.");
+        }
+        
+        if (endTime == null) {
+            throw new IllegalArgumentException("종료 날짜는 필수입니다.");
+        }
+        
+        if (startTime.isAfter(endTime)) {
+            throw new IllegalArgumentException("시작 날짜는 종료 날짜보다 이전이어야 합니다.");
+        }
+        
+        if (recruitLimit == null || recruitLimit < 1) {
+            throw new IllegalArgumentException("모집 인원은 1명 이상이어야 합니다.");
+        }
+    }
+
+    // 조회수 증가
     public void incrementViewCount() {
         this.viewCount++;
     }
-    
-    /**
-     * 게시글 수정
-     */
-    public void update(String title, String content, LocalDate startTime, LocalDate endTime, 
-                      String imageUrl, Integer recuitLimit, PostType postType, Boolean isAddRecruit) {
-        this.title = title;
-        this.content = content;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.imageUrl = imageUrl;
-        this.recuitLimit = recuitLimit;
-        this.postType = postType;
-        this.isAddRecruit = isAddRecruit;
-        this.modifiedAt = LocalDateTime.now();
-    }
-    
-    /**
-     * 작성자 확인
-     */
+
+    // 작성자 본인 확인
     public boolean isAuthor(Long userId) {
-        return this.userId.equals(userId);
+        return this.user.getId().equals(userId);
     }
+
+    // 게시글 삭제 가능 여부 확인
+    public boolean canBeDeleted() {
+        // 참가자가 없는 경우에만 삭제 가능
+        return this.viewCount == 0; // 간단한 예시, 실제로는 참가자 수 확인 필요
+    }
+
+    // 모집 상태 확인 (모집 중인지 완료인지)
+    public boolean isRecruiting() {
+        return this.isAddRecruit;
+    }
+
+    // 모집 상태 업데이트
+    public void updateRecruitStatus(boolean isRecruiting) {
+        this.isAddRecruit = isRecruiting;
+    }
+
+    // 모집 완료 여부 확인 (참가자 수 기반)
+    public boolean isRecruitmentFull(int approvedParticipantCount) {
+        return approvedParticipantCount >= this.recruitLimit;
+    }
+
 } 
