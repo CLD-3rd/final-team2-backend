@@ -340,7 +340,7 @@ public class TravelPostService {
                     String authorNickname = tp.getUser().getNickname();
                     Double similarity = similarityMap.getOrDefault(authorId, 0.5);
                     // 승인된 참가자 수 조회
-                    Long approvedCount = participationApplicationRepository.countApprovedParticipantsByTravelPostId(tp.getId());
+                    Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(tp.getId(), ParticipationStatus.APPROVED);
                     Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
                     return BeforeTravelPostResponseDto.from(tp, currentUserId, authorNickname, similarity, approvedParticipantCount);
                 })

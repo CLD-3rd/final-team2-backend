@@ -32,14 +32,7 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     Long countByPostType(@Param("postType") PostType postType,
                          @Param("currentUserId") Long currentUserId);
     
-    /**
-     * 특정 게시글 조회
-     * 
-     * @param postId 게시글 ID
-     * @return 여행 게시글 정보 (Optional)
-     */
-    @Query("SELECT tp FROM TravelPost tp WHERE tp.id = :postId")
-    Optional<TravelPost> findById(@Param("postId") Long postId);
+
     
     /**
      * 조회수 증가
@@ -56,7 +49,7 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
      * @param postId 게시글 ID
      */
     @Modifying
-    @Query(value = "DELETE FROM participation_application WHERE travel_post_id = :postId", nativeQuery = true)
+    @Query("DELETE FROM ParticipationApplication pa WHERE pa.travelPost.id = :postId")
     void deleteParticipationApplications(@Param("postId") Long postId);
     
     /**
@@ -65,19 +58,10 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
      * @param postId 게시글 ID
      */
     @Modifying
-    @Query(value = "DELETE FROM user_review WHERE post_id = :postId", nativeQuery = true)
+    @Query("DELETE FROM UserReview ur WHERE ur.post.id = :postId")
     void deleteUserReviews(@Param("postId") Long postId);
     
-    /**
-     * 내 일정 조회 (작성자이거나 참여자인 게시글) - N+1 문제 해결을 위한 JOIN FETCH
-     */
-    @Query(value = """
-        SELECT DISTINCT tp.* FROM travel_posts tp
-        LEFT JOIN participation_application pa ON tp.travel_post_id = pa.travel_post_id
-        WHERE tp.user_id = :userId OR pa.user_id = :userId
-        ORDER BY tp.start_time ASC
-        """, nativeQuery = true)
-    List<TravelPost> findMySchedules(@Param("userId") Long userId);
+
 
     /**
      * 내 일정 조회 (작성자이거나 참여자인 게시글) - N+1 문제 해결을 위한 JOIN FETCH

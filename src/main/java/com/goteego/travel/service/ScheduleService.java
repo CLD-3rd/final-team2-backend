@@ -63,7 +63,7 @@ public class ScheduleService {
         return pagedSchedules.stream()
                 .map(tp -> {
                     // 승인된 참가자 수 조회
-                    Long approvedCount = participationApplicationRepository.countApprovedParticipantsByTravelPostId(tp.getId());
+                    Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(tp.getId(), ParticipationStatus.APPROVED);
                     Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
                     return BeforeTravelPostResponseDto.from(
                             tp,
@@ -175,9 +175,9 @@ public class ScheduleService {
 
 
     
-    /**
+        /**
      * 특정 게시글의 대기 중인 참가자 수 조회
-     * 
+     *
      * @param travelPostId 여행 게시글 ID
      * @return 대기 중인 참가자 수
      */
@@ -193,29 +193,11 @@ public class ScheduleService {
      * @return 승인된 참가자 수
      */
     public Long getApprovedParticipantCount(Long travelPostId) {
-        return participationApplicationRepository.countByTravelPostIdAndStatus(travelPostId, ParticipationStatus.APPROVED);
+        return participationApplicationRepository.countByTravelPostIdAndStatus(
+            travelPostId, ParticipationStatus.APPROVED);
     }
 
-    
-    /**
-     * 특정 게시글의 승인된 참가 신청 조회
-     * 
-     * @param travelPostId 여행 게시글 ID
-     * @return 승인된 참가 신청 목록
-     */
-    public List<ParticipationApplication> getApprovedApplications(Long travelPostId) {
-        return participationApplicationRepository.findApprovedByTravelPostId(travelPostId);
-    }
-    
-    /**
-     * 특정 게시글의 대기 중인 참가 신청 조회
-     * 
-     * @param travelPostId 여행 게시글 ID
-     * @return 대기 중인 참가 신청 목록
-     */
-    public List<ParticipationApplication> getPendingApplications(Long travelPostId) {
-        return participationApplicationRepository.findPendingByTravelPostId(travelPostId);
-    }
+
     
     /**
      * 진행 상태 계산
