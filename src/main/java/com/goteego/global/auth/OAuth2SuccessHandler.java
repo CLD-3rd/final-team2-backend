@@ -26,7 +26,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Value("${frontend.url:http://localhost:3000}")
+    @Value("${frontend.url}")
     private String frontendUrl;
 
     @Override
@@ -62,7 +62,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         // ✅ 리디렉션
 //        response.sendRedirect("/dashboard.html");
-        response.sendRedirect("/post.html");
+//        response.sendRedirect("/post.html");
+
+        response.sendRedirect(frontendUrl);
+        log.info("Redirecting to frontend: {}", frontendUrl);
 
     }
 }

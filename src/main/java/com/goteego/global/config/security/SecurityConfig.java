@@ -4,6 +4,7 @@ import com.goteego.global.auth.OAuth2SuccessHandler;
 import com.goteego.user.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -25,9 +26,10 @@ public class SecurityConfig {
             "/",
             "/favicon.ico",
             "/api/public/**",
+            "/api/feed/**",  // 임시 추가
             "/api/travel-posts/**",  // 임시 추가
             "/api/schedule/**",      // 임시 추가
-            "/api/users/**",         // 임시 추가
+//            "/api/users/**",         // 임시 추가
             "/api/recommendation/**", // 임시 추가
             "/error",
             "/index.html",
@@ -39,6 +41,8 @@ public class SecurityConfig {
     };
     private final OAuth2SuccessHandler oAuth2SuccessHandler; // ✅ 주입받기
     private final CustomOAuth2UserService customOAuth2UserService;
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -67,7 +71,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 //        configuration.setAllowedOrigins(List.of("*"));
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // * 대신 명시적으로 작성
+        configuration.setAllowedOrigins(List.of(frontendUrl)); // * 대신 명시적으로 작성
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
