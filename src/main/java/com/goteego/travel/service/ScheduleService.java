@@ -6,8 +6,9 @@ import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.domain.enumerate.ParticipationStatus;
+import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
-import com.goteego.travel.dto.travel.TravelPostResponseDto;
+import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
 import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
 import com.goteego.user.domain.User;
@@ -39,28 +40,39 @@ public class ScheduleService {
     private final ChatRoomService chatRoomService;
     
     /**
-     * 내 일정 조회 (작성자이거나 참여자인 게시글)
+     * 내 일정 조회 (BEFORE 타입만 - 작성자이거나 참여자인 게시글)
      */
-    public List<TravelPostResponseDto> getMySchedules(Long userId, int page, int size) {
-        List<TravelPost> allSchedules = travelPostRepository.findMySchedules(userId);
+    public List<BeforeTravelPostResponseDto> getMySchedules(Long userId, int page, int size) {
+        List<TravelPost> allSchedules = travelPostRepository.findMySchedulesWithUser(userId);
+        
+        // BEFORE 타입만 필터링
+        List<TravelPost> beforeSchedules = allSchedules.stream()
+                .filter(tp -> tp.getPostType() == PostType.BEFORE)
+                .collect(Collectors.toList());
         
         // 페이징 처리
         int start = page * size;
-        int end = Math.min(start + size, allSchedules.size());
+        int end = Math.min(start + size, beforeSchedules.size());
         
-        if (start >= allSchedules.size()) {
+        if (start >= beforeSchedules.size()) {
             return List.of();
         }
 
-        List<TravelPost> pagedSchedules = allSchedules.subList(start, end);
+        List<TravelPost> pagedSchedules = beforeSchedules.subList(start, end);
 
         return pagedSchedules.stream()
-                .map(tp -> TravelPostResponseDto.from(
-                        tp,
-                        tp.getUser().getId(),
-                        tp.getUser().getNickname(),
-                        null // similarity는 이 컨텍스트에선 필요 없다면 null
-                ))
+                .map(tp -> {
+                    // 승인된 참가자 수 조회
+                    Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(tp.getId(), ParticipationStatus.APPROVED);
+                    Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
+                    return BeforeTravelPostResponseDto.from(
+                            tp,
+                            tp.getUser().getId(),
+                            tp.getUser().getNickname(),
+                            null, // similarity는 이 컨텍스트에선 필요 없다면 null
+                            approvedParticipantCount
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
@@ -118,7 +130,10 @@ public class ScheduleService {
             }
         }
 
-        // 6. DTO 변환
+        // 6. 모집 상태 업데이트
+        updateRecruitmentStatus(travelPost);
+
+        // 7. DTO 변환
         return ParticipationApplicationResponseDto.from(participationApplication, participant);
     }
 
@@ -160,9 +175,9 @@ public class ScheduleService {
 
 
     
-    /**
+        /**
      * 특정 게시글의 대기 중인 참가자 수 조회
-     * 
+     *
      * @param travelPostId 여행 게시글 ID
      * @return 대기 중인 참가자 수
      */
@@ -178,29 +193,11 @@ public class ScheduleService {
      * @return 승인된 참가자 수
      */
     public Long getApprovedParticipantCount(Long travelPostId) {
-        return participationApplicationRepository.countByTravelPostIdAndStatus(travelPostId, ParticipationStatus.APPROVED);
+        return participationApplicationRepository.countByTravelPostIdAndStatus(
+            travelPostId, ParticipationStatus.APPROVED);
     }
 
-    
-    /**
-     * 특정 게시글의 승인된 참가 신청 조회
-     * 
-     * @param travelPostId 여행 게시글 ID
-     * @return 승인된 참가 신청 목록
-     */
-    public List<ParticipationApplication> getApprovedApplications(Long travelPostId) {
-        return participationApplicationRepository.findApprovedByTravelPostId(travelPostId);
-    }
-    
-    /**
-     * 특정 게시글의 대기 중인 참가 신청 조회
-     * 
-     * @param travelPostId 여행 게시글 ID
-     * @return 대기 중인 참가 신청 목록
-     */
-    public List<ParticipationApplication> getPendingApplications(Long travelPostId) {
-        return participationApplicationRepository.findPendingByTravelPostId(travelPostId);
-    }
+
     
     /**
      * 진행 상태 계산
@@ -244,5 +241,25 @@ public class ScheduleService {
         Optional<ParticipationApplication> applicationOpt = participationApplicationRepository
                 .findByTravelPostIdAndUserId(travelPostId, userId);
         return applicationOpt.isPresent();
+    }
+
+    /**
+     * 모집 상태 업데이트
+     * 승인된 참가자 수를 확인하여 모집 완료 여부를 결정
+     * 
+     * @param travelPost 여행 게시글
+     */
+    private void updateRecruitmentStatus(TravelPost travelPost) {
+        Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(
+            travelPost.getId(), ParticipationStatus.APPROVED);
+        
+        // 승인된 참가자 수가 모집 인원에 도달하면 모집 완료
+        boolean isRecruiting = approvedCount < travelPost.getRecruitLimit();
+        travelPost.updateRecruitStatus(isRecruiting);
+        
+        travelPostRepository.save(travelPost);
+        
+        log.info("모집 상태 업데이트 - travelPostId: {}, approvedCount: {}, recruitLimit: {}, isRecruiting: {}", 
+                travelPost.getId(), approvedCount, travelPost.getRecruitLimit(), isRecruiting);
     }
 } 

@@ -4,7 +4,7 @@ import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.domain.enumerate.ParticipationStatus;
 import com.goteego.travel.dto.participation.ParticipantStatusRequest;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
-import com.goteego.travel.dto.travel.TravelPostResponseDto;
+import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
 import com.goteego.travel.service.ScheduleService;
 import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -25,16 +25,16 @@ public class ScheduleController {
     private final ScheduleService scheduleService;
     
     /**
-     * 내 일정 조회
+     * 내 일정 조회 (BEFORE 타입만)
      */
     @GetMapping("/mine")
-    public ResponseEntity<List<TravelPostResponseDto>> getMySchedule(
+    public ResponseEntity<List<BeforeTravelPostResponseDto>> getMySchedule(
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
             @AuthenticationPrincipal User user) {
 
         Long currentUserId = user.getId();
-        List<TravelPostResponseDto> schedules = scheduleService.getMySchedules(currentUserId, page, size);
+        List<BeforeTravelPostResponseDto> schedules = scheduleService.getMySchedules(currentUserId, page, size);
         
         log.info("내 일정 조회 - userId: {}, page: {}, size: {}, totalCount: {}", 
                 currentUserId, page, size, schedules.size());

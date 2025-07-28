@@ -4,8 +4,9 @@ import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.*;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
+import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
 import com.goteego.travel.dto.travel.TravelPostCreateRequest;
-import com.goteego.travel.dto.travel.TravelPostResponseDto;
+import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
 import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.user.domain.User;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 
 @Slf4j
@@ -27,10 +29,10 @@ public class TravelPostController {
     private final UserService userService;
     
     /**
-     * 여행 게시글 목록 조회 (벡터 유사도 기반)
+     * 여행 게시글 목록 조회 (PostType별 다른 응답 구조)
      */
     @GetMapping
-    public ResponseEntity<PageResponseDto<TravelPostResponseDto>> getTravelPosts(
+    public ResponseEntity<TravelPostResponseWrapper> getTravelPosts(
             @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
@@ -39,7 +41,7 @@ public class TravelPostController {
         Long currentUserId = user.getId();
         PostType currentPostType = PostType.valueOf(postType.toUpperCase());
 
-        PageResponseDto<TravelPostResponseDto> travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, currentUserId);
+        TravelPostResponseWrapper travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, currentUserId);
         return ResponseEntity.ok(travelPosts);
     }
     
@@ -54,10 +56,10 @@ public class TravelPostController {
      * @return 생성된 여행 게시글
      */
     @PostMapping("/requests")
-    public ResponseEntity<TravelPostResponseDto> createTravelPost(@RequestBody TravelPostCreateRequest requestDto, @AuthenticationPrincipal User user) {
+    public ResponseEntity<BeforeTravelPostResponseDto> createTravelPost(@Valid @RequestBody TravelPostCreateRequest requestDto, @AuthenticationPrincipal User user) {
 
         User currentUser = userService.getUserById(user.getId());
-        TravelPostResponseDto travelPostResponseDto = travelPostService.registerTravelPost(currentUser, requestDto);
+        BeforeTravelPostResponseDto travelPostResponseDto = travelPostService.registerTravelPost(currentUser, requestDto);
 
         log.info("여행 게시글 생성 - travelPostId: {}, title: {}, userId: {}",
                 travelPostResponseDto.getTravelPostId(), travelPostResponseDto.getTitle(), user.getId());
@@ -126,23 +128,13 @@ public class TravelPostController {
     @PutMapping("/{travelPostId}")
     public ResponseEntity<TravelPost> updateTravelPost(
             @PathVariable("travelPostId") Long travelPostId,
-            @RequestBody TravelPostUpdateRequest requestDto,
+            @Valid @RequestBody TravelPostUpdateRequest requestDto,
             @AuthenticationPrincipal User user) {
 
         Long currentUserId = user.getId();
 
-        TravelPost travelPost = travelPostService.updateTravelPost(
-            travelPostId,
-            currentUserId,
-            requestDto.getTitle(),
-            requestDto.getContent(),
-            requestDto.getStartTime(),
-            requestDto.getEndTime(),
-            requestDto.getImageUrl(),
-            requestDto.getRecuitLimit(),
-            PostType.valueOf(requestDto.getPostType().toUpperCase()),
-            requestDto.getIsAddRecruit()
-        );
+        // 새로운 DTO 기반 메서드 사용
+        TravelPost travelPost = travelPostService.updateTravelPost(travelPostId, currentUserId, requestDto);
 
         log.info("여행 게시글 수정 - travelPostId: {}, title: {}, userId: {}",
                 travelPostId, travelPost.getTitle(), currentUserId);

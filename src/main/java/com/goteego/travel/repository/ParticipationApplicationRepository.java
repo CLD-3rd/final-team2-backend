@@ -81,6 +81,8 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
                                          @Param("userId") Long userId);
 
 
+
+
     boolean existsByTravelPost_ChatRoom_RoomIdAndUser_IdAndStatus(String roomId, Long userId, ParticipationStatus status);
 
 } 

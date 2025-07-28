@@ -18,12 +18,12 @@ import java.util.Optional;
 public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     
     /**
-     * 게시글 타입별 목록 조회 (현재 사용자 제외)
+     * 게시글 타입별 목록 조회 (현재 사용자 제외) - N+1 문제 해결을 위한 JOIN FETCH
      */
-    @Query("SELECT tp FROM TravelPost tp WHERE tp.postType = :postType And tp.user.id != :currentUserId ORDER BY tp.createdAt DESC")
-    Page<TravelPost> findByPostTypeOrderByCreatedAtDesc(@Param("postType") PostType postType,
-                                                        @Param("currentUserId") Long currentUserId,
-                                                        Pageable pageable);
+    @Query("SELECT tp FROM TravelPost tp JOIN FETCH tp.user WHERE tp.postType = :postType AND tp.user.id != :currentUserId ORDER BY tp.createdAt DESC")
+    Page<TravelPost> findByPostTypeOrderByCreatedAtDescWithUser(@Param("postType") PostType postType,
+                                                               @Param("currentUserId") Long currentUserId,
+                                                               Pageable pageable);
     
     /**
      * 게시글 타입 별 개수 조회 (현재 사용자 제외)
@@ -32,14 +32,7 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     Long countByPostType(@Param("postType") PostType postType,
                          @Param("currentUserId") Long currentUserId);
     
-    /**
-     * 특정 게시글 조회
-     * 
-     * @param postId 게시글 ID
-     * @return 여행 게시글 정보 (Optional)
-     */
-    @Query("SELECT tp FROM TravelPost tp WHERE tp.id = :postId")
-    Optional<TravelPost> findById(@Param("postId") Long postId);
+
     
     /**
      * 조회수 증가
@@ -56,7 +49,7 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
      * @param postId 게시글 ID
      */
     @Modifying
-    @Query(value = "DELETE FROM participation_application WHERE travel_post_id = :postId", nativeQuery = true)
+    @Query("DELETE FROM ParticipationApplication pa WHERE pa.travelPost.id = :postId")
     void deleteParticipationApplications(@Param("postId") Long postId);
     
     /**
@@ -65,22 +58,22 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
      * @param postId 게시글 ID
      */
     @Modifying
-    @Query(value = "DELETE FROM user_review WHERE post_id = :postId", nativeQuery = true)
+    @Query("DELETE FROM UserReview ur WHERE ur.post.id = :postId")
     void deleteUserReviews(@Param("postId") Long postId);
     
+
+
     /**
-     * 내 일정 조회 (작성자이거나 참여자인 게시글)
-     * 
-     * @param userId 사용자 ID
-     * @return 내가 관련된 여행 게시글 목록
+     * 내 일정 조회 (작성자이거나 참여자인 게시글) - N+1 문제 해결을 위한 JOIN FETCH
      */
-    @Query(value = """
-        SELECT DISTINCT tp.* FROM travel_posts tp
-        LEFT JOIN participation_application pa ON tp.travel_post_id = pa.travel_post_id
-        WHERE tp.user_id = :userId OR pa.user_id = :userId
-        ORDER BY tp.start_time ASC
-        """, nativeQuery = true)
-    List<TravelPost> findMySchedules(@Param("userId") Long userId);
+    @Query("""
+        SELECT DISTINCT tp FROM TravelPost tp 
+        JOIN FETCH tp.user 
+        LEFT JOIN ParticipationApplication pa ON tp.id = pa.travelPost.id 
+        WHERE tp.user.id = :userId OR pa.user.id = :userId 
+        ORDER BY tp.startTime ASC
+        """)
+    List<TravelPost> findMySchedulesWithUser(@Param("userId") Long userId);
     
     /**
      * 특정 게시글의 참여자 목록 조회 (REJECTED 제외)
