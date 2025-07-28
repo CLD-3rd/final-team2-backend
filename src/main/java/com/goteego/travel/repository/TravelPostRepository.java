@@ -52,14 +52,7 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     @Query("DELETE FROM ParticipationApplication pa WHERE pa.travelPost.id = :postId")
     void deleteParticipationApplications(@Param("postId") Long postId);
     
-    /**
-     * 사용자 리뷰 데이터 삭제 (게시글 삭제 전)
-     * 
-     * @param postId 게시글 ID
-     */
-    @Modifying
-    @Query("DELETE FROM UserReview ur WHERE ur.post.id = :postId")
-    void deleteUserReviews(@Param("postId") Long postId);
+
     
 
 

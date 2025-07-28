@@ -55,7 +55,7 @@ public class TravelPost extends BaseEntity {
     @Builder
     public TravelPost(User user, ChatRoom chatRoom, String title, String content,
                      LocalDate startTime, LocalDate endTime, String imageUrl, 
-                     Integer recruitLimit, PostType postType, Boolean isAddRecruit) {
+                     Integer recruitLimit, PostType postType, Boolean isAddRecruit, String location) {
         this.user = user;
         this.chatRoom = chatRoom;
         this.title = title;
@@ -66,6 +66,7 @@ public class TravelPost extends BaseEntity {
         this.recruitLimit = recruitLimit;
         this.postType = postType;
         this.isAddRecruit = isAddRecruit;
+        this.location = location;
     }
 
 
@@ -84,6 +85,8 @@ public class TravelPost extends BaseEntity {
         this.recruitLimit = request.getRecruitLimit();
         this.postType = PostType.valueOf(request.getPostType().toUpperCase());
         this.isAddRecruit = request.getIsAddRecruit();
+        // TODO: TravelPostUpdateRequest에 location 필드 추가 필요
+        // this.location = request.getLocation();
     }
 
     // 내부 검증 로직
