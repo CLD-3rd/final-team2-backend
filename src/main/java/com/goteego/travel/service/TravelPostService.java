@@ -122,6 +122,7 @@ public class TravelPostService {
                 .recruitLimit(request.getRecruitLimit())
                 .postType(PostType.valueOf(request.getPostType().toUpperCase()))
                 .isAddRecruit(request.getIsAddRecruit())
+                .location("JEJU") // TODO: TravelPostCreateRequest에 location 필드 추가 필요
                 .build();
 
         // 게시글 저장
@@ -306,11 +307,9 @@ public class TravelPostService {
     /**
      * 관련 데이터 삭제
      * - 참가 신청 데이터 삭제
-     * - 사용자 리뷰 데이터 삭제
      */
     private void deleteRelatedData(Long travelPostId) {
         travelPostRepository.deleteParticipationApplications(travelPostId);
-        travelPostRepository.deleteUserReviews(travelPostId);
     }
 
     /**

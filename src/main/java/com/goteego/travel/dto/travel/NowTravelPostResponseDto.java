@@ -34,8 +34,9 @@ public class NowTravelPostResponseDto {
         private Long userId;
         private String nickname;
         private String profileImgUrl;
-        private Double rating;
-        private List<String> tags;
+        // TODO: user_review 테이블 구현 후 추가
+        // private Double rating;
+        // private List<String> tags;
     }
     
     /**
@@ -60,8 +61,9 @@ public class NowTravelPostResponseDto {
                 .userId(user.getId())
                 .nickname(nickname)
                 .profileImgUrl(user.getProfileImgUrl())
-                .rating(null) // TODO: 실제 평점 시스템 구현 필요
-                .tags(List.of()) // TODO: 실제 태그 시스템 구현 필요
+                // TODO: user_review 테이블 구현 후 추가
+                // .rating(null)
+                // .tags(List.of())
                 .build();
     }
 } 
