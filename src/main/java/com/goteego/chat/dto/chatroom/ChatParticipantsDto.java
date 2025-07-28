@@ -17,12 +17,7 @@ public class ChatParticipantsDto {
     private Long userId;
     private String nickname;
     private String profileImageUrl;
-
     private LocalDateTime lastReadAt; // 마지막 읽은 일시
-
-    // 권한 정보 (필요시)
-    private boolean isManager; // 방장 여부
-    private boolean canSendMessage; // 메시지 전송 권한 여부
 
     // 엔티티 변환 메서드
     public static ChatParticipantsDto from(UserChatRoom userChatRoom) {
