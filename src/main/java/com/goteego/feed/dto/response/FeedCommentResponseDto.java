@@ -1,4 +1,4 @@
-package com.goteego.feed.dto;
+package com.goteego.feed.dto.response;
 
 import com.goteego.feed.domain.FeedComment;
 import lombok.Builder;
@@ -20,7 +20,7 @@ public class FeedCommentResponseDto {
     /**
      * 코멘트 고유 식별자
      */
-    private Long commentId;
+    private Long comment_id;
     
     /**
      * 코멘트 작성자 정보
@@ -35,12 +35,12 @@ public class FeedCommentResponseDto {
     /**
      * 코멘트 생성 날짜 (시간 정보 제외)
      */
-    private LocalDate createdAt;
+    private String created_at;
     
     /**
      * 코멘트 수정 날짜 (시간 정보 제외)
      */
-    private LocalDate modifiedAt;
+    private String modified_at;
     
     /**
      * 코멘트 작성자 정보를 담는 내부 클래스
@@ -51,7 +51,7 @@ public class FeedCommentResponseDto {
         /**
          * 작성자 사용자 ID
          */
-        private Long userId;
+        private Long user_id;
         
         /**
          * 작성자 닉네임
@@ -63,19 +63,18 @@ public class FeedCommentResponseDto {
      * FeedComment 엔티티를 FeedCommentResponseDto로 변환하는 정적 팩토리 메서드
      * 
      * @param comment 변환할 FeedComment 엔티티
-     * @param authorNickname 작성자 닉네임
      * @return 변환된 FeedCommentResponseDto 객체
      */
-    public static FeedCommentResponseDto from(FeedComment comment, String authorNickname) {
+    public static FeedCommentResponseDto from(FeedComment comment) {
         return FeedCommentResponseDto.builder()
-                .commentId(comment.getId())
+                .comment_id(comment.getId())
                 .author(AuthorDto.builder()
-                        .userId(comment.getUserId())
-                        .nickname(authorNickname)
+                        .user_id(comment.getAuthor().getId())
+                        .nickname(comment.getAuthor().getNickname())
                         .build())
                 .content(comment.getContent())
-                .createdAt(comment.getCreatedAt().toLocalDate())
-                .modifiedAt(comment.getModifiedAt() != null ? comment.getModifiedAt().toLocalDate() : comment.getCreatedAt().toLocalDate())
+                .created_at(comment.getCreatedAt().toLocalDate().toString())
+                .modified_at(comment.getModifiedAt() != null ? comment.getModifiedAt().toLocalDate().toString() : comment.getCreatedAt().toLocalDate().toString())
                 .build();
     }
 } 

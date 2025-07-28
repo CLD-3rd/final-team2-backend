@@ -1,15 +1,14 @@
 package com.goteego.feed.controller;
 
 import com.goteego.feed.domain.Feed;
-import com.goteego.feed.dto.FeedCreateResponseDto;
-import com.goteego.feed.dto.FeedDetailResponseDto;
-import com.goteego.feed.dto.FeedListResponseDto;
-import com.goteego.feed.dto.FeedResponseDto;
-
-import java.time.LocalDate;
+import com.goteego.feed.dto.request.FeedCreateRequest;
+import com.goteego.feed.dto.request.FeedUpdateRequest;
+import com.goteego.feed.dto.response.FeedCreateResponseDto;
+import com.goteego.feed.dto.response.FeedDetailResponseDto;
+import com.goteego.feed.dto.response.FeedListResponseDto;
+import com.goteego.feed.dto.response.FeedResponseDto;
 import com.goteego.feed.service.FeedService;
 import com.goteego.user.domain.User;
-import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -23,18 +22,9 @@ import org.springframework.web.bind.annotation.*;
 public class FeedController {
     
     private final FeedService feedService;
-    private final UserRepository userRepository;
     
     /**
      * 피드 목록 조회
-     * 
-     * @param title 제목 검색 (선택사항)
-     * @param author 글쓴이 검색 (선택사항)
-     * @param region 지역 검색 (선택사항)
-     * @param sort 정렬 기준 (recent: 최근순, view: 조회순)
-     * @param page 페이지 번호 (0부터 시작)
-     * @param size 페이지 크기
-     * @return 피드 목록과 페이징 정보
      */
     @GetMapping
     public ResponseEntity<FeedListResponseDto> getFeeds(
@@ -55,9 +45,6 @@ public class FeedController {
     
     /**
      * 피드 상세 조회
-     * 
-     * @param feedId 피드 ID
-     * @return 피드 상세 정보와 코멘트 목록
      */
     @GetMapping("/{feedId}")
     public ResponseEntity<FeedDetailResponseDto> getFeedDetail(@PathVariable("feedId") Long feedId) {
@@ -71,24 +58,13 @@ public class FeedController {
     
     /**
      * 피드 생성
-     * 
-     * @param requestDto 피드 생성 요청 데이터
-     * @param user 현재 로그인한 사용자
-     * @return 생성된 피드 정보
      */
     @PostMapping
     public ResponseEntity<FeedCreateResponseDto> createFeed(
             @RequestBody FeedCreateRequest requestDto,
             @AuthenticationPrincipal User user) {
         
-        Feed feed = feedService.createFeed(
-            user.getId(),
-            requestDto.getTitle(),
-            requestDto.getContent(),
-            requestDto.getImageUrl(),
-            requestDto.getLocation(),
-            requestDto.getBadgeRequest()
-        );
+        Feed feed = feedService.createFeed(user.getId(), requestDto);
         
         FeedCreateResponseDto responseDto = FeedCreateResponseDto.from(feed);
         
@@ -100,11 +76,6 @@ public class FeedController {
     
     /**
      * 피드 수정
-     * 
-     * @param feedId 피드 ID
-     * @param requestDto 피드 수정 요청 데이터
-     * @param user 현재 로그인한 사용자
-     * @return 수정된 피드 정보
      */
     @PutMapping("/{feedId}")
     public ResponseEntity<FeedResponseDto> updateFeed(
@@ -112,23 +83,9 @@ public class FeedController {
             @RequestBody FeedUpdateRequest requestDto,
             @AuthenticationPrincipal User user) {
         
-        Feed feed = feedService.updateFeed(
-            feedId,
-            user.getId(),
-            requestDto.getTitle(),
-            requestDto.getContent(),
-            requestDto.getImageUrl(),
-            requestDto.getLocation(),
-            requestDto.getBadgeRequest(),
-            requestDto.getDeleteImageUrl()
-        );
+        Feed feed = feedService.updateFeed(feedId, user.getId(), requestDto);
         
-        // 작성자 닉네임 조회
-        String authorNickname = userRepository.findById(feed.getUserId())
-                .map(User::getNickname)
-                .orElse("알 수 없는 사용자");
-        
-        FeedResponseDto responseDto = FeedResponseDto.fromForUpdate(feed, authorNickname);
+        FeedResponseDto responseDto = FeedResponseDto.from(feed);
         
         log.info("피드 수정 - feedId: {}, title: {}, userId: {}", 
                 feedId, feed.getTitle(), user.getId());
@@ -138,10 +95,6 @@ public class FeedController {
     
     /**
      * 피드 삭제
-     * 
-     * @param feedId 피드 ID
-     * @param user 현재 로그인한 사용자
-     * @return 삭제 결과 메시지
      */
     @DeleteMapping("/{feedId}")
     public ResponseEntity<String> deleteFeed(
@@ -153,67 +106,5 @@ public class FeedController {
         log.info("피드 삭제 - feedId: {}, userId: {}", feedId, user.getId());
         
         return ResponseEntity.ok("피드가 삭제되었습니다.");
-    }
-    
-    /**
-     * 피드 생성 요청 DTO
-     */
-    public static class FeedCreateRequest {
-        private String title;
-        private String content;
-        private String imageUrl;
-        private String location;
-        private Boolean badgeRequest;
-        
-        // Getters and Setters
-        public String getTitle() { return title; }
-        public void setTitle(String title) { this.title = title; }
-        
-        public String getContent() { return content; }
-        public void setContent(String content) { this.content = content; }
-        
-        public String getImageUrl() { return imageUrl; }
-        public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-        
-        public String getLocation() { return location; }
-        public void setLocation(String location) { this.location = location; }
-        
-        public Boolean getBadgeRequest() { return badgeRequest; }
-        public void setBadgeRequest(Boolean badgeRequest) { this.badgeRequest = badgeRequest; }
-    }
-    
-    /**
-     * 피드 수정 요청 DTO
-     */
-    public static class FeedUpdateRequest {
-        private String title;
-        private String content;
-        private String imageUrl;
-        private String location;
-        private Boolean badgeRequest;
-        private String deleteImageUrl;
-        private LocalDate modifiedAt;
-        
-        // Getters and Setters
-        public String getTitle() { return title; }
-        public void setTitle(String title) { this.title = title; }
-        
-        public String getContent() { return content; }
-        public void setContent(String content) { this.content = content; }
-        
-        public String getImageUrl() { return imageUrl; }
-        public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-        
-        public String getLocation() { return location; }
-        public void setLocation(String location) { this.location = location; }
-        
-        public Boolean getBadgeRequest() { return badgeRequest; }
-        public void setBadgeRequest(Boolean badgeRequest) { this.badgeRequest = badgeRequest; }
-        
-        public String getDeleteImageUrl() { return deleteImageUrl; }
-        public void setDeleteImageUrl(String deleteImageUrl) { this.deleteImageUrl = deleteImageUrl; }
-        
-        public LocalDate getModifiedAt() { return modifiedAt; }
-        public void setModifiedAt(LocalDate modifiedAt) { this.modifiedAt = modifiedAt; }
     }
 } 

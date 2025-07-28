@@ -1,5 +1,6 @@
 package com.goteego.travel.dto.travel;
 
+import com.goteego.global.domain.enumerate.Location;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Min;
@@ -25,7 +26,7 @@ public class TravelPostUpdateRequest {
     private String content;
     
     @NotBlank(message = "지역은 필수입니다")
-    private String location;
+    private String location; // String으로 받아서 Location enum으로 변환
     
     @NotNull(message = "시작 날짜는 필수입니다")
     private LocalDate startTime;
@@ -42,4 +43,11 @@ public class TravelPostUpdateRequest {
     private String postType;
     
     private Boolean isAddRecruit;
+    
+    /**
+     * String location을 Location enum으로 변환
+     */
+    public Location getLocationAsEnum() {
+        return Location.valueOf(location.toUpperCase());
+    }
 }

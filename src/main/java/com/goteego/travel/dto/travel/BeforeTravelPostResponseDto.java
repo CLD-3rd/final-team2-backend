@@ -51,7 +51,7 @@ public class BeforeTravelPostResponseDto {
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
                 .content(travelPost.getContent())
-                .location(travelPost.getLocation())
+                .location(travelPost.getLocation().name())
                 .viewCount(travelPost.getViewCount())
                 .startTime(travelPost.getStartTime().toString())
                 .endTime(travelPost.getEndTime().toString())

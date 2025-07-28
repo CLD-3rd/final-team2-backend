@@ -1,4 +1,4 @@
-package com.goteego.feed.dto;
+package com.goteego.feed.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -8,9 +8,6 @@ import java.util.List;
 /**
  * 피드 목록 응답 DTO 클래스
  * 페이징된 피드 목록과 페이지 정보를 클라이언트에게 전달하는 데이터 전송 객체
- * 
- * @author GotEEgo Team
- * @version 1.0
  */
 @Getter
 @Builder
@@ -18,13 +15,11 @@ public class FeedListResponseDto {
     
     /**
      * 피드 목록
-     * 현재 페이지에 해당하는 피드들의 리스트
      */
     private List<FeedResponseDto> feeds;
     
     /**
      * 페이지 정보
-     * 페이징 관련 메타데이터
      */
     private PageInfoDto pageInfo;
     

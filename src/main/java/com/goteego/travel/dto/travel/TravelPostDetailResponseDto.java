@@ -1,5 +1,6 @@
 package com.goteego.travel.dto.travel;
 
+import com.goteego.global.domain.enumerate.Location;
 import com.goteego.travel.domain.TravelPost;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,7 @@ public class TravelPostDetailResponseDto {
     private Long travelPostId;
     private String title;
     private String content;
-    private String location;
+    private Location location;
     private String startTime;
     private String endTime;
     private AuthorDto author;

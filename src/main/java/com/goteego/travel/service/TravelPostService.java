@@ -123,7 +123,7 @@ public class TravelPostService {
                 .recruitLimit(request.getRecruitLimit())
                 .postType(PostType.valueOf(request.getPostType().toUpperCase()))
                 .isAddRecruit(request.getIsAddRecruit())
-                .location(request.getLocation())
+                .location(request.getLocationAsEnum())
                 .build();
 
         // 게시글 저장

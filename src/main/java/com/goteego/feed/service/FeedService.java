@@ -1,10 +1,14 @@
 package com.goteego.feed.service;
 
 import com.goteego.feed.domain.Feed;
-import com.goteego.feed.dto.FeedCommentResponseDto;
-import com.goteego.feed.dto.FeedDetailResponseDto;
-import com.goteego.feed.dto.FeedListResponseDto;
-import com.goteego.feed.dto.FeedResponseDto;
+import com.goteego.global.domain.enumerate.Location;
+import com.goteego.feed.domain.enumerate.FeedSortType;
+import com.goteego.feed.dto.request.FeedCreateRequest;
+import com.goteego.feed.dto.request.FeedUpdateRequest;
+import com.goteego.feed.dto.response.FeedCommentResponseDto;
+import com.goteego.feed.dto.response.FeedDetailResponseDto;
+import com.goteego.feed.dto.response.FeedListResponseDto;
+import com.goteego.feed.dto.response.FeedResponseDto;
 import com.goteego.feed.repository.FeedRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.repository.UserRepository;
@@ -17,15 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * 피드 서비스 클래스
  * 피드 관련 비즈니스 로직을 처리하는 서비스 계층
- * 
- * @author GotEEgo Team
- * @version 1.0
  */
 @Slf4j
 @Service
@@ -33,53 +33,26 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class FeedService {
     
-    /**
-     * 피드 데이터 접근을 위한 리포지토리
-     */
     private final FeedRepository feedRepository;
-    
-    /**
-     * 사용자 데이터 접근을 위한 리포지토리
-     */
     private final UserRepository userRepository;
-    
-    /**
-     * 피드 코멘트 서비스
-     */
     private final FeedCommentService feedCommentService;
     
     /**
      * 피드 목록을 조회하는 메서드
-     * 제목, 작성자, 지역으로 필터링이 가능하며, 정렬과 페이징을 지원함
-     * 
-     * @param title 검색할 제목 (선택사항)
-     * @param author 검색할 작성자 닉네임 (선택사항)
-     * @param region 검색할 지역 정보 (선택사항)
-     * @param sort 정렬 기준 (recent: 최근순, view: 조회순)
-     * @param page 페이지 번호 (0부터 시작)
-     * @param size 페이지당 항목 수
-     * @return 페이징된 피드 목록과 페이지 정보
      */
     public FeedListResponseDto getFeeds(String title, String author, String region, String sort, int page, int size) {
         // 페이징 정보 생성
         Pageable pageable = PageRequest.of(page, size);
         
+        // 정렬 타입 변환
+        FeedSortType sortType = FeedSortType.fromValue(sort);
+        
         // 조건에 따른 피드 조회
-        Page<Feed> feedPage = getFeedsByCondition(title, author, region, sort, pageable);
+        Page<Feed> feedPage = getFeedsByCondition(title, author, region, sortType, pageable);
         
-        // 피드 작성자들의 사용자 ID 수집
-        List<Long> userIds = feedPage.getContent().stream()
-                .map(Feed::getUserId)
-                .distinct()
-                .collect(Collectors.toList());
-        
-        // 사용자 ID를 키로 하는 닉네임 맵 생성
-        Map<Long, String> userNicknames = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, User::getNickname));
-        
-        // Feed 엔티티를 FeedResponseDto로 변환
+        // Feed 엔티티를 FeedResponseDto로 변환 (이미 Fetch Join으로 N+1 문제 해결됨)
         List<FeedResponseDto> feedDtos = feedPage.getContent().stream()
-                .map(feed -> FeedResponseDto.from(feed, userNicknames.get(feed.getUserId())))
+                .map(FeedResponseDto::from)
                 .collect(Collectors.toList());
         
         // 페이지 정보 생성
@@ -99,21 +72,16 @@ public class FeedService {
     
     /**
      * 검색 조건과 정렬 기준에 따른 피드 조회 메서드
-     * 
-     * @param title 제목 검색 조건
-     * @param author 작성자 검색 조건
-     * @param region 지역 검색 조건
-     * @param sort 정렬 기준 (recent: 최근순, view: 조회순)
-     * @param pageable 페이징 정보
-     * @return 조건에 맞는 페이징된 피드 목록
      */
-    private Page<Feed> getFeedsByCondition(String title, String author, String region, String sort, Pageable pageable) {
-        // 정렬 기준에 따른 조회 메서드 선택
-        if ("view".equals(sort)) {
-            return getFeedsByViewCount(title, author, region, pageable);
-        } else {
-            // 기본값은 최근순
-            return getFeedsByRecent(title, author, region, pageable);
+    private Page<Feed> getFeedsByCondition(String title, String author, String region, FeedSortType sortType, Pageable pageable) {
+        switch (sortType) {
+            case VIEW:
+                return getFeedsByViewCount(title, author, region, pageable);
+            case LIKE:
+                return getFeedsByLikeCount(title, author, region, pageable);
+            case RECENT:
+            default:
+                return getFeedsByRecent(title, author, region, pageable);
         }
     }
     
@@ -126,7 +94,8 @@ public class FeedService {
         } else if (author != null && !author.trim().isEmpty()) {
             return feedRepository.findByAuthorNicknameContainingOrderByCreatedAtDesc(author.trim(), pageable);
         } else if (region != null && !region.trim().isEmpty()) {
-            return feedRepository.findByLocationContainingOrderByCreatedAtDesc(region.trim(), pageable);
+            Location location = Location.valueOf(region.toUpperCase());
+            return feedRepository.findByLocationOrderByCreatedAtDesc(location, pageable);
         } else {
             return feedRepository.findAllByOrderByCreatedAtDesc(pageable);
         }
@@ -141,35 +110,46 @@ public class FeedService {
         } else if (author != null && !author.trim().isEmpty()) {
             return feedRepository.findByAuthorNicknameContainingOrderByViewCountDesc(author.trim(), pageable);
         } else if (region != null && !region.trim().isEmpty()) {
-            return feedRepository.findByLocationContainingOrderByViewCountDesc(region.trim(), pageable);
+            Location location = Location.valueOf(region.toUpperCase());
+            return feedRepository.findByLocationOrderByViewCountDesc(location, pageable);
         } else {
             return feedRepository.findAllByOrderByViewCountDesc(pageable);
         }
     }
     
-
+    /**
+     * 좋아요순으로 피드를 조회하는 메서드
+     */
+    private Page<Feed> getFeedsByLikeCount(String title, String author, String region, Pageable pageable) {
+        if (title != null && !title.trim().isEmpty()) {
+            return feedRepository.findByTitleContainingOrderByLikeCountDesc(title.trim(), pageable);
+        } else if (author != null && !author.trim().isEmpty()) {
+            return feedRepository.findByAuthorNicknameContainingOrderByLikeCountDesc(author.trim(), pageable);
+        } else if (region != null && !region.trim().isEmpty()) {
+            Location location = Location.valueOf(region.toUpperCase());
+            return feedRepository.findByLocationOrderByLikeCountDesc(location, pageable);
+        } else {
+            return feedRepository.findAllByOrderByLikeCountDesc(pageable);
+        }
+    }
     
     /**
      * 새로운 피드를 생성하는 메서드
-     * 
-     * @param userId 피드 작성자 ID
-     * @param title 피드 제목
-     * @param content 피드 내용
-     * @param imageUrl 이미지 URL
-     * @param location 위치 정보
-     * @param badgeRequest 배지 요청 여부
-     * @return 생성된 피드 엔티티
      */
     @Transactional
-    public Feed createFeed(Long userId, String title, String content, String imageUrl, String location, Boolean badgeRequest) {
+    public Feed createFeed(Long userId, FeedCreateRequest requestDto) {
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
         // 피드 엔티티 생성
         Feed feed = Feed.builder()
-                .userId(userId)
-                .title(title)
-                .content(content)
-                .imageUrl(imageUrl)
-                .location(location)
-                .badgeRequest(badgeRequest)
+                .author(user)
+                .title(requestDto.getTitle())
+                .content(requestDto.getContent())
+                .imageUrl(requestDto.getImageUrl())
+                .location(requestDto.getLocation())
+                .badgeRequest(requestDto.getBadgeRequest())
                 .build();
         
         // 데이터베이스에 저장
@@ -178,21 +158,9 @@ public class FeedService {
     
     /**
      * 피드 정보를 수정하는 메서드
-     * 작성자만 수정할 수 있도록 권한 검증을 수행함
-     * 
-     * @param feedId 수정할 피드 ID
-     * @param userId 수정 요청한 사용자 ID
-     * @param title 수정할 제목
-     * @param content 수정할 내용
-     * @param imageUrl 수정할 이미지 URL
-     * @param location 수정할 위치 정보
-     * @param badgeRequest 수정할 배지 요청 여부
-     * @param deleteImageUrl 삭제할 이미지 URL
-     * @return 수정된 피드 엔티티
-     * @throws IllegalArgumentException 피드를 찾을 수 없거나 작성자가 아닌 경우
      */
     @Transactional
-    public Feed updateFeed(Long feedId, Long userId, String title, String content, String imageUrl, String location, Boolean badgeRequest, String deleteImageUrl) {
+    public Feed updateFeed(Long feedId, Long userId, FeedUpdateRequest requestDto) {
         // 피드 조회
         Feed feed = feedRepository.findById(feedId)
                 .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
@@ -202,18 +170,20 @@ public class FeedService {
             throw new IllegalArgumentException("피드 작성자만 수정할 수 있습니다.");
         }
         
-        // 피드 정보 업데이트
-        feed.update(title, content, imageUrl, location, badgeRequest);
+        // 피드 정보 수정
+        feed.update(
+            requestDto.getTitle(),
+            requestDto.getContent(),
+            requestDto.getImageUrl(),
+            requestDto.getLocation(),
+            requestDto.getBadgeRequest()
+        );
+        
         return feed;
     }
     
     /**
      * 피드를 삭제하는 메서드
-     * 작성자만 삭제할 수 있도록 권한 검증을 수행함
-     * 
-     * @param feedId 삭제할 피드 ID
-     * @param userId 삭제 요청한 사용자 ID
-     * @throws IllegalArgumentException 피드를 찾을 수 없거나 작성자가 아닌 경우
      */
     @Transactional
     public void deleteFeed(Long feedId, Long userId) {
@@ -232,11 +202,6 @@ public class FeedService {
     
     /**
      * 피드 상세 정보를 조회하는 메서드
-     * 조회 시 조회수가 자동으로 증가되며, 코멘트 목록도 함께 반환됨
-     * 
-     * @param feedId 조회할 피드 ID
-     * @return 피드 상세 정보와 코멘트 목록
-     * @throws IllegalArgumentException 피드를 찾을 수 없는 경우
      */
     @Transactional
     public FeedDetailResponseDto getFeedDetail(Long feedId) {
@@ -247,15 +212,10 @@ public class FeedService {
         // 조회수 증가
         feed.incrementViewCount();
         
-        // 작성자 닉네임 조회
-        String authorNickname = userRepository.findById(feed.getUserId())
-                .map(User::getNickname)
-                .orElse("알 수 없는 사용자");
-        
         // 코멘트 목록 조회
         List<FeedCommentResponseDto> comments = feedCommentService.getCommentsByFeedId(feedId);
         
         // FeedDetailResponseDto로 변환하여 반환
-        return FeedDetailResponseDto.from(feed, authorNickname, comments);
+        return FeedDetailResponseDto.from(feed, comments);
     }
 } 

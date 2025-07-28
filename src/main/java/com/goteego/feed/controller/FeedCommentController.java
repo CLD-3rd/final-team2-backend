@@ -1,7 +1,7 @@
 package com.goteego.feed.controller;
 
 import com.goteego.feed.domain.FeedComment;
-import com.goteego.feed.dto.FeedCommentResponseDto;
+import com.goteego.feed.dto.response.FeedCommentResponseDto;
 import com.goteego.feed.service.FeedCommentService;
 import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
