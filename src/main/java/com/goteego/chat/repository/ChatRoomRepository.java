@@ -9,7 +9,12 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
-    Optional<ChatRoom> findByRoomId(String roomId);
+
+    @Query("SELECT DISTINCT cr FROM ChatRoom cr " +
+            "LEFT JOIN FETCH cr.participants p " +
+            "LEFT JOIN FETCH p.user " +
+            "WHERE cr.roomId = :roomId")
+    Optional<ChatRoom> findByRoomId(@Param("roomId") String roomId);
 
     /**
      * 두 사용자가 모두 참여하고 있는 DIRECT 타입의 채팅방을 찾는 쿼리
