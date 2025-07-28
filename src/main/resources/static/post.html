@@ -100,6 +100,15 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label>지역:</label>
+                        <select id="tp-location" required>
+                            <option value="JEJU">제주도</option>
+                            <option value="SEOUL">서울</option>
+                            <option value="BUSAN">부산</option>
+                            <option value="GANGWON">강원도</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>시작 날짜:</label>
                         <input type="date" id="tp-start" required>
                     </div>
@@ -359,12 +368,10 @@
                     </div>
                 `;
             } else {
-                // NOW 타입 응답 구조
+                // NOW 타입 응답 구조 (API 명세에 맞게 수정)
                 div.innerHTML = `
                     <h4>${post.title || '제목 없음'}</h4>
                     <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
-                    <p><strong>평점:</strong> ${post.author?.rating || 'N/A'}</p>
-                    <p><strong>태그:</strong> ${post.author?.tags?.join(', ') || 'N/A'}</p>
                     <p><strong>타입:</strong> ${postTypeBadge}</p>
                     <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
                     <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
@@ -405,16 +412,17 @@
                 <div class="schedule-item">
                     <h3>📋 게시글 상세 정보</h3>
                     <h4>${post.title || '제목 없음'}</h4>
-                    <p><strong>작성자:</strong> ${post.user?.nickname || post.userEmail || 'N/A'}</p>
+                    <p><strong>작성자:</strong> ${post.author?.nickname || post.user?.nickname || 'N/A'}</p>
                     <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
+                    <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
                     <p><strong>타입:</strong> ${postTypeBadge}</p>
                     <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
-                    <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
+                    <p><strong>모집인원:</strong> ${post.maxParticipants || post.recruitLimit || 'N/A'}명</p>
                     <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
                     <p><strong>생성일:</strong> ${post.createdAt || 'N/A'}</p>
                     <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
                     <div class="action-buttons">
-                        <button onclick="joinTravelPost(${post.id || post.travelPostId})" class="approve">
+                        <button onclick="joinTravelPost(${post.travelPostId || post.id})" class="approve">
                             참여 신청
                         </button>
                     </div>
@@ -467,6 +475,7 @@
         const data = {
             title: document.getElementById('tp-title').value,
             content: document.getElementById('tp-content').value,
+            location: document.getElementById('tp-location').value,
             startTime: document.getElementById('tp-start').value,
             endTime: document.getElementById('tp-end').value,
             recruitLimit: parseInt(document.getElementById('tp-limit').value),
