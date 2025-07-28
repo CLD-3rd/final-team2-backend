@@ -19,6 +19,7 @@
         <div>
             <button onclick="logout()">로그아웃</button>
             <span id="login-status">로그인 상태 확인 중...</span>
+            <button onclick="location.href='/'" style="margin-left: 10px; background-color: #28a745;">로그인</button>
         </div>
         <div>
             <button onclick="location.href='chat.html'" style="margin-right: 10px;">채팅으로 이동</button>
@@ -102,10 +103,16 @@
                     <div class="form-group">
                         <label>지역:</label>
                         <select id="tp-location" required>
-                            <option value="JEJU">제주도</option>
+                            <option value="JEJU">제주</option>
                             <option value="SEOUL">서울</option>
                             <option value="BUSAN">부산</option>
-                            <option value="GANGWON">강원도</option>
+                            <option value="DAEGU">대구</option>
+                            <option value="DAEJEON">대전</option>
+                            <option value="JEONJU">전주</option>
+                            <option value="GWANGJU">광주</option>
+                            <option value="GYEONGJU">경주</option>
+                            <option value="GANGNEUNG">강릉</option>
+                            <option value="SOKCHO">속초</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -187,7 +194,8 @@
     window.onload = function() {
         const cookies = document.cookie.split(';');
         const accessToken = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
-        document.getElementById('login-status').textContent = accessToken ? '로그인됨' : '로그인 필요';
+        const isLoggedIn = accessToken ? true : false;
+        document.getElementById('login-status').textContent = isLoggedIn ? '로그인됨' : '로그인 필요';
 
         // WebSocketManager 초기화 (알림 핸들러 등록)
         if (typeof initWebSocketManager === 'function') {
@@ -195,9 +203,18 @@
         }
 
         // 페이지 로드 시 자동으로 일정 데이터 로드
-        if (accessToken) {
+        if (isLoggedIn) {
             loadScheduleData();
             getTravelPosts();
+        } else {
+            // 로그인 필요 안내
+            document.getElementById('travel-result').innerHTML = `
+                <div class="error-message">
+                    <h3>⚠️ 로그인이 필요합니다</h3>
+                    <p>게시글 작성과 조회를 위해서는 먼저 로그인해주세요.</p>
+                    <p>Google 계정으로 로그인 후 다시 시도해주세요.</p>
+                </div>
+            `;
         }
 
         // 날짜 기본값 설정
@@ -310,7 +327,25 @@
             const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
             displayTravelPosts(res.data, postType);
         } catch(e) { 
-            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+            let errorMessage = '알 수 없는 오류가 발생했습니다.';
+            
+            if (e.response) {
+                if (e.response.status === 401) {
+                    errorMessage = '로그인이 필요합니다. Google 계정으로 로그인해주세요.';
+                } else if (e.response.status === 403) {
+                    errorMessage = '접근 권한이 없습니다.';
+                } else if (e.response.data && e.response.data.message) {
+                    errorMessage = e.response.data.message;
+                } else {
+                    errorMessage = `서버 오류 (${e.response.status}): ${e.message}`;
+                }
+            } else if (e.request) {
+                errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
+            } else {
+                errorMessage = e.message;
+            }
+            
+            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${errorMessage}</div>`;
         }
     }
 
@@ -318,74 +353,115 @@
         const container = document.getElementById('travel-result');
         container.innerHTML = '';
 
+        // 디버깅을 위한 응답 데이터 로그
+        console.log('API 응답 데이터:', responseData);
+        console.log('PostType:', postType);
+
         // 새로운 API 응답 구조에 맞게 처리
         let posts = [];
-        if (postType === 'BEFORE' && responseData.beforePosts) {
-            posts = responseData.beforePosts;
-        } else if (postType === 'NOW' && responseData.nowPosts) {
-            posts = responseData.nowPosts;
+        
+        // 응답 데이터가 객체인지 배열인지 확인
+        if (Array.isArray(responseData)) {
+            // 직접 배열로 온 경우
+            posts = responseData;
+        } else if (responseData && typeof responseData === 'object') {
+            // 객체로 온 경우 (TravelPostResponseWrapper)
+            if (postType === 'BEFORE' && responseData.beforePosts) {
+                posts = responseData.beforePosts;
+            } else if (postType === 'NOW' && responseData.nowPosts) {
+                posts = responseData.nowPosts;
+            } else if (responseData.content) {
+                // PageResponseDto 구조
+                posts = responseData.content;
+            } else {
+                // 기타 객체 구조
+                posts = [];
+            }
         } else {
-            // 기존 구조 호환성
-            posts = responseData.content || responseData || [];
+            // 기타 경우
+            posts = [];
         }
+
+        console.log('처리된 posts:', posts);
 
         if (!posts || posts.length === 0) {
             container.innerHTML = '<div class="success-message">📝 등록된 게시글이 없습니다.</div>';
             return;
         }
 
-        posts.forEach(post => {
-            const div = document.createElement('div');
-            div.className = 'schedule-item';
-            
-            const postTypeBadge = postType === 'BEFORE' ? 
-                '<span class="status-badge status-before">사전여행</span>' : 
-                '<span class="status-badge status-now">현지여행</span>';
-            
-            if (postType === 'BEFORE') {
-                // BEFORE 타입 응답 구조
-                const recruitmentBadge = post.participants >= post.maxParticipants ? 
-                    '<span class="status-badge status-completed">모집완료</span>' : 
-                    '<span class="status-badge status-recruiting">모집중</span>';
+        // posts가 배열인지 확인
+        if (!Array.isArray(posts)) {
+            console.error('posts가 배열이 아닙니다:', posts);
+            container.innerHTML = '<div class="error-message">❌ 데이터 형식 오류: posts가 배열이 아닙니다.</div>';
+            return;
+        }
+
+        posts.forEach((post, index) => {
+            try {
+                const div = document.createElement('div');
+                div.className = 'schedule-item';
                 
-                div.innerHTML = `
-                    <h4>${post.title || '제목 없음'}</h4>
-                    <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
-                    <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
-                    <p><strong>타입:</strong> ${postTypeBadge}</p>
-                    <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
-                    <p><strong>참가자:</strong> ${post.participants || 0}/${post.maxParticipants || 'N/A'}명</p>
-                    <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
-                    <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
-                    <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
-                    <div class="action-buttons">
-                        <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
-                            참여 신청
-                        </button>
-                        <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
-                            상세 보기
-                        </button>
-                    </div>
+                const postTypeBadge = postType === 'BEFORE' ? 
+                    '<span class="status-badge status-before">사전여행</span>' : 
+                    '<span class="status-badge status-now">현지여행</span>';
+                
+                if (postType === 'BEFORE') {
+                    // BEFORE 타입 응답 구조
+                    const recruitmentBadge = post.participants >= post.maxParticipants ? 
+                        '<span class="status-badge status-completed">모집완료</span>' : 
+                        '<span class="status-badge status-recruiting">모집중</span>';
+                    
+                    div.innerHTML = `
+                        <h4>${post.title || '제목 없음'}</h4>
+                        <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
+                        <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
+                        <p><strong>타입:</strong> ${postTypeBadge}</p>
+                        <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
+                        <p><strong>참가자:</strong> ${post.participants || 0}/${post.maxParticipants || 'N/A'}명</p>
+                        <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
+                        <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
+                        <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
+                        <div class="action-buttons">
+                            <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
+                                참여 신청
+                            </button>
+                            <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
+                                상세 보기
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // NOW 타입 응답 구조 (API 명세에 맞게 수정)
+                    div.innerHTML = `
+                        <h4>${post.title || '제목 없음'}</h4>
+                        <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
+                        <p><strong>타입:</strong> ${postTypeBadge}</p>
+                        <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
+                        <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
+                        <div class="action-buttons">
+                            <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
+                                참여 신청
+                            </button>
+                            <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
+                                상세 보기
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                container.appendChild(div);
+            } catch (error) {
+                console.error(`게시글 ${index} 처리 중 오류:`, error, post);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'schedule-item';
+                errorDiv.style.borderLeftColor = '#dc3545';
+                errorDiv.innerHTML = `
+                    <h4>❌ 게시글 처리 오류</h4>
+                    <p>게시글 데이터 처리 중 오류가 발생했습니다.</p>
+                    <p><strong>오류:</strong> ${error.message}</p>
                 `;
-            } else {
-                // NOW 타입 응답 구조 (API 명세에 맞게 수정)
-                div.innerHTML = `
-                    <h4>${post.title || '제목 없음'}</h4>
-                    <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
-                    <p><strong>타입:</strong> ${postTypeBadge}</p>
-                    <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
-                    <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
-                    <div class="action-buttons">
-                        <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
-                            참여 신청
-                        </button>
-                        <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
-                            상세 보기
-                        </button>
-                    </div>
-                `;
+                container.appendChild(errorDiv);
             }
-            container.appendChild(div);
         });
     }
 
@@ -429,7 +505,25 @@
                 </div>
             `;
         } catch(e) { 
-            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+            let errorMessage = '알 수 없는 오류가 발생했습니다.';
+            
+            if (e.response) {
+                if (e.response.status === 401) {
+                    errorMessage = '로그인이 필요합니다. Google 계정으로 로그인해주세요.';
+                } else if (e.response.status === 403) {
+                    errorMessage = '접근 권한이 없습니다.';
+                } else if (e.response.data && e.response.data.message) {
+                    errorMessage = e.response.data.message;
+                } else {
+                    errorMessage = `서버 오류 (${e.response.status}): ${e.message}`;
+                }
+            } else if (e.request) {
+                errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
+            } else {
+                errorMessage = e.message;
+            }
+            
+            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${errorMessage}</div>`;
         }
     }
 

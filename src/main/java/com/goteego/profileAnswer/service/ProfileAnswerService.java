@@ -4,6 +4,8 @@ import com.goteego.profileAnswer.domain.ProfileAnswer;
 import com.goteego.profileAnswer.dto.ProfileAnswerRequestDto;
 import com.goteego.profileAnswer.dto.ProfileAnswerResponseDto;
 import com.goteego.profileAnswer.repository.ProfileAnswerRepository;
+import com.goteego.recommendation.service.RecommendationService;
+import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,8 +15,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 여행 취향 설문 서비스 클래스
- * 여행 취향 설문 관련 비즈니스 로직을 처리하는 서비스 계층
+ * 사용자 선호도 서비스 클래스
+ * 사용자 선호도 관련 비즈니스 로직을 처리하는 서비스 계층
  * 
  * @author GotEEgo Team
  * @version 1.0
@@ -26,143 +28,159 @@ import java.util.stream.Collectors;
 public class ProfileAnswerService {
     
     /**
-     * 여행 취향 설문 데이터 접근을 위한 리포지토리
+     * 사용자 선호도 데이터 접근을 위한 리포지토리
      */
     private final ProfileAnswerRepository profileAnswerRepository;
     
     /**
-     * 사용자의 여행 취향 설문을 조회하는 메서드
-     * 
-     * @param userId 조회할 사용자 ID
-     * @return 해당 사용자의 여행 취향 설문 응답 DTO
-     * @throws IllegalArgumentException 설문을 찾을 수 없는 경우
+     * 추천 시스템 서비스 (임베딩 생성용)
      */
-    public ProfileAnswerResponseDto getProfileAnswer(Long userId) {
-        ProfileAnswer profileAnswer = profileAnswerRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("여행 취향 설문을 찾을 수 없습니다."));
+    private final RecommendationService recommendationService;
+    
+    /**
+     * 사용자의 선호도를 조회하는 메서드
+     * 
+     * @param user 조회할 사용자
+     * @return 해당 사용자의 선호도 응답 DTO
+     * @throws IllegalArgumentException 선호도를 찾을 수 없는 경우
+     */
+    public ProfileAnswerResponseDto getProfileAnswer(User user) {
+        ProfileAnswer profileAnswer = profileAnswerRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("사용자 선호도를 찾을 수 없습니다."));
         
         return ProfileAnswerResponseDto.from(profileAnswer);
     }
     
     /**
-     * 사용자의 여행 취향 설문 존재 여부를 확인하는 메서드
+     * 사용자의 선호도 존재 여부를 확인하는 메서드
      * 
-     * @param userId 확인할 사용자 ID
-     * @return 설문 존재 여부
+     * @param user 확인할 사용자
+     * @return 선호도 존재 여부
      */
-    public boolean existsByUserId(Long userId) {
-        return profileAnswerRepository.existsByUserId(userId);
+    public boolean existsByUser(User user) {
+        return profileAnswerRepository.existsByUser(user);
     }
     
     /**
-     * 사용자의 설문 완료 여부를 확인하는 메서드
+     * 새로운 사용자 선호도를 생성하는 메서드
      * 
-     * @param userId 확인할 사용자 ID
-     * @return 설문 완료 여부 (설문이 없으면 false)
-     */
-    public boolean isCompletedByUserId(Long userId) {
-        return profileAnswerRepository.findIsCompletedByUserId(userId)
-                .orElse(false);
-    }
-    
-    /**
-     * 새로운 여행 취향 설문을 생성하는 메서드
-     * 
-     * @param userId 사용자 ID
-     * @param requestDto 설문 요청 데이터
-     * @return 생성된 설문 엔티티
+     * @param user 사용자 객체
+     * @param requestDto 선호도 요청 데이터
+     * @return 생성된 선호도 엔티티
      */
     @Transactional
-    public ProfileAnswer createProfileAnswer(Long userId, ProfileAnswerRequestDto requestDto) {
-        // 이미 설문이 존재하는지 확인
-        if (profileAnswerRepository.existsByUserId(userId)) {
-            throw new IllegalArgumentException("이미 여행 취향 설문이 존재합니다.");
+    public ProfileAnswer createProfileAnswer(User user, ProfileAnswerRequestDto requestDto) {
+        // ===== 내부로직: 사용자 선호도 중복 검증 및 엔티티 생성 =====
+        if (profileAnswerRepository.existsByUser(user)) {
+            throw new IllegalArgumentException("이미 사용자 선호도가 존재합니다.");
         }
         
-        // JSON 형태로 변환하여 저장
-        String travelTendencies = convertListToJson(requestDto.getTravelTendencies());
-        String preferredActivities = convertListToJson(requestDto.getPreferredActivities());
-        String preferredDestinations = convertListToJson(requestDto.getPreferredDestinations());
-        
-        // 설문 엔티티 생성
         ProfileAnswer profileAnswer = ProfileAnswer.builder()
-                .userId(userId)
-                .travelTendencies(travelTendencies)
-                .preferredActivities(preferredActivities)
-                .scheduleStyle(requestDto.getScheduleStyle())
-                .drinkingPreference(requestDto.getDrinkingPreference())
-                .smokingStatus(requestDto.getSmokingStatus())
-                .preferredDestinations(preferredDestinations)
+                .user(user)
+                .isAlchol3(requestDto.getIsAlchol3())
+                .isAlchol2(requestDto.getIsAlchol2())
+                .isAlchol1(requestDto.getIsAlchol1())
+                .isSmoker(requestDto.getIsSmoker())
+                .isFriendly(requestDto.getIsFriendly())
+                .isQuiet(requestDto.getIsQuiet())
+                .isLead(requestDto.getIsLead())
+                .isParty(requestDto.getIsParty())
+                .isSearch(requestDto.getIsSearch())
+                .isListen(requestDto.getIsListen())
+                .isSee(requestDto.getIsSee())
+                .isCafe(requestDto.getIsCafe())
+                .isTaste(requestDto.getIsTaste())
+                .isPicture(requestDto.getIsPicture())
+                .isShopping(requestDto.getIsShopping())
+                .isOutdoor(requestDto.getIsOutdoor())
+                .isChill(requestDto.getIsChill())
+                .isBusy(requestDto.getIsBusy())
+                .isFlex(requestDto.getIsFlex())
+                .isCity(requestDto.getIsCity())
+                .isHeal(requestDto.getIsHeal())
+                .isBeach(requestDto.getIsBeach())
+                .isMountain(requestDto.getIsMountain())
                 .build();
         
-        // 데이터베이스에 저장
-        return profileAnswerRepository.save(profileAnswer);
+        ProfileAnswer savedProfileAnswer = profileAnswerRepository.save(profileAnswer);
+        createUserEmbeddingFromProfileAnswer(savedProfileAnswer);
+        
+        return savedProfileAnswer;
     }
     
     /**
-     * 여행 취향 설문을 수정하는 메서드
+     * 사용자 선호도를 수정하는 메서드
      * 
-     * @param userId 수정할 사용자 ID
-     * @param requestDto 수정할 설문 데이터
-     * @return 수정된 설문 엔티티
-     * @throws IllegalArgumentException 설문을 찾을 수 없는 경우
+     * @param user 사용자 객체
+     * @param requestDto 수정할 선호도 데이터
+     * @return 수정된 선호도 엔티티
+     * @throws IllegalArgumentException 선호도를 찾을 수 없는 경우
      */
     @Transactional
-    public ProfileAnswer updateProfileAnswer(Long userId, ProfileAnswerRequestDto requestDto) {
-        // 기존 설문 조회
-        ProfileAnswer profileAnswer = profileAnswerRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("여행 취향 설문을 찾을 수 없습니다."));
+    public ProfileAnswer updateProfileAnswer(User user, ProfileAnswerRequestDto requestDto) {
+        // ===== 내부로직: 기존 선호도 조회 및 업데이트 =====
+        ProfileAnswer profileAnswer = profileAnswerRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("사용자 선호도를 찾을 수 없습니다."));
         
-        // JSON 형태로 변환하여 저장
-        String travelTendencies = convertListToJson(requestDto.getTravelTendencies());
-        String preferredActivities = convertListToJson(requestDto.getPreferredActivities());
-        String preferredDestinations = convertListToJson(requestDto.getPreferredDestinations());
+        profileAnswer.update(
+                requestDto.getIsAlchol3(), requestDto.getIsAlchol2(), requestDto.getIsAlchol1(),
+                requestDto.getIsSmoker(), requestDto.getIsFriendly(), requestDto.getIsQuiet(),
+                requestDto.getIsLead(), requestDto.getIsParty(), requestDto.getIsSearch(),
+                requestDto.getIsListen(), requestDto.getIsSee(), requestDto.getIsCafe(),
+                requestDto.getIsTaste(), requestDto.getIsPicture(), requestDto.getIsShopping(),
+                requestDto.getIsOutdoor(), requestDto.getIsChill(), requestDto.getIsBusy(),
+                requestDto.getIsFlex(), requestDto.getIsCity(), requestDto.getIsHeal(),
+                requestDto.getIsBeach(), requestDto.getIsMountain()
+        );
         
-        // 설문 정보 업데이트
-        profileAnswer.update(travelTendencies, preferredActivities, requestDto.getScheduleStyle(),
-                           requestDto.getDrinkingPreference(), requestDto.getSmokingStatus(), preferredDestinations);
+        createUserEmbeddingFromProfileAnswer(profileAnswer);
         
         return profileAnswer;
     }
     
     /**
-     * 여행 취향 설문을 생성하거나 수정하는 메서드
+     * 사용자 선호도를 생성하거나 수정하는 메서드
      * 
-     * @param userId 사용자 ID
-     * @param requestDto 설문 데이터
-     * @return 생성되거나 수정된 설문 엔티티
+     * @param user 사용자 객체
+     * @param requestDto 선호도 데이터
+     * @return 생성되거나 수정된 선호도 엔티티
      */
     @Transactional
-    public ProfileAnswer saveOrUpdateProfileAnswer(Long userId, ProfileAnswerRequestDto requestDto) {
-        if (profileAnswerRepository.existsByUserId(userId)) {
-            return updateProfileAnswer(userId, requestDto);
+    public ProfileAnswer saveOrUpdateProfileAnswer(User user, ProfileAnswerRequestDto requestDto) {
+        // ===== 내부로직: 조건부 생성/수정 처리 =====
+        if (profileAnswerRepository.existsByUser(user)) {
+            return updateProfileAnswer(user, requestDto);
         } else {
-            return createProfileAnswer(userId, requestDto);
+            return createProfileAnswer(user, requestDto);
         }
     }
     
     /**
-     * 여행 취향 설문을 삭제하는 메서드
+     * 사용자 선호도를 삭제하는 메서드
      * 
-     * @param userId 삭제할 사용자 ID
-     * @throws IllegalArgumentException 설문을 찾을 수 없는 경우
+     * @param user 사용자 객체
+     * @throws IllegalArgumentException 선호도를 찾을 수 없는 경우
      */
     @Transactional
-    public void deleteProfileAnswer(Long userId) {
-        ProfileAnswer profileAnswer = profileAnswerRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("여행 취향 설문을 찾을 수 없습니다."));
+    public void deleteProfileAnswer(User user) {
+        // ===== 내부로직: 선호도 및 연관 임베딩 삭제 =====
+        ProfileAnswer profileAnswer = profileAnswerRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("사용자 선호도를 찾을 수 없습니다."));
         
         profileAnswerRepository.delete(profileAnswer);
+        recommendationService.deleteUserEmbedding(user.getId());
     }
     
     /**
-     * 특정 여행 스타일을 선호하는 사용자들의 설문을 조회하는 메서드
+     * 특정 여행 스타일을 선호하는 사용자들의 선호도를 조회하는 메서드
      * 
-     * @param scheduleStyle 조회할 여행 스타일
-     * @return 해당 스타일을 선호하는 사용자들의 설문 목록
+     * @param isChill 느긋한 스타일 선호 여부
+     * @param isBusy 바쁜 스타일 선호 여부
+     * @param isFlex 유연한 스타일 선호 여부
+     * @return 해당 스타일을 선호하는 사용자들의 선호도 목록
      */
-    public List<ProfileAnswerResponseDto> getProfileAnswersByScheduleStyle(String scheduleStyle) {
-        List<ProfileAnswer> profileAnswers = profileAnswerRepository.findByScheduleStyle(scheduleStyle);
+    public List<ProfileAnswerResponseDto> getProfileAnswersByScheduleStyle(Boolean isChill, Boolean isBusy, Boolean isFlex) {
+        List<ProfileAnswer> profileAnswers = profileAnswerRepository.findByScheduleStyle(isChill, isBusy, isFlex);
         
         return profileAnswers.stream()
                 .map(ProfileAnswerResponseDto::from)
@@ -170,13 +188,15 @@ public class ProfileAnswerService {
     }
     
     /**
-     * 특정 술자리 선호도를 가진 사용자들의 설문을 조회하는 메서드
+     * 특정 술자리 선호도를 가진 사용자들의 선호도를 조회하는 메서드
      * 
-     * @param drinkingPreference 조회할 술자리 선호도
-     * @return 해당 선호도를 가진 사용자들의 설문 목록
+     * @param isAlchol3 술 좋아하는 여부
+     * @param isAlchol2 분위기상 한두 잔 정도 여부
+     * @param isAlchol1 술 즐기지 않는 여부
+     * @return 해당 선호도를 가진 사용자들의 선호도 목록
      */
-    public List<ProfileAnswerResponseDto> getProfileAnswersByDrinkingPreference(String drinkingPreference) {
-        List<ProfileAnswer> profileAnswers = profileAnswerRepository.findByDrinkingPreference(drinkingPreference);
+    public List<ProfileAnswerResponseDto> getProfileAnswersByDrinkingPreference(Boolean isAlchol3, Boolean isAlchol2, Boolean isAlchol1) {
+        List<ProfileAnswer> profileAnswers = profileAnswerRepository.findByDrinkingPreference(isAlchol3, isAlchol2, isAlchol1);
         
         return profileAnswers.stream()
                 .map(ProfileAnswerResponseDto::from)
@@ -184,18 +204,85 @@ public class ProfileAnswerService {
     }
     
     /**
-     * List를 JSON 문자열로 변환하는 헬퍼 메서드
-     * 실제 구현에서는 Jackson ObjectMapper 등을 사용할 수 있음
+     * ProfileAnswer에서 사용자 임베딩 벡터를 생성하는 메서드
+     * 24개의 boolean 값을 30차원 벡터로 변환
      * 
-     * @param list 변환할 문자열 리스트
-     * @return JSON 형태의 문자열
+     * @param profileAnswer 사용자 선호도 엔티티
      */
-    private String convertListToJson(List<String> list) {
-        if (list == null || list.isEmpty()) {
-            return "[]";
+    private void createUserEmbeddingFromProfileAnswer(ProfileAnswer profileAnswer) {
+        try {
+            // 24개의 boolean 값을 1,0으로 변환하여 벡터 생성
+            String embedding = convertProfileAnswerToEmbedding(profileAnswer);
+            
+            // RecommendationService를 통해 임베딩 저장/업데이트
+            recommendationService.createOrUpdateUserEmbedding(profileAnswer.getUser().getId(), embedding);
+            
+            log.info("사용자 임베딩 생성/업데이트 완료 - userId: {}", profileAnswer.getUser().getId());
+            
+        } catch (Exception e) {
+            log.error("사용자 임베딩 생성 중 오류 발생 - userId: {}, error: {}", 
+                    profileAnswer.getUser().getId(), e.getMessage(), e);
         }
-        // 실제로는 ObjectMapper를 사용하여 JSON으로 변환해야 함
-        // 현재는 간단한 구현을 위해 쉼표로 구분된 문자열로 변환
-        return String.join(",", list);
+    }
+    
+    /**
+     * ProfileAnswer의 boolean 값들을 30차원 벡터 문자열로 변환
+     * 
+     * @param profileAnswer 사용자 선호도 엔티티
+     * @return 30차원 벡터 문자열 (예: "[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0]")
+     */
+    private String convertProfileAnswerToEmbedding(ProfileAnswer profileAnswer) {
+        // 24개의 boolean 값을 1,0으로 변환
+        int[] vector = new int[30];
+        
+        // 🍶 술 관련 선호도 (3개)
+        vector[0] = profileAnswer.getIsAlchol3() != null && profileAnswer.getIsAlchol3() ? 1 : 0;
+        vector[1] = profileAnswer.getIsAlchol2() != null && profileAnswer.getIsAlchol2() ? 1 : 0;
+        vector[2] = profileAnswer.getIsAlchol1() != null && profileAnswer.getIsAlchol1() ? 1 : 0;
+        
+        // 🤝 성격 관련 선호도 (6개)
+        vector[3] = profileAnswer.getIsSmoker() != null && profileAnswer.getIsSmoker() ? 1 : 0;
+        vector[4] = profileAnswer.getIsFriendly() != null && profileAnswer.getIsFriendly() ? 1 : 0;
+        vector[5] = profileAnswer.getIsQuiet() != null && profileAnswer.getIsQuiet() ? 1 : 0;
+        vector[6] = profileAnswer.getIsLead() != null && profileAnswer.getIsLead() ? 1 : 0;
+        vector[7] = profileAnswer.getIsParty() != null && profileAnswer.getIsParty() ? 1 : 0;
+        vector[8] = profileAnswer.getIsSearch() != null && profileAnswer.getIsSearch() ? 1 : 0;
+        vector[9] = profileAnswer.getIsListen() != null && profileAnswer.getIsListen() ? 1 : 0;
+        
+        // 🏞 활동 관련 선호도 (6개)
+        vector[10] = profileAnswer.getIsSee() != null && profileAnswer.getIsSee() ? 1 : 0;
+        vector[11] = profileAnswer.getIsCafe() != null && profileAnswer.getIsCafe() ? 1 : 0;
+        vector[12] = profileAnswer.getIsTaste() != null && profileAnswer.getIsTaste() ? 1 : 0;
+        vector[13] = profileAnswer.getIsPicture() != null && profileAnswer.getIsPicture() ? 1 : 0;
+        vector[14] = profileAnswer.getIsShopping() != null && profileAnswer.getIsShopping() ? 1 : 0;
+        vector[15] = profileAnswer.getIsOutdoor() != null && profileAnswer.getIsOutdoor() ? 1 : 0;
+        
+        // 💤 여행 스타일 관련 선호도 (3개)
+        vector[16] = profileAnswer.getIsChill() != null && profileAnswer.getIsChill() ? 1 : 0;
+        vector[17] = profileAnswer.getIsBusy() != null && profileAnswer.getIsBusy() ? 1 : 0;
+        vector[18] = profileAnswer.getIsFlex() != null && profileAnswer.getIsFlex() ? 1 : 0;
+        
+        // 🌆 여행지 유형 관련 선호도 (4개)
+        vector[19] = profileAnswer.getIsCity() != null && profileAnswer.getIsCity() ? 1 : 0;
+        vector[20] = profileAnswer.getIsHeal() != null && profileAnswer.getIsHeal() ? 1 : 0;
+        vector[21] = profileAnswer.getIsBeach() != null && profileAnswer.getIsBeach() ? 1 : 0;
+        vector[22] = profileAnswer.getIsMountain() != null && profileAnswer.getIsMountain() ? 1 : 0;
+        
+        // 나머지 7차원은 0으로 설정 (확장성을 위해)
+        for (int i = 23; i < 30; i++) {
+            vector[i] = 0;
+        }
+        
+        // 배열을 문자열로 변환
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < vector.length; i++) {
+            sb.append(vector[i]);
+            if (i < vector.length - 1) {
+                sb.append(",");
+            }
+        }
+        sb.append("]");
+        
+        return sb.toString();
     }
 } 

@@ -1,6 +1,7 @@
 package com.goteego.profileAnswer.domain;
 
 import com.goteego.global.domain.BaseEntity;
+import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,8 +13,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import java.time.LocalDateTime;
 
 /**
- * 여행 취향 설문 엔티티 클래스
- * 사용자의 여행 성향과 선호도를 저장하는 엔티티
+ * 사용자 선호도 엔티티 클래스
+ * 사용자의 여행 성향과 선호도를 저장하는 엔티티 (user_prefer 테이블)
  * 
  * @author GotEEgo Team
  * @version 1.0
@@ -21,144 +22,195 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "profile_answers")
+@Table(name = "user_prefer")
 public class ProfileAnswer extends BaseEntity {
     
     /**
-     * 여행 취향 고유 식별자 (Primary Key)
+     * 사용자 선호도 고유 식별자 (Primary Key)
      * 자동 증가하는 ID 값
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "answer_id")
+    @Column(name = "user_id")
     private Long id;
     
     /**
-     * 여행 취향을 가진 사용자 ID
-     * 외래키로 사용되며, User 엔티티와 연결됨
+     * 사용자
+     * User 엔티티와 OneToOne 관계
      */
-    @Column(name = "user_id", nullable = false, unique = true)
-    private Long userId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @MapsId
+    private User user;
+    
+    // 🍶 술 관련 선호도
+    @Column(name = "is_alchol3")
+    private Boolean isAlchol3; // 술 좋아해요
+    
+    @Column(name = "is_alchol2")
+    private Boolean isAlchol2; // 분위기상 한두 잔 정도
+    
+    @Column(name = "is_alchol1")
+    private Boolean isAlchol1; // 술은 즐기지 않아요
+    
+    @Column(name = "is_smoker")
+    private Boolean isSmoker; // 흡연 유무
+    
+    // 🤝 성격 관련 선호도
+    @Column(name = "is_friendly")
+    private Boolean isFriendly; // 새로운 사람과도 금방 친해져요
+    
+    @Column(name = "is_quiet")
+    private Boolean isQuiet; // 조용한 분위기를 좋아해요
+    
+    @Column(name = "is_lead")
+    private Boolean isLead; // 앞장서서 리드하는 편이에요
+    
+    @Column(name = "is_party")
+    private Boolean isParty; // 분위기를 띄우는 걸 좋아해요
+    
+    @Column(name = "is_search")
+    private Boolean isSearch; // 여행 중에도 정보를 꼼꼼히 찾는 편이에요
+    
+    @Column(name = "is_listen")
+    private Boolean isListen; // 다른 사람 의견을 잘 들어주는 편이에요
+    
+    // 🏞 활동 관련 선호도
+    @Column(name = "is_see")
+    private Boolean isSee; // 자연 경관 감상
+    
+    @Column(name = "is_cafe")
+    private Boolean isCafe; // 카페/휴식
+    
+    @Column(name = "is_taste")
+    private Boolean isTaste; // 맛집 탐방
+    
+    @Column(name = "is_picture")
+    private Boolean isPicture; // 사진 촬영
+    
+    @Column(name = "is_shopping")
+    private Boolean isShopping; // 쇼핑
+    
+    @Column(name = "is_outdoor")
+    private Boolean isOutdoor; // 액티비티(서핑 등산 등)
+    
+    // 💤 여행 스타일 관련 선호도
+    @Column(name = "is_chill")
+    private Boolean isChill; // 느긋하게 여유롭게
+    
+    @Column(name = "is_busy")
+    private Boolean isBusy; // 빡빡하고 알차게
+    
+    @Column(name = "is_flex")
+    private Boolean isFlex; // 상황에 따라 유동적으로
+    
+    // 🌆 여행지 유형 관련 선호도
+    @Column(name = "is_city")
+    private Boolean isCity; // 도시/핫플 위주
+    
+    @Column(name = "is_heal")
+    private Boolean isHeal; // 자연/힐링 위주
+    
+    @Column(name = "is_beach")
+    private Boolean isBeach; // 바다/해변
+    
+    @Column(name = "is_mountain")
+    private Boolean isMountain; // 산/등산
     
     /**
-     * 여행 중 성향 (JSON 형태로 저장)
-     * 예: ["새로운 사람과도 금방 친해져요", "조용한 분위기를 좋아해요"]
-     */
-    @Column(name = "travel_tendencies", columnDefinition = "TEXT")
-    private String travelTendencies;
-    
-    /**
-     * 선호하는 활동들 (JSON 형태로 저장)
-     * 예: ["자연 경관 감상", "카페/휴식", "맛집 탐방"]
-     */
-    @Column(name = "preferred_activities", columnDefinition = "TEXT")
-    private String preferredActivities;
-    
-    /**
-     * 여행 일정 스타일
-     * "느긋하게 여유롭게", "빡빡하고 알차게", "상황에 따라 유동적으로"
-     */
-    @Column(name = "schedule_style", length = 50)
-    private String scheduleStyle;
-    
-    /**
-     * 여행 중 술자리에 대한 의견
-     * "술 좋아해요", "분위기상 한두 잔 정도", "술은 즐기지 않아요"
-     */
-    @Column(name = "drinking_preference", length = 50)
-    private String drinkingPreference;
-    
-    /**
-     * 흡연 여부
-     */
-    @Column(name = "smoking_status")
-    private Boolean smokingStatus;
-    
-    /**
-     * 선호하는 여행지 유형 (JSON 형태로 저장)
-     * 예: ["어디든 좋아요!", "도시/핫플 위주", "자연/힐링 위주"]
-     */
-    @Column(name = "preferred_destinations", columnDefinition = "TEXT")
-    private String preferredDestinations;
-    
-    /**
-     * 설문 완료 여부
-     */
-    @Column(name = "is_completed")
-    private Boolean isCompleted = false;
-    
-    /**
-     * 설문 생성 시간
-     * JPA Auditing을 통해 자동으로 설정됨
+     * 생성 시간
      */
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
     
     /**
-     * 설문 수정 시간
-     * JPA Auditing을 통해 자동으로 업데이트됨
+     * 수정 시간
      */
     @LastModifiedDate
     @Column(name = "modified_at")
     private LocalDateTime modifiedAt;
     
     /**
-     * 여행 취향 설문 생성 빌더 메서드
-     * 
-     * @param userId 사용자 ID
-     * @param travelTendencies 여행 중 성향
-     * @param preferredActivities 선호하는 활동들
-     * @param scheduleStyle 여행 일정 스타일
-     * @param drinkingPreference 술자리 의견
-     * @param smokingStatus 흡연 여부
-     * @param preferredDestinations 선호하는 여행지 유형
+     * 사용자 선호도 생성 빌더 메서드
      */
     @Builder
-    public ProfileAnswer(Long userId, String travelTendencies, String preferredActivities, 
-                        String scheduleStyle, String drinkingPreference, Boolean smokingStatus, 
-                        String preferredDestinations) {
-        this.userId = userId;
-        this.travelTendencies = travelTendencies;
-        this.preferredActivities = preferredActivities;
-        this.scheduleStyle = scheduleStyle;
-        this.drinkingPreference = drinkingPreference;
-        this.smokingStatus = smokingStatus;
-        this.preferredDestinations = preferredDestinations;
-        this.isCompleted = true;
+    public ProfileAnswer(User user, Boolean isAlchol3, Boolean isAlchol2, Boolean isAlchol1, 
+                        Boolean isSmoker, Boolean isFriendly, Boolean isQuiet, Boolean isLead, 
+                        Boolean isParty, Boolean isSearch, Boolean isListen, Boolean isSee, 
+                        Boolean isCafe, Boolean isTaste, Boolean isPicture, Boolean isShopping, 
+                        Boolean isOutdoor, Boolean isChill, Boolean isBusy, Boolean isFlex, 
+                        Boolean isCity, Boolean isHeal, Boolean isBeach, Boolean isMountain) {
+        this.user = user;
+        this.isAlchol3 = isAlchol3;
+        this.isAlchol2 = isAlchol2;
+        this.isAlchol1 = isAlchol1;
+        this.isSmoker = isSmoker;
+        this.isFriendly = isFriendly;
+        this.isQuiet = isQuiet;
+        this.isLead = isLead;
+        this.isParty = isParty;
+        this.isSearch = isSearch;
+        this.isListen = isListen;
+        this.isSee = isSee;
+        this.isCafe = isCafe;
+        this.isTaste = isTaste;
+        this.isPicture = isPicture;
+        this.isShopping = isShopping;
+        this.isOutdoor = isOutdoor;
+        this.isChill = isChill;
+        this.isBusy = isBusy;
+        this.isFlex = isFlex;
+        this.isCity = isCity;
+        this.isHeal = isHeal;
+        this.isBeach = isBeach;
+        this.isMountain = isMountain;
         this.createdAt = LocalDateTime.now();
         this.modifiedAt = LocalDateTime.now();
     }
     
     /**
-     * 여행 취향 정보를 업데이트하는 메서드
-     * 
-     * @param travelTendencies 여행 중 성향
-     * @param preferredActivities 선호하는 활동들
-     * @param scheduleStyle 여행 일정 스타일
-     * @param drinkingPreference 술자리 의견
-     * @param smokingStatus 흡연 여부
-     * @param preferredDestinations 선호하는 여행지 유형
+     * 사용자 선호도 정보를 업데이트하는 메서드
      */
-    public void update(String travelTendencies, String preferredActivities, String scheduleStyle,
-                      String drinkingPreference, Boolean smokingStatus, String preferredDestinations) {
-        this.travelTendencies = travelTendencies;
-        this.preferredActivities = preferredActivities;
-        this.scheduleStyle = scheduleStyle;
-        this.drinkingPreference = drinkingPreference;
-        this.smokingStatus = smokingStatus;
-        this.preferredDestinations = preferredDestinations;
-        this.isCompleted = true;
+    public void update(Boolean isAlchol3, Boolean isAlchol2, Boolean isAlchol1, 
+                      Boolean isSmoker, Boolean isFriendly, Boolean isQuiet, Boolean isLead, 
+                      Boolean isParty, Boolean isSearch, Boolean isListen, Boolean isSee, 
+                      Boolean isCafe, Boolean isTaste, Boolean isPicture, Boolean isShopping, 
+                      Boolean isOutdoor, Boolean isChill, Boolean isBusy, Boolean isFlex, 
+                      Boolean isCity, Boolean isHeal, Boolean isBeach, Boolean isMountain) {
+        this.isAlchol3 = isAlchol3;
+        this.isAlchol2 = isAlchol2;
+        this.isAlchol1 = isAlchol1;
+        this.isSmoker = isSmoker;
+        this.isFriendly = isFriendly;
+        this.isQuiet = isQuiet;
+        this.isLead = isLead;
+        this.isParty = isParty;
+        this.isSearch = isSearch;
+        this.isListen = isListen;
+        this.isSee = isSee;
+        this.isCafe = isCafe;
+        this.isTaste = isTaste;
+        this.isPicture = isPicture;
+        this.isShopping = isShopping;
+        this.isOutdoor = isOutdoor;
+        this.isChill = isChill;
+        this.isBusy = isBusy;
+        this.isFlex = isFlex;
+        this.isCity = isCity;
+        this.isHeal = isHeal;
+        this.isBeach = isBeach;
+        this.isMountain = isMountain;
         this.modifiedAt = LocalDateTime.now();
     }
     
     /**
-     * 설문 완료 여부를 설정하는 메서드
+     * 작성자 확인 메서드
      * 
-     * @param isCompleted 완료 여부
+     * @param userId 확인할 사용자 ID
+     * @return 작성자 여부
      */
-    public void setCompleted(Boolean isCompleted) {
-        this.isCompleted = isCompleted;
-        this.modifiedAt = LocalDateTime.now();
+    public boolean isAuthor(Long userId) {
+        return this.user.getId().equals(userId);
     }
 } 
