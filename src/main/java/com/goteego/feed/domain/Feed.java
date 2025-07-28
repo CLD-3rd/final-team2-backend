@@ -76,6 +76,13 @@ public class Feed extends BaseEntity {
     private Long viewCount = 0L;
     
     /**
+     * 배지 요청 여부
+     * 기본값은 false로 설정
+     */
+    @Column(name = "badge_request")
+    private Boolean badgeRequest = false;
+    
+    /**
      * 피드 생성 시간
      * JPA Auditing을 통해 자동으로 설정됨
      */
@@ -85,9 +92,8 @@ public class Feed extends BaseEntity {
     
     /**
      * 피드 수정 시간
-     * JPA Auditing을 통해 자동으로 업데이트됨
+     * 실제 수정이 발생했을 때만 업데이트됨
      */
-    @LastModifiedDate
     @Column(name = "modified_at")
     private LocalDateTime modifiedAt;
     
@@ -101,14 +107,15 @@ public class Feed extends BaseEntity {
      * @param location 위치 정보
      */
     @Builder
-    public Feed(Long userId, String title, String content, String imageUrl, String location) {
+    public Feed(Long userId, String title, String content, String imageUrl, String location, Boolean badgeRequest) {
         this.userId = userId;
         this.title = title;
         this.content = content;
         this.imageUrl = imageUrl;
         this.location = location;
+        this.badgeRequest = badgeRequest != null ? badgeRequest : false;
         this.createdAt = LocalDateTime.now();
-        this.modifiedAt = LocalDateTime.now();
+        this.modifiedAt = null; // 생성 시에는 null로 설정
     }
     
     /**
@@ -118,12 +125,14 @@ public class Feed extends BaseEntity {
      * @param content 수정할 내용
      * @param imageUrl 수정할 이미지 URL
      * @param location 수정할 위치 정보
+     * @param badgeRequest 수정할 배지 요청 여부
      */
-    public void update(String title, String content, String imageUrl, String location) {
+    public void update(String title, String content, String imageUrl, String location, Boolean badgeRequest) {
         this.title = title;
         this.content = content;
         this.imageUrl = imageUrl;
         this.location = location;
+        this.badgeRequest = badgeRequest != null ? badgeRequest : this.badgeRequest;
         this.modifiedAt = LocalDateTime.now();
     }
     

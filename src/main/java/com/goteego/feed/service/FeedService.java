@@ -50,20 +50,22 @@ public class FeedService {
     
     /**
      * 피드 목록을 조회하는 메서드
-     * 작성자나 위치로 필터링이 가능하며, 페이징을 지원함
+     * 제목, 작성자, 지역으로 필터링이 가능하며, 정렬과 페이징을 지원함
      * 
+     * @param title 검색할 제목 (선택사항)
      * @param author 검색할 작성자 닉네임 (선택사항)
-     * @param location 검색할 위치 정보 (선택사항)
+     * @param region 검색할 지역 정보 (선택사항)
+     * @param sort 정렬 기준 (recent: 최근순, view: 조회순)
      * @param page 페이지 번호 (0부터 시작)
      * @param size 페이지당 항목 수
      * @return 페이징된 피드 목록과 페이지 정보
      */
-    public FeedListResponseDto getFeeds(String author, String location, int page, int size) {
+    public FeedListResponseDto getFeeds(String title, String author, String region, String sort, int page, int size) {
         // 페이징 정보 생성
         Pageable pageable = PageRequest.of(page, size);
         
         // 조건에 따른 피드 조회
-        Page<Feed> feedPage = getFeedsByLatest(author, location, pageable);
+        Page<Feed> feedPage = getFeedsByCondition(title, author, region, sort, pageable);
         
         // 피드 작성자들의 사용자 ID 수집
         List<Long> userIds = feedPage.getContent().stream()
@@ -96,23 +98,52 @@ public class FeedService {
     }
     
     /**
-     * 검색 조건에 따른 피드 조회 메서드
+     * 검색 조건과 정렬 기준에 따른 피드 조회 메서드
      * 
+     * @param title 제목 검색 조건
      * @param author 작성자 검색 조건
-     * @param location 위치 검색 조건
+     * @param region 지역 검색 조건
+     * @param sort 정렬 기준 (recent: 최근순, view: 조회순)
      * @param pageable 페이징 정보
      * @return 조건에 맞는 페이징된 피드 목록
      */
-    private Page<Feed> getFeedsByLatest(String author, String location, Pageable pageable) {
-        if (author != null && !author.trim().isEmpty()) {
-            // 작성자로 검색
-            return feedRepository.findByAuthorNicknameContainingOrderByCreatedAtDesc(author.trim(), pageable);
-        } else if (location != null && !location.trim().isEmpty()) {
-            // 위치로 검색
-            return feedRepository.findByLocationContainingOrderByCreatedAtDesc(location.trim(), pageable);
+    private Page<Feed> getFeedsByCondition(String title, String author, String region, String sort, Pageable pageable) {
+        // 정렬 기준에 따른 조회 메서드 선택
+        if ("view".equals(sort)) {
+            return getFeedsByViewCount(title, author, region, pageable);
         } else {
-            // 전체 피드 조회
+            // 기본값은 최근순
+            return getFeedsByRecent(title, author, region, pageable);
+        }
+    }
+    
+    /**
+     * 최근순으로 피드를 조회하는 메서드
+     */
+    private Page<Feed> getFeedsByRecent(String title, String author, String region, Pageable pageable) {
+        if (title != null && !title.trim().isEmpty()) {
+            return feedRepository.findByTitleContainingOrderByCreatedAtDesc(title.trim(), pageable);
+        } else if (author != null && !author.trim().isEmpty()) {
+            return feedRepository.findByAuthorNicknameContainingOrderByCreatedAtDesc(author.trim(), pageable);
+        } else if (region != null && !region.trim().isEmpty()) {
+            return feedRepository.findByLocationContainingOrderByCreatedAtDesc(region.trim(), pageable);
+        } else {
             return feedRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+    }
+    
+    /**
+     * 조회순으로 피드를 조회하는 메서드
+     */
+    private Page<Feed> getFeedsByViewCount(String title, String author, String region, Pageable pageable) {
+        if (title != null && !title.trim().isEmpty()) {
+            return feedRepository.findByTitleContainingOrderByViewCountDesc(title.trim(), pageable);
+        } else if (author != null && !author.trim().isEmpty()) {
+            return feedRepository.findByAuthorNicknameContainingOrderByViewCountDesc(author.trim(), pageable);
+        } else if (region != null && !region.trim().isEmpty()) {
+            return feedRepository.findByLocationContainingOrderByViewCountDesc(region.trim(), pageable);
+        } else {
+            return feedRepository.findAllByOrderByViewCountDesc(pageable);
         }
     }
     
@@ -126,10 +157,11 @@ public class FeedService {
      * @param content 피드 내용
      * @param imageUrl 이미지 URL
      * @param location 위치 정보
+     * @param badgeRequest 배지 요청 여부
      * @return 생성된 피드 엔티티
      */
     @Transactional
-    public Feed createFeed(Long userId, String title, String content, String imageUrl, String location) {
+    public Feed createFeed(Long userId, String title, String content, String imageUrl, String location, Boolean badgeRequest) {
         // 피드 엔티티 생성
         Feed feed = Feed.builder()
                 .userId(userId)
@@ -137,6 +169,7 @@ public class FeedService {
                 .content(content)
                 .imageUrl(imageUrl)
                 .location(location)
+                .badgeRequest(badgeRequest)
                 .build();
         
         // 데이터베이스에 저장
@@ -153,11 +186,13 @@ public class FeedService {
      * @param content 수정할 내용
      * @param imageUrl 수정할 이미지 URL
      * @param location 수정할 위치 정보
+     * @param badgeRequest 수정할 배지 요청 여부
+     * @param deleteImageUrl 삭제할 이미지 URL
      * @return 수정된 피드 엔티티
      * @throws IllegalArgumentException 피드를 찾을 수 없거나 작성자가 아닌 경우
      */
     @Transactional
-    public Feed updateFeed(Long feedId, Long userId, String title, String content, String imageUrl, String location) {
+    public Feed updateFeed(Long feedId, Long userId, String title, String content, String imageUrl, String location, Boolean badgeRequest, String deleteImageUrl) {
         // 피드 조회
         Feed feed = feedRepository.findById(feedId)
                 .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
@@ -168,7 +203,7 @@ public class FeedService {
         }
         
         // 피드 정보 업데이트
-        feed.update(title, content, imageUrl, location);
+        feed.update(title, content, imageUrl, location, badgeRequest);
         return feed;
     }
     

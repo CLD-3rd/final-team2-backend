@@ -64,9 +64,8 @@ public class FeedComment extends BaseEntity {
     
     /**
      * 코멘트 수정 시간
-     * JPA Auditing을 통해 자동으로 업데이트됨
+     * 실제 수정이 발생했을 때만 업데이트됨
      */
-    @LastModifiedDate
     @Column(name = "modified_at")
     private LocalDateTime modifiedAt;
     
@@ -83,7 +82,7 @@ public class FeedComment extends BaseEntity {
         this.userId = userId;
         this.content = content;
         this.createdAt = LocalDateTime.now();
-        this.modifiedAt = LocalDateTime.now();
+        this.modifiedAt = null; // 생성 시에는 null로 설정
     }
     
     /**

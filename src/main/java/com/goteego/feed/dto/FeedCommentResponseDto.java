@@ -75,7 +75,7 @@ public class FeedCommentResponseDto {
                         .build())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt().toLocalDate())
-                .modifiedAt(comment.getModifiedAt().toLocalDate())
+                .modifiedAt(comment.getModifiedAt() != null ? comment.getModifiedAt().toLocalDate() : comment.getCreatedAt().toLocalDate())
                 .build();
     }
 } 

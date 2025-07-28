@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/feeds/{feedId}/comments")
+@RequestMapping("/api/feed/{feedId}/comments")
 @RequiredArgsConstructor
 public class FeedCommentController {
     

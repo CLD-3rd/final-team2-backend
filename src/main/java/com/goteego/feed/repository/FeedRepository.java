@@ -50,4 +50,40 @@ public interface FeedRepository extends JpaRepository<Feed, Long> {
      */
     @Query("SELECT f FROM Feed f WHERE f.location LIKE %:location% ORDER BY f.createdAt DESC")
     Page<Feed> findByLocationContainingOrderByCreatedAtDesc(@Param("location") String location, Pageable pageable);
+    
+    // ===== 제목 검색 메서드들 =====
+    
+    /**
+     * 제목으로 피드를 검색하여 생성일 기준 내림차순으로 페이징하여 조회
+     */
+    @Query("SELECT f FROM Feed f WHERE f.title LIKE %:title% ORDER BY f.createdAt DESC")
+    Page<Feed> findByTitleContainingOrderByCreatedAtDesc(@Param("title") String title, Pageable pageable);
+    
+    /**
+     * 제목으로 피드를 검색하여 조회수 기준 내림차순으로 페이징하여 조회
+     */
+    @Query("SELECT f FROM Feed f WHERE f.title LIKE %:title% ORDER BY f.viewCount DESC")
+    Page<Feed> findByTitleContainingOrderByViewCountDesc(@Param("title") String title, Pageable pageable);
+    
+    // ===== 조회수 기준 정렬 메서드들 =====
+    
+    /**
+     * 모든 피드를 조회수 기준 내림차순으로 페이징하여 조회
+     */
+    @Query("SELECT f FROM Feed f ORDER BY f.viewCount DESC")
+    Page<Feed> findAllByOrderByViewCountDesc(Pageable pageable);
+    
+    /**
+     * 특정 작성자의 닉네임으로 피드를 검색하여 조회수 기준 내림차순으로 페이징하여 조회
+     */
+    @Query("SELECT f FROM Feed f WHERE f.userId IN " +
+           "(SELECT u.id FROM User u WHERE u.nickname LIKE %:author% OR u.nickname = :author) " +
+           "ORDER BY f.viewCount DESC")
+    Page<Feed> findByAuthorNicknameContainingOrderByViewCountDesc(@Param("author") String author, Pageable pageable);
+    
+    /**
+     * 특정 위치로 피드를 검색하여 조회수 기준 내림차순으로 페이징하여 조회
+     */
+    @Query("SELECT f FROM Feed f WHERE f.location LIKE %:location% ORDER BY f.viewCount DESC")
+    Page<Feed> findByLocationContainingOrderByViewCountDesc(@Param("location") String location, Pageable pageable);
 } 

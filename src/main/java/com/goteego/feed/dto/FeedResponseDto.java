@@ -63,6 +63,11 @@ public class FeedResponseDto {
     private LocalDate modifiedAt;
     
     /**
+     * 배지 요청 여부
+     */
+    private Boolean badgeRequest;
+    
+    /**
      * 피드 작성자 정보를 담는 내부 클래스
      */
     @Getter
@@ -99,7 +104,33 @@ public class FeedResponseDto {
                 .location(feed.getLocation())
                 .viewCount(feed.getViewCount())
                 .createdAt(feed.getCreatedAt().toLocalDate())
-                .modifiedAt(feed.getModifiedAt().toLocalDate())
+                .modifiedAt(feed.getModifiedAt() != null ? feed.getModifiedAt().toLocalDate() : feed.getCreatedAt().toLocalDate())
+                .badgeRequest(feed.getBadgeRequest())
+                .build();
+    }
+    
+    /**
+     * Feed 엔티티를 FeedResponseDto로 변환하는 정적 팩토리 메서드 (수정용)
+     * createdAt은 제외하고 modifiedAt만 포함
+     * 
+     * @param feed 변환할 Feed 엔티티
+     * @param authorNickname 작성자 닉네임
+     * @return 변환된 FeedResponseDto 객체
+     */
+    public static FeedResponseDto fromForUpdate(Feed feed, String authorNickname) {
+        return FeedResponseDto.builder()
+                .feedId(feed.getId())
+                .author(AuthorDto.builder()
+                        .userId(feed.getUserId())
+                        .nickname(authorNickname)
+                        .build())
+                .title(feed.getTitle())
+                .content(feed.getContent())
+                .imageUrl(feed.getImageUrl())
+                .location(feed.getLocation())
+                .viewCount(feed.getViewCount())
+                .modifiedAt(feed.getModifiedAt() != null ? feed.getModifiedAt().toLocalDate() : null)
+                .badgeRequest(feed.getBadgeRequest())
                 .build();
     }
 } 

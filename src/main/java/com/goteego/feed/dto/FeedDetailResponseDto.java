@@ -106,7 +106,7 @@ public class FeedDetailResponseDto {
                 .location(feed.getLocation())
                 .viewCount(feed.getViewCount())
                 .createdAt(feed.getCreatedAt().toLocalDate())
-                .modifiedAt(feed.getModifiedAt().toLocalDate())
+                .modifiedAt(feed.getModifiedAt() != null ? feed.getModifiedAt().toLocalDate() : feed.getCreatedAt().toLocalDate())
                 .comments(comments)
                 .build();
     }
