@@ -571,15 +571,26 @@
         
         try {
             const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
-            displayTravelPosts(res.data.content || res.data);
+            displayTravelPosts(res.data, postType);
         } catch(e) { 
             document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
         }
     }
 
-    function displayTravelPosts(posts) {
+    function displayTravelPosts(responseData, postType) {
         const container = document.getElementById('travel-result');
         container.innerHTML = '';
+
+        // 새로운 API 응답 구조에 맞게 처리
+        let posts = [];
+        if (postType === 'BEFORE' && responseData.beforePosts) {
+            posts = responseData.beforePosts;
+        } else if (postType === 'NOW' && responseData.nowPosts) {
+            posts = responseData.nowPosts;
+        } else {
+            // 기존 구조 호환성
+            posts = responseData.content || responseData || [];
+        }
 
         if (!posts || posts.length === 0) {
             container.innerHTML = '<div class="success-message">📝 등록된 게시글이 없습니다.</div>';
@@ -590,32 +601,55 @@
             const div = document.createElement('div');
             div.className = 'schedule-item';
             
-            const postTypeBadge = post.postType === 'BEFORE' ? 
+            const postTypeBadge = postType === 'BEFORE' ? 
                 '<span class="status-badge status-before">사전여행</span>' : 
                 '<span class="status-badge status-now">현지여행</span>';
             
-            const recruitmentBadge = post.recruitmentStatus === '모집중' ? 
-                '<span class="status-badge status-recruiting">모집중</span>' : 
-                '<span class="status-badge status-completed">모집완료</span>';
-            
-            div.innerHTML = `
-                <h4>${post.title || '제목 없음'}</h4>
-                <p><strong>작성자:</strong> ${post.nickname || post.userEmail || 'N/A'}</p>
-                <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
-                <p><strong>타입:</strong> ${postTypeBadge}</p>
-                <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
-                <p><strong>모집인원:</strong> ${post.recruitLimit || 'N/A'}명</p>
-                <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
-                <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
-                <div class="action-buttons">
-                    <button onclick="joinTravelPost(${post.travelPostId || post.id})" class="approve">
-                        참여 신청
-                    </button>
-                    <button onclick="getTravelPostDetail(${post.travelPostId || post.id})" class="test">
-                        상세 보기
-                    </button>
-                </div>
-            `;
+            if (postType === 'BEFORE') {
+                // BEFORE 타입 응답 구조
+                const recruitmentBadge = post.participants >= post.maxParticipants ? 
+                    '<span class="status-badge status-completed">모집완료</span>' : 
+                    '<span class="status-badge status-recruiting">모집중</span>';
+                
+                div.innerHTML = `
+                    <h4>${post.title || '제목 없음'}</h4>
+                    <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
+                    <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
+                    <p><strong>타입:</strong> ${postTypeBadge}</p>
+                    <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
+                    <p><strong>참가자:</strong> ${post.participants || 0}/${post.maxParticipants || 'N/A'}명</p>
+                    <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
+                    <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
+                    <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
+                    <div class="action-buttons">
+                        <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
+                            참여 신청
+                        </button>
+                        <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
+                            상세 보기
+                        </button>
+                    </div>
+                `;
+            } else {
+                // NOW 타입 응답 구조
+                div.innerHTML = `
+                    <h4>${post.title || '제목 없음'}</h4>
+                    <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
+                    <p><strong>평점:</strong> ${post.author?.rating || 'N/A'}</p>
+                    <p><strong>태그:</strong> ${post.author?.tags?.join(', ') || 'N/A'}</p>
+                    <p><strong>타입:</strong> ${postTypeBadge}</p>
+                    <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
+                    <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
+                    <div class="action-buttons">
+                        <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
+                            참여 신청
+                        </button>
+                        <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
+                            상세 보기
+                        </button>
+                    </div>
+                `;
+            }
             container.appendChild(div);
         });
     }
@@ -767,21 +801,21 @@
             const div = document.createElement('div');
             div.className = 'schedule-item';
             
-            const postTypeBadge = schedule.postType === 'BEFORE' ? 
-                '<span class="status-badge status-before">사전여행</span>' : 
-                '<span class="status-badge status-now">현지여행</span>';
+            const postTypeBadge = '<span class="status-badge status-before">사전여행</span>'; // 일정은 BEFORE만
             
-            const recruitmentBadge = schedule.recruitmentStatus === '모집중' ? 
-                '<span class="status-badge status-recruiting">모집중</span>' : 
-                '<span class="status-badge status-completed">모집완료</span>';
+            const recruitmentBadge = schedule.participants >= schedule.maxParticipants ? 
+                '<span class="status-badge status-completed">모집완료</span>' : 
+                '<span class="status-badge status-recruiting">모집중</span>';
             
             div.innerHTML = `
                 <h4>${schedule.title || '제목 없음'}</h4>
+                <p><strong>작성자:</strong> ${schedule.author?.nickname || 'N/A'}</p>
                 <p><strong>기간:</strong> ${schedule.startTime || 'N/A'} ~ ${schedule.endTime || 'N/A'}</p>
                 <p><strong>타입:</strong> ${postTypeBadge}</p>
                 <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
-                <p><strong>모집인원:</strong> ${schedule.recruitLimit || 'N/A'}명</p>
-                <button onclick="loadParticipantData(${schedule.travelPostId || schedule.id})" class="approve">
+                <p><strong>참가자:</strong> ${schedule.participants || 0}/${schedule.maxParticipants || 'N/A'}명</p>
+                <p><strong>지역:</strong> ${schedule.location || 'N/A'}</p>
+                <button onclick="loadParticipantData(${schedule.travelPostId})" class="approve">
                     참여자 관리
                 </button>
             `;

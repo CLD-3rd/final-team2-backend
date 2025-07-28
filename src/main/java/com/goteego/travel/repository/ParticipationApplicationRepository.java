@@ -80,6 +80,15 @@ public interface ParticipationApplicationRepository extends JpaRepository<Partic
     boolean existsByTravelPostIdAndUserId(@Param("travelPostId") Long travelPostId, 
                                          @Param("userId") Long userId);
 
+    /**
+     * 특정 여행 게시글의 승인된 참가자 수 조회
+     * 
+     * @param travelPostId 여행 게시글 ID
+     * @return 승인된 참가자 수
+     */
+    @Query("SELECT COUNT(pa) FROM ParticipationApplication pa WHERE pa.travelPost.id = :travelPostId AND pa.status = 'APPROVED'")
+    Long countApprovedParticipantsByTravelPostId(@Param("travelPostId") Long travelPostId);
+
 
     boolean existsByTravelPost_ChatRoom_RoomIdAndUser_IdAndStatus(String roomId, Long userId, ParticipationStatus status);
 

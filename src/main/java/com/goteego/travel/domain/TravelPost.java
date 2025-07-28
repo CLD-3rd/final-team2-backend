@@ -44,6 +44,7 @@ public class TravelPost extends BaseEntity {
 
     private String title;
     private String content;
+    private String location;
     private LocalDate startTime;
     private LocalDate endTime;
     private Integer recruitLimit;

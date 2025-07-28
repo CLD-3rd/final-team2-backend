@@ -4,8 +4,9 @@ import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.*;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
+import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
 import com.goteego.travel.dto.travel.TravelPostCreateRequest;
-import com.goteego.travel.dto.travel.TravelPostResponseDto;
+import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
 import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.user.domain.User;
@@ -28,10 +29,10 @@ public class TravelPostController {
     private final UserService userService;
     
     /**
-     * 여행 게시글 목록 조회 (벡터 유사도 기반)
+     * 여행 게시글 목록 조회 (PostType별 다른 응답 구조)
      */
     @GetMapping
-    public ResponseEntity<PageResponseDto<TravelPostResponseDto>> getTravelPosts(
+    public ResponseEntity<TravelPostResponseWrapper> getTravelPosts(
             @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
@@ -40,7 +41,7 @@ public class TravelPostController {
         Long currentUserId = user.getId();
         PostType currentPostType = PostType.valueOf(postType.toUpperCase());
 
-        PageResponseDto<TravelPostResponseDto> travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, currentUserId);
+        TravelPostResponseWrapper travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, currentUserId);
         return ResponseEntity.ok(travelPosts);
     }
     
@@ -55,10 +56,10 @@ public class TravelPostController {
      * @return 생성된 여행 게시글
      */
     @PostMapping("/requests")
-    public ResponseEntity<TravelPostResponseDto> createTravelPost(@Valid @RequestBody TravelPostCreateRequest requestDto, @AuthenticationPrincipal User user) {
+    public ResponseEntity<BeforeTravelPostResponseDto> createTravelPost(@Valid @RequestBody TravelPostCreateRequest requestDto, @AuthenticationPrincipal User user) {
 
         User currentUser = userService.getUserById(user.getId());
-        TravelPostResponseDto travelPostResponseDto = travelPostService.registerTravelPost(currentUser, requestDto);
+        BeforeTravelPostResponseDto travelPostResponseDto = travelPostService.registerTravelPost(currentUser, requestDto);
 
         log.info("여행 게시글 생성 - travelPostId: {}, title: {}, userId: {}",
                 travelPostResponseDto.getTravelPostId(), travelPostResponseDto.getTitle(), user.getId());

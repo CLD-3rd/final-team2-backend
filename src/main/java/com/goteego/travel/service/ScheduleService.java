@@ -6,8 +6,9 @@ import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.domain.enumerate.ParticipationStatus;
+import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
-import com.goteego.travel.dto.travel.TravelPostResponseDto;
+import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
 import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
 import com.goteego.user.domain.User;
@@ -39,28 +40,39 @@ public class ScheduleService {
     private final ChatRoomService chatRoomService;
     
     /**
-     * 내 일정 조회 (작성자이거나 참여자인 게시글)
+     * 내 일정 조회 (BEFORE 타입만 - 작성자이거나 참여자인 게시글)
      */
-    public List<TravelPostResponseDto> getMySchedules(Long userId, int page, int size) {
+    public List<BeforeTravelPostResponseDto> getMySchedules(Long userId, int page, int size) {
         List<TravelPost> allSchedules = travelPostRepository.findMySchedulesWithUser(userId);
+        
+        // BEFORE 타입만 필터링
+        List<TravelPost> beforeSchedules = allSchedules.stream()
+                .filter(tp -> tp.getPostType() == PostType.BEFORE)
+                .collect(Collectors.toList());
         
         // 페이징 처리
         int start = page * size;
-        int end = Math.min(start + size, allSchedules.size());
+        int end = Math.min(start + size, beforeSchedules.size());
         
-        if (start >= allSchedules.size()) {
+        if (start >= beforeSchedules.size()) {
             return List.of();
         }
 
-        List<TravelPost> pagedSchedules = allSchedules.subList(start, end);
+        List<TravelPost> pagedSchedules = beforeSchedules.subList(start, end);
 
         return pagedSchedules.stream()
-                .map(tp -> TravelPostResponseDto.from(
-                        tp,
-                        tp.getUser().getId(),
-                        tp.getUser().getNickname(),
-                        null // similarity는 이 컨텍스트에선 필요 없다면 null
-                ))
+                .map(tp -> {
+                    // 승인된 참가자 수 조회
+                    Long approvedCount = participationApplicationRepository.countApprovedParticipantsByTravelPostId(tp.getId());
+                    Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
+                    return BeforeTravelPostResponseDto.from(
+                            tp,
+                            tp.getUser().getId(),
+                            tp.getUser().getNickname(),
+                            null, // similarity는 이 컨텍스트에선 필요 없다면 null
+                            approvedParticipantCount
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
