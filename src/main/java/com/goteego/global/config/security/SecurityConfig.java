@@ -29,6 +29,7 @@ public class SecurityConfig {
             "/api/schedule/**",      // 임시 추가
             "/api/users/**",         // 임시 추가
             "/api/recommendation/**", // 임시 추가
+            "/api/review/**", //임시 추가
             "/error",
             "/index.html",
             "/oauth2/**",
