@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>GotEEgo 게시판</title>
+    <title>GotEEgo 여행 게시판</title>
     <link rel="stylesheet" href="/css/post.css">
     <link rel="stylesheet" href="/css/notification.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -46,17 +46,10 @@
         <button onclick="testGetTravelPosts()" class="test">게시글 목록 테스트</button>
         <button onclick="testGetCurrentUser()" class="test">내 정보 테스트</button>
         <button onclick="testGetMySchedules()" class="test">내 일정 테스트</button>
+        <button onclick="testCreateTravelPost()" class="test">게시글 작성 테스트</button>
+        <button onclick="testJoinTravelPost()" class="test">참여 신청 테스트</button>
         <pre id="test-result"></pre>
     </div>
-
-    <!-- 사용자 API 섹션 -->
-    <fieldset>
-        <legend>👤 사용자 API</legend>
-        <button onclick="getCurrentUser()">내 정보</button>
-        <button onclick="getUserProfile()">프로필</button>
-        <button onclick="getUserStats()">통계</button>
-        <pre id="user-result"></pre>
-    </fieldset>
 
     <!-- 여행 게시판 API 섹션 -->
     <fieldset>
@@ -78,6 +71,8 @@
         <input type="number" id="travelPostId" placeholder="게시글ID" style="width:100px;">
         <button onclick="getTravelPostDetail()">상세</button>
         <button onclick="joinTravelPost()">참여신청</button>
+        <button onclick="updateTravelPost()">수정</button>
+        <button onclick="deleteTravelPost()">삭제</button>
         
         <div style="margin-top: 20px;">
             <h4>📝 새 게시글 작성</h4>
@@ -140,9 +135,9 @@
         <pre id="travel-result"></pre>
     </fieldset>
 
-    <!-- 일정관리 API 섹션 -->
+    <!-- 내 일정 관리 섹션 -->
     <fieldset>
-        <legend>📅 일정관리</legend>
+        <legend>📅 내 일정 관리</legend>
         <button onclick="loadScheduleData()">내 일정 새로고침</button>
 
         <div class="schedule-container">
@@ -161,7 +156,7 @@
 </div>
 
 <script>
-    // 전역 변수
+    // 전역 변수 (테스트용)
     let currentPostType = 'BEFORE';
     let currentPageSize = 10;
 
@@ -290,31 +285,36 @@
         }
     }
 
-    // ===== 사용자 API =====
-    async function getCurrentUser() {
+    async function testCreateTravelPost() {
+        const testData = {
+            title: "테스트 게시글",
+            content: "테스트용 게시글입니다.",
+            location: "SEOUL",
+            startTime: "2025-01-15",
+            endTime: "2025-01-20",
+            recruitLimit: 3,
+            postType: "BEFORE",
+            imageUrl: null,
+            isAddRecruit: true
+        };
+        
         try {
-            const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
-            document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { 
-            document.getElementById('user-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+            const res = await axios.post('/api/travel-posts/requests', testData, {headers: getAuthHeaders()});
+            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
+        } catch(e) {
+            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
         }
     }
 
-    async function getUserProfile() {
+    async function testJoinTravelPost() {
+        const postId = prompt("참여 신청할 게시글 ID를 입력하세요:");
+        if (!postId) return;
+        
         try {
-            const res = await axios.get('/api/users/profile', {headers: getAuthHeaders()});
-            document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { 
-            document.getElementById('user-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
-        }
-    }
-
-    async function getUserStats() {
-        try {
-            const res = await axios.get('/api/users/stats', {headers: getAuthHeaders()});
-            document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
-        } catch(e) { 
-            document.getElementById('user-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+            const res = await axios.post(`/api/travel-posts/requests/${postId}`, {}, {headers: getAuthHeaders()});
+            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
+        } catch(e) {
+            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
         }
     }
 
@@ -323,10 +323,14 @@
         const postType = document.getElementById('postType-select').value;
         const pageSize = document.getElementById('pageSize-input').value;
         
+        console.log('getTravelPosts 호출됨 - postType:', postType, 'pageSize:', pageSize);
+        
         try {
             const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
+            console.log('게시글 목록 API 응답:', res.data);
             displayTravelPosts(res.data, postType);
         } catch(e) { 
+            console.error('게시글 목록 조회 실패:', e);
             let errorMessage = '알 수 없는 오류가 발생했습니다.';
             
             if (e.response) {
@@ -354,8 +358,12 @@
         container.innerHTML = '';
 
         // 디버깅을 위한 응답 데이터 로그
+        console.log('displayTravelPosts 호출됨');
         console.log('API 응답 데이터:', responseData);
         console.log('PostType:', postType);
+        console.log('responseData 타입:', typeof responseData);
+        console.log('responseData가 객체인가:', typeof responseData === 'object');
+        console.log('responseData.data:', responseData?.data);
 
         // 새로운 API 응답 구조에 맞게 처리
         let posts = [];
@@ -365,8 +373,23 @@
             // 직접 배열로 온 경우
             posts = responseData;
         } else if (responseData && typeof responseData === 'object') {
-            // 객체로 온 경우 (TravelPostResponseWrapper)
-            if (postType === 'BEFORE' && responseData.beforePosts) {
+            // 서버 응답 구조에 맞게 data 필드 확인
+            if (responseData.data && typeof responseData.data === 'object') {
+                // data가 객체인 경우 (TravelPostResponseWrapper 구조)
+                if (postType === 'BEFORE' && responseData.data.beforePosts) {
+                    posts = responseData.data.beforePosts;
+                    console.log('data.beforePosts에서 게시글 배열 추출:', posts);
+                } else if (postType === 'NOW' && responseData.data.nowPosts) {
+                    posts = responseData.data.nowPosts;
+                    console.log('data.nowPosts에서 게시글 배열 추출:', posts);
+                } else if (Array.isArray(responseData.data)) {
+                    // data가 직접 배열인 경우
+                    posts = responseData.data;
+                    console.log('data 필드에서 게시글 배열 추출:', posts);
+                } else {
+                    posts = [];
+                }
+            } else if (postType === 'BEFORE' && responseData.beforePosts) {
                 posts = responseData.beforePosts;
             } else if (postType === 'NOW' && responseData.nowPosts) {
                 posts = responseData.nowPosts;
@@ -431,7 +454,7 @@
                         </div>
                     `;
                 } else {
-                    // NOW 타입 응답 구조 (API 명세에 맞게 수정)
+                    // NOW 타입 응답 구조
                     div.innerHTML = `
                         <h4>${post.title || '제목 없음'}</h4>
                         <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
@@ -500,6 +523,12 @@
                     <div class="action-buttons">
                         <button onclick="joinTravelPost(${post.travelPostId || post.id})" class="approve">
                             참여 신청
+                        </button>
+                        <button onclick="updateTravelPost(${post.travelPostId || post.id})" class="test">
+                            수정
+                        </button>
+                        <button onclick="deleteTravelPost(${post.travelPostId || post.id})" class="reject">
+                            삭제
                         </button>
                     </div>
                 </div>
@@ -603,15 +632,112 @@
         }
     }
 
+    async function updateTravelPost(postId) {
+        if (!postId) {
+            postId = document.getElementById('travelPostId').value;
+            if (!postId) return alert('게시글ID를 입력해주세요');
+        }
+
+        const newTitle = prompt('새로운 제목을 입력하세요:');
+        if (!newTitle) return;
+
+        const newContent = prompt('새로운 내용을 입력하세요:');
+        if (!newContent) return;
+
+        const data = {
+            title: newTitle,
+            content: newContent,
+            isAddRecruit: true
+        };
+
+        try {
+            const res = await axios.put(`/api/travel-posts/${postId}`, data, {headers: getAuthHeaders()});
+            document.getElementById('travel-result').innerHTML = `
+                <div class="success-message">
+                    <h3>✅ 게시글 수정 완료!</h3>
+                    <p>게시글이 성공적으로 수정되었습니다.</p>
+                </div>
+            `;
+            
+            // 게시글 목록 새로고침
+            setTimeout(() => {
+                getTravelPosts();
+            }, 1000);
+            
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
+    }
+
+    async function deleteTravelPost(postId) {
+        if (!postId) {
+            postId = document.getElementById('travelPostId').value;
+            if (!postId) return alert('게시글ID를 입력해주세요');
+        }
+
+        if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) return;
+
+        try {
+            const res = await axios.delete(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
+            document.getElementById('travel-result').innerHTML = `
+                <div class="success-message">
+                    <h3>✅ 게시글 삭제 완료!</h3>
+                    <p>게시글이 성공적으로 삭제되었습니다.</p>
+                </div>
+            `;
+            
+            // 게시글 목록 새로고침
+            setTimeout(() => {
+                getTravelPosts();
+                loadScheduleData();
+            }, 1000);
+            
+        } catch(e) { 
+            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+        }
+    }
+
     // ===== 일정관리 API =====
     async function loadScheduleData() {
         try {
             const scheduleRes = await axios.get('/api/schedule/mine?page=0&size=10', {headers: getAuthHeaders()});
+            console.log('일정 API 응답:', scheduleRes.data);
+            
             displaySchedules(scheduleRes.data);
 
-            if (scheduleRes.data && scheduleRes.data.length > 0) {
-                const firstSchedule = scheduleRes.data[0];
-                await loadParticipantData(firstSchedule.travelPostId || firstSchedule.id);
+            // 첫 번째 일정의 참여자 데이터 로드
+            let scheduleData = scheduleRes.data;
+            console.log('원본 scheduleData:', scheduleData);
+            
+            // 서버 응답 구조에 맞게 data 필드 추출
+            if (scheduleData && typeof scheduleData === 'object' && scheduleData.data) {
+                scheduleData = scheduleData.data;
+                console.log('data 필드 추출 후:', scheduleData);
+            }
+            
+            if (scheduleData && !Array.isArray(scheduleData)) {
+                if (scheduleData.content && Array.isArray(scheduleData.content)) {
+                    scheduleData = scheduleData.content;
+                } else if (typeof scheduleData === 'object') {
+                    scheduleData = [scheduleData];
+                }
+            }
+
+            if (scheduleData && Array.isArray(scheduleData) && scheduleData.length > 0) {
+                const firstSchedule = scheduleData[0];
+                console.log('첫 번째 일정 데이터:', firstSchedule);
+                
+                // travelPostId 추출 시도
+                const travelPostId = firstSchedule.travelPostId || firstSchedule.id || firstSchedule.travel_post_id;
+                console.log('추출된 travelPostId:', travelPostId);
+                
+                if (travelPostId && travelPostId !== 'undefined') {
+                    await loadParticipantData(travelPostId);
+                } else {
+                    console.warn('travelPostId를 찾을 수 없습니다:', firstSchedule);
+                    document.getElementById('participant-management').innerHTML = 
+                        '<div class="warning-message">⚠️ 참여자 데이터를 로드할 수 없습니다. travelPostId가 없습니다.</div>';
+                }
             }
         } catch(e) {
             console.error('일정 데이터 로드 실패:', e);
@@ -623,12 +749,43 @@
         const container = document.getElementById('schedule-list');
         container.innerHTML = '';
 
-        if (!schedules || schedules.length === 0) {
+        // 디버깅을 위한 로그
+        console.log('일정 데이터:', schedules);
+        console.log('일정 데이터 타입:', typeof schedules);
+        console.log('일정 데이터가 배열인가:', Array.isArray(schedules));
+
+        // schedules가 배열이 아닌 경우 처리
+        if (!schedules) {
             container.innerHTML = '<div class="success-message">📝 등록된 일정이 없습니다.</div>';
             return;
         }
 
-        schedules.forEach(schedule => {
+        // schedules가 배열이 아닌 경우 배열로 변환 시도
+        let scheduleArray = schedules;
+        if (!Array.isArray(schedules)) {
+            if (typeof schedules === 'object') {
+                // 서버 응답 구조에 맞게 data 필드 확인
+                if (schedules.data && Array.isArray(schedules.data)) {
+                    scheduleArray = schedules.data;
+                    console.log('data 필드에서 배열 추출:', scheduleArray);
+                } else if (schedules.content && Array.isArray(schedules.content)) {
+                    scheduleArray = schedules.content;
+                } else {
+                    // 단일 객체인 경우 배열로 변환
+                    scheduleArray = [schedules];
+                }
+            } else {
+                container.innerHTML = '<div class="error-message">❌ 일정 데이터 형식이 올바르지 않습니다.</div>';
+                return;
+            }
+        }
+
+        if (scheduleArray.length === 0) {
+            container.innerHTML = '<div class="success-message">📝 등록된 일정이 없습니다.</div>';
+            return;
+        }
+
+        scheduleArray.forEach(schedule => {
             const div = document.createElement('div');
             div.className = 'schedule-item';
             
@@ -646,7 +803,7 @@
                 <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
                 <p><strong>참가자:</strong> ${schedule.participants || 0}/${schedule.maxParticipants || 'N/A'}명</p>
                 <p><strong>지역:</strong> ${schedule.location || 'N/A'}</p>
-                <button onclick="loadParticipantData(${schedule.travelPostId})" class="approve">
+                <button onclick="loadParticipantData(${schedule.travelPostId || schedule.id || schedule.travel_post_id})" class="approve">
                     참여자 관리
                 </button>
             `;
@@ -655,17 +812,41 @@
     }
 
     async function loadParticipantData(postId) {
+        // postId 유효성 검사
+        if (!postId || postId === 'undefined' || postId === 'null') {
+            console.error('유효하지 않은 postId:', postId);
+            document.getElementById('participant-management').innerHTML =
+                '<div class="error-message">❌ 유효하지 않은 게시글 ID입니다.</div>';
+            return;
+        }
+
+        console.log('참여자 데이터 로드 시작 - postId:', postId);
+        
         try {
             const [participantsRes, applicationsRes] = await Promise.all([
                 axios.get(`/api/schedule/${postId}/participants`, {headers: getAuthHeaders()}),
                 axios.get(`/api/schedule/${postId}/applications`, {headers: getAuthHeaders()})
             ]);
 
+            console.log('참여자 데이터 응답:', participantsRes.data);
+            console.log('신청자 데이터 응답:', applicationsRes.data);
+
             displayParticipantManagement(participantsRes.data, applicationsRes.data, postId);
         } catch(e) {
             console.error('참여자 데이터 로드 실패:', e);
+            console.error('에러 상세:', e.response?.data);
+            
+            let errorMessage = '참여자 데이터를 로드할 수 없습니다.';
+            if (e.response?.status === 404) {
+                errorMessage = '게시글을 찾을 수 없습니다.';
+            } else if (e.response?.status === 500) {
+                errorMessage = '서버 내부 오류가 발생했습니다.';
+            } else if (e.response?.data?.message) {
+                errorMessage = e.response.data.message;
+            }
+            
             document.getElementById('participant-management').innerHTML =
-                `<div class="error-message">❌ 참여자 데이터 로드 실패: ${e.response?.data?.message || e.message}</div>`;
+                `<div class="error-message">❌ ${errorMessage}</div>`;
         }
     }
 
@@ -673,8 +854,42 @@
         const container = document.getElementById('participant-management');
         container.innerHTML = '';
 
+        console.log('displayParticipantManagement 호출됨');
+        console.log('participants:', participants);
+        console.log('applications:', applications);
+        console.log('postId:', postId);
+
+        // 데이터 구조 확인 및 배열 변환
+        let participantsArray = participants;
+        let applicationsArray = applications;
+
+        // participants 처리
+        if (participants && !Array.isArray(participants)) {
+            if (participants.data && Array.isArray(participants.data)) {
+                participantsArray = participants.data;
+            } else if (typeof participants === 'object') {
+                participantsArray = [participants];
+            } else {
+                participantsArray = [];
+            }
+        }
+
+        // applications 처리
+        if (applications && !Array.isArray(applications)) {
+            if (applications.data && Array.isArray(applications.data)) {
+                applicationsArray = applications.data;
+            } else if (typeof applications === 'object') {
+                applicationsArray = [applications];
+            } else {
+                applicationsArray = [];
+            }
+        }
+
+        console.log('처리된 participantsArray:', participantsArray);
+        console.log('처리된 applicationsArray:', applicationsArray);
+
         // 승인된 참가자 목록
-        const approvedParticipants = participants || [];
+        const approvedParticipants = participantsArray || [];
         if (approvedParticipants.length > 0) {
             const participantsDiv = document.createElement('div');
             participantsDiv.innerHTML = '<h4>✅ 승인된 참가자</h4>';
@@ -697,7 +912,7 @@
         }
 
         // 대기 중인 신청자 목록
-        const pendingApplications = applications ? applications.filter(app => app.status === 'PENDING') : [];
+        const pendingApplications = applicationsArray ? applicationsArray.filter(app => app.status === 'PENDING') : [];
         if (pendingApplications.length > 0) {
             const applicationsDiv = document.createElement('div');
             applicationsDiv.innerHTML = '<h4>⏳ 대기 중인 신청자</h4>';
@@ -723,7 +938,7 @@
         }
 
         // 거절된 신청자 목록
-        const rejectedApplications = applications ? applications.filter(app => app.status === 'REJECTED') : [];
+        const rejectedApplications = applicationsArray ? applicationsArray.filter(app => app.status === 'REJECTED') : [];
         if (rejectedApplications.length > 0) {
             const rejectedDiv = document.createElement('div');
             rejectedDiv.innerHTML = '<h4>❌ 거절된 신청자</h4>';
@@ -800,40 +1015,6 @@
         alert('로그아웃되었습니다.');
         window.location.href = '/';
     }
-
-
-
-    <!-- 웹 소켓 초기화 -->
-
-    // 공통 알림 표시 함수 (유지)
-    function showNotification(notification) {
-        const notificationDiv = document.createElement('div');
-        notificationDiv.className = 'notification';
-        notificationDiv.innerHTML = `
-        <strong>${notification.title || '새 알림'}</strong>
-        <p>${notification.content}</p>
-        <small>${new Date(notification.createdAt).toLocaleString()}</small>
-    `;
-        document.body.appendChild(notificationDiv);
-
-        setTimeout(() => notificationDiv.remove(), 5000);
-    }
-
-    // 수정된 페이지 로드 함수
-    window.onload = async function() {
-        const accessToken = getCookie('accessToken');
-        document.getElementById('login-status').textContent = accessToken ? '로그인됨' : '로그인 필요';
-
-        if (accessToken) {
-            try {
-                await window.wsManager.connect(); // 공통 WebSocketManager 사용
-                loadScheduleData();
-            } catch (error) {
-                console.error("웹소켓 연결 실패:", error);
-            }
-        }
-    };
-
 </script>
 </body>
 </html>
