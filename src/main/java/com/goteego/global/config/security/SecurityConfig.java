@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -27,7 +28,6 @@ public class SecurityConfig {
             "/favicon.ico",
             "/api/public/**",
             "/api/feed/**",  // 임시 추가
-            "/api/travel-posts",
             "/api/users/me",
             "/api/schedule/**",      // 임시 추가
             "/api/recommendation/**", // 임시 추가
@@ -53,6 +53,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ 여행 게시글: GET 요청은 허용, 나머지는 인증 필요
+                        .requestMatchers(HttpMethod.GET, "/api/travel-posts", "/api/travel-posts/**").permitAll()
                         .requestMatchers(PUBLIC_URLS).permitAll()
                         .anyRequest().authenticated()
                 )
