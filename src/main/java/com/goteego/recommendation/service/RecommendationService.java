@@ -104,25 +104,33 @@ public class RecommendationService {
     @Transactional
     public UserEmbedding createOrUpdateUserEmbedding(Long userId, String embedding) {
         log.info("=== 사용자 임베딩 생성/업데이트 시작 ===");
-        log.info("요청 사용자 ID: {}, 임베딩 길이: {}", userId, embedding.length());
+        log.info("요청 사용자 ID: {}, 임베딩 길이: {}, 임베딩: {}", userId, embedding.length(), embedding);
         
-        // ===== 내부로직: 기존 임베딩 조회 및 생성/업데이트 처리 =====
-        Optional<UserEmbedding> existingEmbedding = userEmbeddingRepository.findByUserId(userId);
-        
-        if (existingEmbedding.isPresent()) {
-            UserEmbedding userEmbedding = existingEmbedding.get();
-            userEmbedding.updateEmbedding(embedding);
-            UserEmbedding updatedEmbedding = userEmbeddingRepository.save(userEmbedding);
-            log.info("사용자 임베딩 업데이트 완료 - userId: {}", userId);
-            return updatedEmbedding;
-        } else {
-            UserEmbedding newEmbedding = UserEmbedding.builder()
-                    .userId(userId)
-                    .userEmbedding(embedding)
-                    .build();
-            UserEmbedding savedEmbedding = userEmbeddingRepository.save(newEmbedding);
-            log.info("사용자 임베딩 생성 완료 - userId: {}", userId);
-            return savedEmbedding;
+        try {
+            // ===== 내부로직: 기존 임베딩 조회 및 생성/업데이트 처리 =====
+            Optional<UserEmbedding> existingEmbedding = userEmbeddingRepository.findByUserId(userId);
+            
+            if (existingEmbedding.isPresent()) {
+                log.info("기존 임베딩 발견 - userId: {}", userId);
+                UserEmbedding userEmbedding = existingEmbedding.get();
+                userEmbedding.updateEmbedding(embedding);
+                UserEmbedding updatedEmbedding = userEmbeddingRepository.save(userEmbedding);
+                log.info("사용자 임베딩 업데이트 완료 - userId: {}", userId);
+                return updatedEmbedding;
+            } else {
+                log.info("새 임베딩 생성 - userId: {}", userId);
+                UserEmbedding newEmbedding = UserEmbedding.builder()
+                        .userId(userId)
+                        .userEmbedding(embedding)
+                        .build();
+                UserEmbedding savedEmbedding = userEmbeddingRepository.save(newEmbedding);
+                log.info("사용자 임베딩 생성 완료 - userId: {}", userId);
+                return savedEmbedding;
+            }
+        } catch (Exception e) {
+            log.error("사용자 임베딩 생성/업데이트 중 오류 발생 - userId: {}, error: {}, stackTrace: {}", 
+                    userId, e.getMessage(), e.getStackTrace(), e);
+            throw e;
         }
     }
     

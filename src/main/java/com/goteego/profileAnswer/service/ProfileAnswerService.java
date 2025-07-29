@@ -119,7 +119,14 @@ public class ProfileAnswerService {
             ProfileAnswer savedProfileAnswer = profileAnswerRepository.save(profileAnswer);
             log.info("사용자 선호도 저장 완료 - userId: {}, answerId: {}", user.getId(), savedProfileAnswer.getId());
             
-            createUserEmbeddingFromProfileAnswer(savedProfileAnswer);
+            // 임베딩 생성은 별도로 처리 (실패해도 ProfileAnswer는 저장됨)
+            try {
+                createUserEmbeddingFromProfileAnswer(savedProfileAnswer);
+            } catch (Exception embeddingError) {
+                log.warn("임베딩 생성 실패했지만 ProfileAnswer는 저장됨 - userId: {}, error: {}", 
+                        user.getId(), embeddingError.getMessage());
+                // 임베딩 생성 실패는 ProfileAnswer 저장을 막지 않음
+            }
             
             return savedProfileAnswer;
         } catch (Exception e) {
@@ -260,8 +267,8 @@ public class ProfileAnswerService {
         try {
             // 24개의 boolean 값을 1,0으로 변환하여 벡터 생성
             String embedding = convertProfileAnswerToEmbedding(profileAnswer);
-            log.debug("임베딩 벡터 생성 완료 - userId: {}, vectorLength: {}", 
-                    profileAnswer.getUser().getId(), embedding.length());
+            log.info("임베딩 벡터 생성 완료 - userId: {}, vectorLength: {}, vector: {}", 
+                    profileAnswer.getUser().getId(), embedding.length(), embedding);
             
             // RecommendationService를 통해 임베딩 저장/업데이트
             recommendationService.createOrUpdateUserEmbedding(profileAnswer.getUser().getId(), embedding);
@@ -269,8 +276,8 @@ public class ProfileAnswerService {
             log.info("사용자 임베딩 생성/업데이트 완료 - userId: {}", profileAnswer.getUser().getId());
             
         } catch (Exception e) {
-            log.error("사용자 임베딩 생성 중 오류 발생 - userId: {}, error: {}", 
-                    profileAnswer.getUser().getId(), e.getMessage(), e);
+            log.error("사용자 임베딩 생성 중 오류 발생 - userId: {}, error: {}, stackTrace: {}", 
+                    profileAnswer.getUser().getId(), e.getMessage(), e.getStackTrace(), e);
             throw new BusinessException(ErrorCode.EMBEDDING_GENERATION_FAILED);
         }
     }
