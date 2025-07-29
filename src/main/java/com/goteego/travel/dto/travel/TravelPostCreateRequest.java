@@ -1,5 +1,6 @@
 package com.goteego.travel.dto.travel;
 
+import com.goteego.global.domain.enumerate.Location;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,7 +23,8 @@ public class TravelPostCreateRequest {
     @NotBlank(message = "내용은 필수입니다")
     private String content;
 
-    private String location;
+    @NotBlank(message = "지역은 필수입니다")
+    private String location; // String으로 받아서 Location enum으로 변환
 
     @NotNull(message = "시작 날짜는 필수입니다")
     private LocalDate startTime;
@@ -39,4 +41,22 @@ public class TravelPostCreateRequest {
     private String postType;
 
     private Boolean isAddRecruit;
+
+    /**
+     * String location을 Location enum으로 변환
+     * null 체크 및 예외 처리를 포함한 안전한 변환
+     */
+    public Location getLocationAsEnum() {
+        if (location == null || location.trim().isEmpty()) {
+            throw new IllegalArgumentException("지역 정보가 비어있습니다.");
+        }
+
+        try {
+            // HTML에서 이미 대문자로 전송되므로 trim()만 수행
+            return Location.valueOf(location.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("유효하지 않은 지역입니다: " + location +
+                    ". 지원되는 지역: " + java.util.Arrays.toString(Location.values()));
+        }
+    }
 }

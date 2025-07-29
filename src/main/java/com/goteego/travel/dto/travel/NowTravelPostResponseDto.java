@@ -46,7 +46,7 @@ public class NowTravelPostResponseDto {
         return NowTravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
-                .location(travelPost.getLocation())
+                .location(travelPost.getLocation().name())
                 .author(createAuthorDto(travelPost.getUser(), nickname))
                 .createdAt(travelPost.getCreatedAt().toString())
                 .similarity(similarity)

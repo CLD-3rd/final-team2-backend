@@ -30,7 +30,6 @@ public class SecurityConfig {
             "/api/travel-posts",
             "/api/users/me",
             "/api/schedule/**",      // 임시 추가
-//            "/api/users/**",         // 임시 추가
             "/api/recommendation/**", // 임시 추가
             "/error",
             "/index.html",
@@ -40,6 +39,7 @@ public class SecurityConfig {
             "/static/**",
             "/ws/**"
     };
+
     private final OAuth2SuccessHandler oAuth2SuccessHandler; // ✅ 주입받기
     private final CustomOAuth2UserService customOAuth2UserService;
     @Value("${frontend.url}")

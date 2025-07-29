@@ -1,5 +1,6 @@
 package com.goteego.travel.dto.travel;
 
+import com.goteego.global.domain.enumerate.Location;
 import com.goteego.travel.domain.TravelPost;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,30 +10,22 @@ import lombok.Builder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * 사전동행모집글 응답 DTO (BEFORE)
- * API 응답 시 사용되는 데이터 전송 객체
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BeforeTravelPostResponseDto {
-    
+public class TravelPostDetailResponseDto {
     private Long travelPostId;
     private String title;
     private String content;
-    private String location;
-    private Long viewCount;
+    private Location location;
     private String startTime;
     private String endTime;
     private AuthorDto author;
-    private Integer participants; // 현재까지 신청받은 인원 수
-    private Integer maxParticipants; // 모집 인원 제한
+    private Integer maxParticipants;
     private String imageUrl;
     private String createdAt;
-    private Double similarity; // 유사도 점수
-    
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -42,35 +35,26 @@ public class BeforeTravelPostResponseDto {
         private String nickname;
         private String profileImgUrl;
     }
-    
-    /**
-     * TravelPost 엔티티를 DTO로 변환
-     */
-    public static BeforeTravelPostResponseDto from(TravelPost travelPost, Long currentUserId, String nickname, Double similarity, Integer approvedParticipantCount) {
-        return BeforeTravelPostResponseDto.builder()
+
+    public static TravelPostDetailResponseDto from(TravelPost travelPost) {
+        return TravelPostDetailResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
                 .content(travelPost.getContent())
-                .location(travelPost.getLocation().name())
-                .viewCount(travelPost.getViewCount())
+                .location(travelPost.getLocation())
                 .startTime(travelPost.getStartTime().toString())
                 .endTime(travelPost.getEndTime().toString())
-                .author(createAuthorDto(travelPost.getUser(), nickname))
-                .participants(approvedParticipantCount != null ? approvedParticipantCount : 0)
+                .author(createAuthorDto(travelPost.getUser()))
                 .maxParticipants(travelPost.getRecruitLimit())
                 .imageUrl(travelPost.getImageUrl())
                 .createdAt(travelPost.getCreatedAt().toString())
-                .similarity(similarity)
                 .build();
     }
 
-    /**
-     * AuthorDto 생성 (객체 참조 방식)
-     */
-    private static AuthorDto createAuthorDto(com.goteego.user.domain.User user, String nickname) {
+    private static AuthorDto createAuthorDto(com.goteego.user.domain.User user) {
         return AuthorDto.builder()
                 .userId(user.getId())
-                .nickname(nickname)
+                .nickname(user.getNickname())
                 .profileImgUrl(user.getProfileImgUrl())
                 .build();
     }

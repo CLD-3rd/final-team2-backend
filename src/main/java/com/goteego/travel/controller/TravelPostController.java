@@ -5,6 +5,7 @@ import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
 import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
 import com.goteego.travel.dto.travel.TravelPostCreateRequest;
+import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
 import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
 import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.travel.service.TravelPostService;
@@ -104,12 +105,12 @@ public class TravelPostController {
      * @return 여행 게시글 상세 정보
      */
     @GetMapping("/{travelPostId}")
-    public ResponseEntity<TravelPost> getTravelPostDetail(@PathVariable("travelPostId") Long travelPostId) {
-        TravelPost travelPost = travelPostService.getTravelPostDetail(travelPostId);
+    public ResponseEntity<TravelPostDetailResponseDto> getTravelPostDetail(@PathVariable("travelPostId") Long travelPostId) {
+        TravelPostDetailResponseDto travelPostDetail = travelPostService.getTravelPostDetail(travelPostId);
 
-        log.info("여행 게시글 상세 조회 - travelPostId: {}, title: {}", travelPostId, travelPost.getTitle());
+        log.info("여행 게시글 상세 조회 - travelPostId: {}, title: {}", travelPostId, travelPostDetail.getTitle());
 
-        return ResponseEntity.ok(travelPost);
+        return ResponseEntity.ok(travelPostDetail);
     }
 
 

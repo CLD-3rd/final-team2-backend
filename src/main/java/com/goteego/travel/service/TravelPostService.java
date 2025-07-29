@@ -105,13 +105,13 @@ public class TravelPostService {
      * 여행 게시글 상세 조회
      */
     @Transactional
-    public TravelPost getTravelPostDetail(Long postId) {
+    public TravelPostDetailResponseDto getTravelPostDetail(Long postId) {
         TravelPost travelPost = travelPostRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
 
         // 조회수 증가
         travelPost.incrementViewCount();
-        return travelPost;
+        return TravelPostDetailResponseDto.from(travelPost);
     }
 
 
@@ -136,13 +136,13 @@ public class TravelPostService {
                 .chatRoom(groupChatRoom)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .location(request.getLocation())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .imageUrl(imageUrl)
                 .recruitLimit(request.getRecruitLimit())
                 .postType(PostType.valueOf(request.getPostType().toUpperCase()))
                 .isAddRecruit(request.getIsAddRecruit())
+                .location(request.getLocationAsEnum())
                 .build();
 
         // 게시글 저장
@@ -159,7 +159,8 @@ public class TravelPostService {
     public ParticipationApplicationResponseDto joinTravelPost(Long travelPostId, User currentUser) {
 
         // 1. 여행 게시글 존재 확인
-        TravelPost travelPost = getTravelPostDetail(travelPostId);
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
 
         // 2. 참가 신청 검증
         validateJoinTravelPost(travelPost, currentUser);

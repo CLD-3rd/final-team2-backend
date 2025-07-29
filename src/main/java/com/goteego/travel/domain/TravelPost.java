@@ -2,6 +2,7 @@ package com.goteego.travel.domain;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.global.domain.BaseEntity;
+import com.goteego.global.domain.enumerate.Location;
 import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.user.domain.User;
@@ -44,7 +45,14 @@ public class TravelPost extends BaseEntity {
 
     private String title;
     private String content;
-    private String location;
+    
+    /**
+     * 여행지 위치 정보 (공통 Location enum 사용)
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "location", length = 50)
+    private Location location;
+    
     private LocalDate startTime;
     private LocalDate endTime;
     private Integer recruitLimit;
@@ -55,7 +63,7 @@ public class TravelPost extends BaseEntity {
     @Builder
     public TravelPost(User user, ChatRoom chatRoom, String title, String content,
                      LocalDate startTime, LocalDate endTime, String imageUrl, 
-                     Integer recruitLimit, PostType postType, Boolean isAddRecruit, String location) {
+                     Integer recruitLimit, PostType postType, Boolean isAddRecruit, Location location) {
         this.user = user;
         this.chatRoom = chatRoom;
         this.title = title;
@@ -70,7 +78,7 @@ public class TravelPost extends BaseEntity {
     }
 
 
-    //=========비즈니스 로직==========//
+    //=========비즈니스 로직==========
 
     // 게시글 수정 (DTO 기반)
     public void update(TravelPostUpdateRequest request) {
@@ -85,8 +93,7 @@ public class TravelPost extends BaseEntity {
         this.recruitLimit = request.getRecruitLimit();
         this.postType = PostType.valueOf(request.getPostType().toUpperCase());
         this.isAddRecruit = request.getIsAddRecruit();
-        // TODO: TravelPostUpdateRequest에 location 필드 추가 필요
-        // this.location = request.getLocation();
+        this.location = request.getLocationAsEnum();
     }
 
     // 내부 검증 로직
@@ -95,23 +102,18 @@ public class TravelPost extends BaseEntity {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("제목은 필수입니다.");
         }
-        
         if (content == null || content.trim().isEmpty()) {
             throw new IllegalArgumentException("내용은 필수입니다.");
         }
-        
         if (startTime == null) {
             throw new IllegalArgumentException("시작 날짜는 필수입니다.");
         }
-        
         if (endTime == null) {
             throw new IllegalArgumentException("종료 날짜는 필수입니다.");
         }
-        
         if (startTime.isAfter(endTime)) {
             throw new IllegalArgumentException("시작 날짜는 종료 날짜보다 이전이어야 합니다.");
         }
-        
         if (recruitLimit == null || recruitLimit < 1) {
             throw new IllegalArgumentException("모집 인원은 1명 이상이어야 합니다.");
         }
@@ -148,4 +150,8 @@ public class TravelPost extends BaseEntity {
         return approvedParticipantCount >= this.recruitLimit;
     }
 
+    // 모집 상태 변경
+    public void updateRecruitmentStatus(Boolean isAddRecruit) {
+        this.isAddRecruit = isAddRecruit;
+    }
 } 
