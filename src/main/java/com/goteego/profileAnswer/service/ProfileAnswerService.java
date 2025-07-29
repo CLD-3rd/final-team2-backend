@@ -116,6 +116,9 @@ public class ProfileAnswerService {
                 .build();
         
         try {
+            log.info("ProfileAnswer 엔티티 생성 완료 - userId: {}, 엔티티: {}", user.getId(), profileAnswer);
+            log.info("저장 시도 중...");
+            
             ProfileAnswer savedProfileAnswer = profileAnswerRepository.save(profileAnswer);
             log.info("사용자 선호도 저장 완료 - userId: {}, answerId: {}", user.getId(), savedProfileAnswer.getId());
             
@@ -130,7 +133,8 @@ public class ProfileAnswerService {
             
             return savedProfileAnswer;
         } catch (Exception e) {
-            log.error("사용자 선호도 생성 중 오류 발생 - userId: {}, error: {}", user.getId(), e.getMessage(), e);
+            log.error("사용자 선호도 생성 중 오류 발생 - userId: {}, error: {}, stackTrace: {}", 
+                    user.getId(), e.getMessage(), e.getStackTrace(), e);
             throw new BusinessException(ErrorCode.PROFILE_ANSWER_CREATION_FAILED);
         }
     }

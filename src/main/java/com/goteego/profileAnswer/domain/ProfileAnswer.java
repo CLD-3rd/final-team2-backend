@@ -7,8 +7,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
+// BaseEntity에서 상속받으므로 별도 import 불필요
 
 import java.time.LocalDateTime;
 
@@ -112,19 +111,8 @@ public class ProfileAnswer extends BaseEntity {
     @Column(name = "is_mountain")
     private Boolean isMountain; // 산/등산
     
-    /**
-     * 생성 시간
-     */
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-    
-    /**
-     * 수정 시간
-     */
-    @LastModifiedDate
-    @Column(name = "modified_at")
-    private LocalDateTime modifiedAt;
+    // BaseEntity에서 상속받은 createdAt, lastModifiedAt 사용
+    // 별도로 정의하지 않음
     
     /**
      * 사용자 선호도 생성 빌더 메서드
@@ -161,8 +149,7 @@ public class ProfileAnswer extends BaseEntity {
         this.isHeal = isHeal;
         this.isBeach = isBeach;
         this.isMountain = isMountain;
-        this.createdAt = LocalDateTime.now();
-        this.modifiedAt = LocalDateTime.now();
+        // BaseEntity의 JPA Auditing이 자동으로 처리
     }
     
     /**
@@ -197,7 +184,7 @@ public class ProfileAnswer extends BaseEntity {
         this.isHeal = isHeal;
         this.isBeach = isBeach;
         this.isMountain = isMountain;
-        this.modifiedAt = LocalDateTime.now();
+        // BaseEntity의 JPA Auditing이 자동으로 처리
     }
     
     /**
