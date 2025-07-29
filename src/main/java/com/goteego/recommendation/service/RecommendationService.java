@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -107,25 +108,17 @@ public class RecommendationService {
         log.info("요청 사용자 ID: {}, 임베딩 길이: {}, 임베딩: {}", userId, embedding.length(), embedding);
         
         try {
-            // ===== 내부로직: 기존 임베딩 조회 및 생성/업데이트 처리 =====
-            Optional<UserEmbedding> existingEmbedding = userEmbeddingRepository.findByUserId(userId);
+            // ===== 내부로직: Native Query를 사용한 벡터 저장/업데이트 =====
+            LocalDateTime now = LocalDateTime.now();
+            userEmbeddingRepository.insertOrUpdateEmbedding(userId, embedding, now);
             
-            if (existingEmbedding.isPresent()) {
-                log.info("기존 임베딩 발견 - userId: {}", userId);
-                UserEmbedding userEmbedding = existingEmbedding.get();
-                userEmbedding.updateEmbedding(embedding);
-                UserEmbedding updatedEmbedding = userEmbeddingRepository.save(userEmbedding);
-                log.info("사용자 임베딩 업데이트 완료 - userId: {}", userId);
-                return updatedEmbedding;
+            // 저장된 임베딩 조회하여 반환
+            Optional<UserEmbedding> savedEmbedding = userEmbeddingRepository.findByUserId(userId);
+            if (savedEmbedding.isPresent()) {
+                log.info("사용자 임베딩 생성/업데이트 완료 - userId: {}", userId);
+                return savedEmbedding.get();
             } else {
-                log.info("새 임베딩 생성 - userId: {}", userId);
-                UserEmbedding newEmbedding = UserEmbedding.builder()
-                        .userId(userId)
-                        .userEmbedding(embedding)
-                        .build();
-                UserEmbedding savedEmbedding = userEmbeddingRepository.save(newEmbedding);
-                log.info("사용자 임베딩 생성 완료 - userId: {}", userId);
-                return savedEmbedding;
+                throw new RuntimeException("임베딩 저장 후 조회 실패 - userId: " + userId);
             }
         } catch (Exception e) {
             log.error("사용자 임베딩 생성/업데이트 중 오류 발생 - userId: {}, error: {}, stackTrace: {}", 
@@ -153,7 +146,12 @@ public class RecommendationService {
      */
     public Long countValidEmbeddings() {
         // ===== 내부로직: 유효한 임베딩 개수 집계 =====
-        return userEmbeddingRepository.countValidEmbeddings();
+        try {
+            return userEmbeddingRepository.countValidEmbeddings();
+        } catch (Exception e) {
+            log.error("유효한 임베딩 개수 조회 중 오류 발생: {}", e.getMessage(), e);
+            return 0L;
+        }
     }
     
     /**

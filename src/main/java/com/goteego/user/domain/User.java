@@ -37,26 +37,17 @@ public class User extends BaseEntity {
 
     private boolean isSuspended = false;
 
-    @CreatedDate
-    @Column(updatable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
-
     private String refreshToken;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<UserChatRoom> userChatRooms = new ArrayList<>();
 
     @Builder
-    public User(String nickname, String profileImgUrl, UserRole role, OauthInfo oauthInfo, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public User(String nickname, String profileImgUrl, UserRole role, OauthInfo oauthInfo) {
         this.nickname = nickname;
         this.profileImgUrl = profileImgUrl;
         this.role = role;
         this.oauthInfo = oauthInfo;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     public static User createDefaultOAuthUser(OauthInfo oauthInfo, String profileImgUrl) {
@@ -65,8 +56,6 @@ public class User extends BaseEntity {
                 .profileImgUrl(profileImgUrl)
                 .role(UserRole.USER)
                 .oauthInfo(oauthInfo)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
@@ -76,6 +65,6 @@ public class User extends BaseEntity {
 
     public void setIsSuspend(boolean isSuspended) {
         this.isSuspended = isSuspended;
-        this.updatedAt = LocalDateTime.now();
+        // BaseEntity의 lastModifiedAt이 자동으로 업데이트됨
     }
 }

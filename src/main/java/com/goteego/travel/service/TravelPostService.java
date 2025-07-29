@@ -260,8 +260,6 @@ public class TravelPostService {
                     .profileImgUrl("")
                     .role(UserRole.USER)
                     .oauthInfo(OauthInfo.builder().build())
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
                     .build();
         }
     }

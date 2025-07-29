@@ -104,11 +104,14 @@ public class RecommendationController {
      */
     @GetMapping("/embeddings/count")
     public ResponseEntity<Long> countValidEmbeddings() {
-        Long count = recommendationService.countValidEmbeddings();
-        
-        log.info("유효한 임베딩 수 조회 - count: {}", count);
-        
-        return ResponseEntity.ok(count);
+        try {
+            Long count = recommendationService.countValidEmbeddings();
+            log.info("유효한 임베딩 수 조회 - count: {}", count);
+            return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            log.error("임베딩 수 조회 중 오류 발생: {}", e.getMessage(), e);
+            return ResponseEntity.ok(0L);
+        }
     }
     
     /**

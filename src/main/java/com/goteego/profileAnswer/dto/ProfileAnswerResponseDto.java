@@ -72,8 +72,15 @@ public class ProfileAnswerResponseDto {
      * @return 변환된 ProfileAnswerResponseDto 객체
      */
     public static ProfileAnswerResponseDto from(ProfileAnswer profileAnswer) {
+        if (profileAnswer == null) {
+            throw new IllegalArgumentException("ProfileAnswer cannot be null");
+        }
+        if (profileAnswer.getUser() == null) {
+            throw new IllegalArgumentException("ProfileAnswer user cannot be null");
+        }
+        
         return ProfileAnswerResponseDto.builder()
-                .userId(profileAnswer.getId())
+                .userId(profileAnswer.getUser().getId())
                 .isAlchol3(profileAnswer.getIsAlchol3())
                 .isAlchol2(profileAnswer.getIsAlchol2())
                 .isAlchol1(profileAnswer.getIsAlchol1())

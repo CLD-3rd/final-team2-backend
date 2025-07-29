@@ -8,9 +8,11 @@ import com.goteego.profileAnswer.repository.ProfileAnswerRepository;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.user.domain.User;
+import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -33,6 +35,11 @@ public class ProfileAnswerService {
      * 사용자 선호도 데이터 접근을 위한 리포지토리
      */
     private final ProfileAnswerRepository profileAnswerRepository;
+    
+    /**
+     * 사용자 데이터 접근을 위한 리포지토리
+     */
+    private final UserRepository userRepository;
     
     /**
      * 추천 시스템 서비스 (임베딩 생성용)
@@ -82,14 +89,18 @@ public class ProfileAnswerService {
         log.info("=== 사용자 선호도 생성 시작 ===");
         log.info("생성 요청 사용자 ID: {}", user.getId());
         
-        // ===== 내부로직: 사용자 선호도 중복 검증 및 엔티티 생성 =====
-        if (profileAnswerRepository.existsByUser(user)) {
-            log.warn("이미 사용자 선호도가 존재함 - userId: {}", user.getId());
-            throw new BusinessException(ErrorCode.PROFILE_ANSWER_ALREADY_EXISTS);
-        }
+        // ===== 내부로직: User 객체 재조회 (detached 상태 방지) =====
+        User managedUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> {
+                    log.error("User를 찾을 수 없습니다 - userId: {}", user.getId());
+                    return new BusinessException(ErrorCode.PROFILE_ANSWER_CREATION_FAILED);
+                });
+        
+        log.info("User 객체 재조회 완료 - ID: {}, Nickname: {}, Email: {}", 
+                managedUser.getId(), managedUser.getNickname(), managedUser.getOauthInfo().getOauthEmail());
         
         ProfileAnswer profileAnswer = ProfileAnswer.builder()
-                .user(user)
+                .user(managedUser)
                 .isAlchol3(requestDto.getIsAlchol3())
                 .isAlchol2(requestDto.getIsAlchol2())
                 .isAlchol1(requestDto.getIsAlchol1())
@@ -116,25 +127,34 @@ public class ProfileAnswerService {
                 .build();
         
         try {
-            log.info("ProfileAnswer 엔티티 생성 완료 - userId: {}, 엔티티: {}", user.getId(), profileAnswer);
+            log.info("ProfileAnswer 엔티티 생성 완료 - userId: {}, 엔티티: {}", managedUser.getId(), profileAnswer);
             log.info("저장 시도 중...");
+            log.info("User 객체 정보 - id: {}, nickname: {}", managedUser.getId(), managedUser.getNickname());
+            log.info("ProfileAnswer ID 설정: {}", profileAnswer.getId());
             
             ProfileAnswer savedProfileAnswer = profileAnswerRepository.save(profileAnswer);
-            log.info("사용자 선호도 저장 완료 - userId: {}, answerId: {}", user.getId(), savedProfileAnswer.getId());
+            log.info("사용자 선호도 저장 완료 - userId: {}, answerId: {}", managedUser.getId(), savedProfileAnswer.getId());
             
             // 임베딩 생성은 별도로 처리 (실패해도 ProfileAnswer는 저장됨)
             try {
                 createUserEmbeddingFromProfileAnswer(savedProfileAnswer);
             } catch (Exception embeddingError) {
                 log.warn("임베딩 생성 실패했지만 ProfileAnswer는 저장됨 - userId: {}, error: {}", 
-                        user.getId(), embeddingError.getMessage());
+                        managedUser.getId(), embeddingError.getMessage());
                 // 임베딩 생성 실패는 ProfileAnswer 저장을 막지 않음
             }
             
             return savedProfileAnswer;
         } catch (Exception e) {
-            log.error("사용자 선호도 생성 중 오류 발생 - userId: {}, error: {}, stackTrace: {}", 
-                    user.getId(), e.getMessage(), e.getStackTrace(), e);
+            log.error("=== ProfileAnswer 생성 실패 상세 분석 ===");
+            log.error("사용자 ID: {}", user.getId());
+            log.error("사용자 닉네임: {}", user.getNickname());
+            log.error("요청 데이터: {}", requestDto);
+            log.error("ProfileAnswer 엔티티: {}", profileAnswer);
+            log.error("예외 타입: {}", e.getClass().getSimpleName());
+            log.error("예외 메시지: {}", e.getMessage());
+            log.error("예외 원인: {}", e.getCause() != null ? e.getCause().getMessage() : "원인 없음");
+            log.error("스택 트레이스:", e);
             throw new BusinessException(ErrorCode.PROFILE_ANSWER_CREATION_FAILED);
         }
     }
@@ -258,6 +278,8 @@ public class ProfileAnswerService {
                 .collect(Collectors.toList());
     }
     
+
+    
     /**
      * ProfileAnswer에서 사용자 임베딩 벡터를 생성하는 메서드
      * 24개의 boolean 값을 30차원 벡터로 변환
@@ -335,14 +357,14 @@ public class ProfileAnswerService {
         }
         
         // PostgreSQL vector 형식으로 변환 (중괄호 사용)
-        StringBuilder sb = new StringBuilder("{");
+        StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < vector.length; i++) {
             sb.append(vector[i]);
             if (i < vector.length - 1) {
                 sb.append(",");
             }
         }
-        sb.append("}");
+        sb.append("]");
         
         String vectorString = sb.toString();
         log.info("생성된 PostgreSQL vector 문자열: {}", vectorString);

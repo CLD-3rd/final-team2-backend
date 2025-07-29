@@ -25,13 +25,16 @@ import java.time.LocalDateTime;
 public class ProfileAnswer extends BaseEntity {
     
     /**
-     * 사용자
-     * User 엔티티와 OneToOne 관계
+     * 기본키 (사용자 ID와 동일)
      */
     @Id
     @Column(name = "user_id")
     private Long id;
     
+    /**
+     * 사용자
+     * User 엔티티와 OneToOne 관계
+     */
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "user_id")
@@ -125,7 +128,6 @@ public class ProfileAnswer extends BaseEntity {
                         Boolean isOutdoor, Boolean isChill, Boolean isBusy, Boolean isFlex, 
                         Boolean isCity, Boolean isHeal, Boolean isBeach, Boolean isMountain) {
         this.user = user;
-        this.id = user.getId();
         this.isAlchol3 = isAlchol3;
         this.isAlchol2 = isAlchol2;
         this.isAlchol1 = isAlchol1;
@@ -149,7 +151,6 @@ public class ProfileAnswer extends BaseEntity {
         this.isHeal = isHeal;
         this.isBeach = isBeach;
         this.isMountain = isMountain;
-        // BaseEntity의 JPA Auditing이 자동으로 처리
     }
     
     /**
@@ -194,6 +195,6 @@ public class ProfileAnswer extends BaseEntity {
      * @return 작성자 여부
      */
     public boolean isAuthor(Long userId) {
-        return this.id.equals(userId);
+        return this.user.getId().equals(userId);
     }
 } 

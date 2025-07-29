@@ -107,7 +107,7 @@ public class ProfileAnswerController {
      * @return 생성되거나 수정된 선호도
      */
     @PostMapping("/save-or-update")
-    public ResponseEntity<ProfileAnswer> saveOrUpdateProfileAnswer(
+    public ResponseEntity<ProfileAnswerResponseDto> saveOrUpdateProfileAnswer(
             @RequestBody ProfileAnswerRequestDto requestDto,
             @AuthenticationPrincipal User user) {
         
@@ -116,10 +116,11 @@ public class ProfileAnswerController {
         log.debug("요청 데이터: {}", requestDto);
         
         ProfileAnswer profileAnswer = profileAnswerService.saveOrUpdateProfileAnswer(user, requestDto);
+        ProfileAnswerResponseDto responseDto = ProfileAnswerResponseDto.from(profileAnswer);
         
         log.info("사용자 선호도 저장 또는 수정 완료 - userId: {}, answerId: {}", user.getId(), profileAnswer.getId());
         
-        return ResponseEntity.ok(profileAnswer);
+        return ResponseEntity.ok(responseDto);
     }
     
     /**
