@@ -309,3 +309,21 @@ http://localhost:8080/test-feed-api.html
 ---
 
 **참고**: 이 테스트 시나리오는 지속적으로 업데이트되어야 하며, 새로운 기능이나 변경사항이 있을 때마다 검토하고 수정해야 합니다. 
+
+4. 기능 테스트 체크리스트
+4-1. ProfileAnswer API 테스트
+[ ] 선호도 생성 (POST /api/profile-answers)
+[ ] 선호도 수정 (PUT /api/profile-answers)
+[ ] 선호도 저장/수정 (POST /api/profile-answers/save-or-update)
+[ ] 선호도 조회 (GET /api/profile-answers/my)
+[ ] 선호도 존재 확인 (GET /api/profile-answers/my/exists)
+[ ] 선호도 삭제 (DELETE /api/profile-answers)
+4-2. Recommendation API 테스트
+[ ] 유사도 계산 (GET /api/recommendation/similarity)
+[ ] 유사한 사용자 검색 (GET /api/recommendation/similar-users)
+[ ] 임베딩 생성/업데이트 (POST /api/recommendation/embeddings)
+[ ] 시스템 상태 확인 (GET /api/recommendation/status)
+4-3. 연동 테스트
+[ ] ProfileAnswer 생성 시 임베딩 자동 생성
+[ ] ProfileAnswer 수정 시 임베딩 자동 업데이트
+[ ] ProfileAnswer 삭제 시 임베딩 자동 삭제
