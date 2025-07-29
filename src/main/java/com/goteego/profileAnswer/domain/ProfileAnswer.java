@@ -7,8 +7,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
+// BaseEntity에서 상속받으므로 별도 import 불필요
 
 import java.time.LocalDateTime;
 
@@ -26,11 +25,9 @@ import java.time.LocalDateTime;
 public class ProfileAnswer extends BaseEntity {
     
     /**
-     * 사용자 선호도 고유 식별자 (Primary Key)
-     * 자동 증가하는 ID 값
+     * 기본키 (사용자 ID와 동일)
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long id;
     
@@ -39,8 +36,8 @@ public class ProfileAnswer extends BaseEntity {
      * User 엔티티와 OneToOne 관계
      */
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
     @MapsId
+    @JoinColumn(name = "user_id")
     private User user;
     
     // 🍶 술 관련 선호도
@@ -117,19 +114,8 @@ public class ProfileAnswer extends BaseEntity {
     @Column(name = "is_mountain")
     private Boolean isMountain; // 산/등산
     
-    /**
-     * 생성 시간
-     */
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-    
-    /**
-     * 수정 시간
-     */
-    @LastModifiedDate
-    @Column(name = "modified_at")
-    private LocalDateTime modifiedAt;
+    // BaseEntity에서 상속받은 createdAt, lastModifiedAt 사용
+    // 별도로 정의하지 않음
     
     /**
      * 사용자 선호도 생성 빌더 메서드
@@ -165,8 +151,6 @@ public class ProfileAnswer extends BaseEntity {
         this.isHeal = isHeal;
         this.isBeach = isBeach;
         this.isMountain = isMountain;
-        this.createdAt = LocalDateTime.now();
-        this.modifiedAt = LocalDateTime.now();
     }
     
     /**
@@ -201,7 +185,7 @@ public class ProfileAnswer extends BaseEntity {
         this.isHeal = isHeal;
         this.isBeach = isBeach;
         this.isMountain = isMountain;
-        this.modifiedAt = LocalDateTime.now();
+        // BaseEntity의 JPA Auditing이 자동으로 처리
     }
     
     /**

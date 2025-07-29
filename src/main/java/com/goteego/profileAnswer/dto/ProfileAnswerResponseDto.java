@@ -72,6 +72,13 @@ public class ProfileAnswerResponseDto {
      * @return 변환된 ProfileAnswerResponseDto 객체
      */
     public static ProfileAnswerResponseDto from(ProfileAnswer profileAnswer) {
+        if (profileAnswer == null) {
+            throw new IllegalArgumentException("ProfileAnswer cannot be null");
+        }
+        if (profileAnswer.getUser() == null) {
+            throw new IllegalArgumentException("ProfileAnswer user cannot be null");
+        }
+        
         return ProfileAnswerResponseDto.builder()
                 .userId(profileAnswer.getUser().getId())
                 .isAlchol3(profileAnswer.getIsAlchol3())
@@ -98,7 +105,7 @@ public class ProfileAnswerResponseDto {
                 .isBeach(profileAnswer.getIsBeach())
                 .isMountain(profileAnswer.getIsMountain())
                 .createdAt(profileAnswer.getCreatedAt().toLocalDate())
-                .modifiedAt(profileAnswer.getModifiedAt().toLocalDate())
+                .modifiedAt(profileAnswer.getLastModifiedAt().toLocalDate())
                 .build();
     }
 } 

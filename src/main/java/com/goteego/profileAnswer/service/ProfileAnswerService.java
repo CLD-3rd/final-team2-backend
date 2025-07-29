@@ -3,12 +3,16 @@ package com.goteego.profileAnswer.service;
 import com.goteego.profileAnswer.domain.ProfileAnswer;
 import com.goteego.profileAnswer.dto.ProfileAnswerRequestDto;
 import com.goteego.profileAnswer.dto.ProfileAnswerResponseDto;
+import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.profileAnswer.repository.ProfileAnswerRepository;
+import com.goteego.global.error.exception.BusinessException;
 import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.user.domain.User;
+import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -33,6 +37,11 @@ public class ProfileAnswerService {
     private final ProfileAnswerRepository profileAnswerRepository;
     
     /**
+     * 사용자 데이터 접근을 위한 리포지토리
+     */
+    private final UserRepository userRepository;
+    
+    /**
      * 추천 시스템 서비스 (임베딩 생성용)
      */
     private final RecommendationService recommendationService;
@@ -45,9 +54,16 @@ public class ProfileAnswerService {
      * @throws IllegalArgumentException 선호도를 찾을 수 없는 경우
      */
     public ProfileAnswerResponseDto getProfileAnswer(User user) {
-        ProfileAnswer profileAnswer = profileAnswerRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException("사용자 선호도를 찾을 수 없습니다."));
+        log.info("=== 사용자 선호도 조회 시작 ===");
+        log.info("조회 요청 사용자 ID: {}", user.getId());
         
+        ProfileAnswer profileAnswer = profileAnswerRepository.findByUser(user)
+                .orElseThrow(() -> {
+                    log.warn("사용자 선호도를 찾을 수 없음 - userId: {}", user.getId());
+                    return new BusinessException(ErrorCode.PROFILE_ANSWER_NOT_FOUND);
+                });
+        
+        log.info("사용자 선호도 조회 완료 - userId: {}, answerId: {}", user.getId(), profileAnswer.getId());
         return ProfileAnswerResponseDto.from(profileAnswer);
     }
     
@@ -70,13 +86,21 @@ public class ProfileAnswerService {
      */
     @Transactional
     public ProfileAnswer createProfileAnswer(User user, ProfileAnswerRequestDto requestDto) {
-        // ===== 내부로직: 사용자 선호도 중복 검증 및 엔티티 생성 =====
-        if (profileAnswerRepository.existsByUser(user)) {
-            throw new IllegalArgumentException("이미 사용자 선호도가 존재합니다.");
-        }
+        log.info("=== 사용자 선호도 생성 시작 ===");
+        log.info("생성 요청 사용자 ID: {}", user.getId());
+        
+        // ===== 내부로직: User 객체 재조회 (detached 상태 방지) =====
+        User managedUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> {
+                    log.error("User를 찾을 수 없습니다 - userId: {}", user.getId());
+                    return new BusinessException(ErrorCode.PROFILE_ANSWER_CREATION_FAILED);
+                });
+        
+        log.info("User 객체 재조회 완료 - ID: {}, Nickname: {}, Email: {}", 
+                managedUser.getId(), managedUser.getNickname(), managedUser.getOauthInfo().getOauthEmail());
         
         ProfileAnswer profileAnswer = ProfileAnswer.builder()
-                .user(user)
+                .user(managedUser)
                 .isAlchol3(requestDto.getIsAlchol3())
                 .isAlchol2(requestDto.getIsAlchol2())
                 .isAlchol1(requestDto.getIsAlchol1())
@@ -102,10 +126,37 @@ public class ProfileAnswerService {
                 .isMountain(requestDto.getIsMountain())
                 .build();
         
-        ProfileAnswer savedProfileAnswer = profileAnswerRepository.save(profileAnswer);
-        createUserEmbeddingFromProfileAnswer(savedProfileAnswer);
-        
-        return savedProfileAnswer;
+        try {
+            log.info("ProfileAnswer 엔티티 생성 완료 - userId: {}, 엔티티: {}", managedUser.getId(), profileAnswer);
+            log.info("저장 시도 중...");
+            log.info("User 객체 정보 - id: {}, nickname: {}", managedUser.getId(), managedUser.getNickname());
+            log.info("ProfileAnswer ID 설정: {}", profileAnswer.getId());
+            
+            ProfileAnswer savedProfileAnswer = profileAnswerRepository.save(profileAnswer);
+            log.info("사용자 선호도 저장 완료 - userId: {}, answerId: {}", managedUser.getId(), savedProfileAnswer.getId());
+            
+            // 임베딩 생성은 별도로 처리 (실패해도 ProfileAnswer는 저장됨)
+            try {
+                createUserEmbeddingFromProfileAnswer(savedProfileAnswer);
+            } catch (Exception embeddingError) {
+                log.warn("임베딩 생성 실패했지만 ProfileAnswer는 저장됨 - userId: {}, error: {}", 
+                        managedUser.getId(), embeddingError.getMessage());
+                // 임베딩 생성 실패는 ProfileAnswer 저장을 막지 않음
+            }
+            
+            return savedProfileAnswer;
+        } catch (Exception e) {
+            log.error("=== ProfileAnswer 생성 실패 상세 분석 ===");
+            log.error("사용자 ID: {}", user.getId());
+            log.error("사용자 닉네임: {}", user.getNickname());
+            log.error("요청 데이터: {}", requestDto);
+            log.error("ProfileAnswer 엔티티: {}", profileAnswer);
+            log.error("예외 타입: {}", e.getClass().getSimpleName());
+            log.error("예외 메시지: {}", e.getMessage());
+            log.error("예외 원인: {}", e.getCause() != null ? e.getCause().getMessage() : "원인 없음");
+            log.error("스택 트레이스:", e);
+            throw new BusinessException(ErrorCode.PROFILE_ANSWER_CREATION_FAILED);
+        }
     }
     
     /**
@@ -118,9 +169,15 @@ public class ProfileAnswerService {
      */
     @Transactional
     public ProfileAnswer updateProfileAnswer(User user, ProfileAnswerRequestDto requestDto) {
+        log.info("=== 사용자 선호도 수정 시작 ===");
+        log.info("수정 요청 사용자 ID: {}", user.getId());
+        
         // ===== 내부로직: 기존 선호도 조회 및 업데이트 =====
         ProfileAnswer profileAnswer = profileAnswerRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException("사용자 선호도를 찾을 수 없습니다."));
+                .orElseThrow(() -> {
+                    log.warn("수정할 사용자 선호도를 찾을 수 없음 - userId: {}", user.getId());
+                    return new BusinessException(ErrorCode.PROFILE_ANSWER_NOT_FOUND);
+                });
         
         profileAnswer.update(
                 requestDto.getIsAlchol3(), requestDto.getIsAlchol2(), requestDto.getIsAlchol1(),
@@ -133,9 +190,15 @@ public class ProfileAnswerService {
                 requestDto.getIsBeach(), requestDto.getIsMountain()
         );
         
-        createUserEmbeddingFromProfileAnswer(profileAnswer);
-        
-        return profileAnswer;
+        try {
+            createUserEmbeddingFromProfileAnswer(profileAnswer);
+            log.info("사용자 선호도 수정 완료 - userId: {}, answerId: {}", user.getId(), profileAnswer.getId());
+            
+            return profileAnswer;
+        } catch (Exception e) {
+            log.error("사용자 선호도 수정 중 오류 발생 - userId: {}, error: {}", user.getId(), e.getMessage(), e);
+            throw new BusinessException(ErrorCode.PROFILE_ANSWER_UPDATE_FAILED);
+        }
     }
     
     /**
@@ -163,12 +226,24 @@ public class ProfileAnswerService {
      */
     @Transactional
     public void deleteProfileAnswer(User user) {
+        log.info("=== 사용자 선호도 삭제 시작 ===");
+        log.info("삭제 요청 사용자 ID: {}", user.getId());
+        
         // ===== 내부로직: 선호도 및 연관 임베딩 삭제 =====
         ProfileAnswer profileAnswer = profileAnswerRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException("사용자 선호도를 찾을 수 없습니다."));
+                .orElseThrow(() -> {
+                    log.warn("삭제할 사용자 선호도를 찾을 수 없음 - userId: {}", user.getId());
+                    return new BusinessException(ErrorCode.PROFILE_ANSWER_NOT_FOUND);
+                });
         
-        profileAnswerRepository.delete(profileAnswer);
-        recommendationService.deleteUserEmbedding(user.getId());
+        try {
+            profileAnswerRepository.delete(profileAnswer);
+            recommendationService.deleteUserEmbedding(user.getId());
+            log.info("사용자 선호도 삭제 완료 - userId: {}, answerId: {}", user.getId(), profileAnswer.getId());
+        } catch (Exception e) {
+            log.error("사용자 선호도 삭제 중 오류 발생 - userId: {}, error: {}", user.getId(), e.getMessage(), e);
+            throw new BusinessException(ErrorCode.PROFILE_ANSWER_DELETE_FAILED);
+        }
     }
     
     /**
@@ -203,6 +278,8 @@ public class ProfileAnswerService {
                 .collect(Collectors.toList());
     }
     
+
+    
     /**
      * ProfileAnswer에서 사용자 임베딩 벡터를 생성하는 메서드
      * 24개의 boolean 값을 30차원 벡터로 변환
@@ -210,9 +287,14 @@ public class ProfileAnswerService {
      * @param profileAnswer 사용자 선호도 엔티티
      */
     private void createUserEmbeddingFromProfileAnswer(ProfileAnswer profileAnswer) {
+        log.info("=== 사용자 임베딩 생성/업데이트 시작 ===");
+        log.info("임베딩 생성 요청 사용자 ID: {}", profileAnswer.getUser().getId());
+        
         try {
             // 24개의 boolean 값을 1,0으로 변환하여 벡터 생성
             String embedding = convertProfileAnswerToEmbedding(profileAnswer);
+            log.info("임베딩 벡터 생성 완료 - userId: {}, vectorLength: {}, vector: {}", 
+                    profileAnswer.getUser().getId(), embedding.length(), embedding);
             
             // RecommendationService를 통해 임베딩 저장/업데이트
             recommendationService.createOrUpdateUserEmbedding(profileAnswer.getUser().getId(), embedding);
@@ -220,8 +302,9 @@ public class ProfileAnswerService {
             log.info("사용자 임베딩 생성/업데이트 완료 - userId: {}", profileAnswer.getUser().getId());
             
         } catch (Exception e) {
-            log.error("사용자 임베딩 생성 중 오류 발생 - userId: {}, error: {}", 
-                    profileAnswer.getUser().getId(), e.getMessage(), e);
+            log.error("사용자 임베딩 생성 중 오류 발생 - userId: {}, error: {}, stackTrace: {}", 
+                    profileAnswer.getUser().getId(), e.getMessage(), e.getStackTrace(), e);
+            throw new BusinessException(ErrorCode.EMBEDDING_GENERATION_FAILED);
         }
     }
     
@@ -273,7 +356,7 @@ public class ProfileAnswerService {
             vector[i] = 0;
         }
         
-        // 배열을 문자열로 변환
+        // PostgreSQL vector 형식으로 변환 (중괄호 사용)
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < vector.length; i++) {
             sb.append(vector[i]);
@@ -283,6 +366,9 @@ public class ProfileAnswerService {
         }
         sb.append("]");
         
-        return sb.toString();
+        String vectorString = sb.toString();
+        log.info("생성된 PostgreSQL vector 문자열: {}", vectorString);
+        
+        return vectorString;
     }
 } 
