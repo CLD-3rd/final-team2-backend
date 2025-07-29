@@ -284,6 +284,7 @@
                 <button type="button" onclick="testErrorScenarios()" style="background-color: #dc3545;">에러 시나리오 테스트</button>
                 <button type="button" onclick="testRecommendationAPI()" style="background-color: #20c997;">추천 API 테스트</button>
                 <button type="button" onclick="showCurrentData()" style="background-color: #6c757d;">현재 데이터 확인</button>
+                <button type="button" onclick="debugToken()" style="background-color: #fd7e14;">토큰 디버깅</button>
             </div>
         </form>
         
@@ -302,6 +303,9 @@
             
             if (accessToken) {
                 headers['Authorization'] = `Bearer ${accessToken}`;
+                console.log('🔑 토큰 사용:', accessToken.substring(0, 20) + '...');
+            } else {
+                console.log('❌ 토큰 없음');
             }
             
             return headers;
@@ -534,33 +538,47 @@
         async function testRecommendationAPI() {
             showResponse('🎯 추천 API 테스트 시작...', 'info');
             
+            // 토큰 상태 먼저 확인
+            const accessToken = getCookie('accessToken');
+            if (!accessToken) {
+                showResponse('❌ 인증 토큰이 없습니다. 먼저 로그인해주세요.', 'error');
+                return;
+            }
+            
             try {
                 // 1. 추천 시스템 상태 확인
+                showResponse('📊 추천 시스템 상태 확인 중...', 'info');
                 const statusResponse = await fetch(`${BASE_URL}/recommendation/status`, {
                     headers: getAuthHeaders()
                 });
                 
                 if (statusResponse.ok) {
                     const status = await statusResponse.json();
-                    showResponse(`📊 추천 시스템 상태: ${JSON.stringify(status, null, 2)}`, 'info');
+                    showResponse(`✅ 추천 시스템 상태 확인 성공:\n${JSON.stringify(status, null, 2)}`, 'success');
                 } else {
-                    showResponse(`❌ 추천 시스템 상태 확인 실패: ${statusResponse.status}`, 'error');
+                    const errorText = await statusResponse.text();
+                    showResponse(`❌ 추천 시스템 상태 확인 실패:\n상태: ${statusResponse.status} ${statusResponse.statusText}\n응답: ${errorText}`, 'error');
                 }
                 
+                // 잠시 대기
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
                 // 2. 유효한 임베딩 수 확인
+                showResponse('🔢 유효한 임베딩 수 확인 중...', 'info');
                 const countResponse = await fetch(`${BASE_URL}/recommendation/embeddings/count`, {
                     headers: getAuthHeaders()
                 });
                 
                 if (countResponse.ok) {
                     const count = await countResponse.text();
-                    showResponse(`🔢 유효한 임베딩 수: ${count}`, 'info');
+                    showResponse(`✅ 유효한 임베딩 수 확인 성공: ${count}개`, 'success');
                 } else {
-                    showResponse(`❌ 임베딩 수 확인 실패: ${countResponse.status}`, 'error');
+                    const errorText = await countResponse.text();
+                    showResponse(`❌ 임베딩 수 확인 실패:\n상태: ${countResponse.status} ${countResponse.statusText}\n응답: ${errorText}`, 'error');
                 }
                 
             } catch (error) {
-                showResponse(`❌ 추천 API 테스트 오류: ${error.message}`, 'error');
+                showResponse(`❌ 추천 API 테스트 네트워크 오류: ${error.message}`, 'error');
             }
         }
         
@@ -570,9 +588,51 @@
             const checkedCount = Object.values(data).filter(Boolean).length;
             const totalCount = Object.keys(data).length;
             
-            showResponse(`📋 현재 폼 데이터 상태:\n` +
-                `- 체크된 항목: ${checkedCount}/${totalCount}\n` +
-                `- 데이터: ${JSON.stringify(data, null, 2)}`, 'info');
+            // 토큰 상태 확인
+            const accessToken = getCookie('accessToken');
+            const tokenStatus = accessToken ? 
+                `✅ 토큰 존재 (${accessToken.substring(0, 20)}...)` : 
+                '❌ 토큰 없음';
+            
+            showResponse(`📋 현재 상태:\n` +
+                `🔑 인증 상태: ${tokenStatus}\n` +
+                `📝 폼 데이터: ${checkedCount}/${totalCount} 항목 체크됨\n` +
+                `📊 데이터: ${JSON.stringify(data, null, 2)}`, 'info');
+        }
+        
+        // 토큰 디버깅
+        function debugToken() {
+            const accessToken = getCookie('accessToken');
+            const allCookies = document.cookie;
+            
+            let debugInfo = '🔍 토큰 디버깅 정보:\n\n';
+            
+            if (accessToken) {
+                debugInfo += `✅ accessToken 쿠키 발견:\n`;
+                debugInfo += `- 전체 길이: ${accessToken.length}자\n`;
+                debugInfo += `- 앞 20자: ${accessToken.substring(0, 20)}...\n`;
+                debugInfo += `- 뒤 20자: ...${accessToken.substring(accessToken.length - 20)}\n`;
+                
+                // JWT 토큰 구조 확인 (3개 부분으로 분리)
+                const parts = accessToken.split('.');
+                if (parts.length === 3) {
+                    debugInfo += `- JWT 구조: ✅ 올바름 (${parts.length}개 부분)\n`;
+                    try {
+                        const payload = JSON.parse(atob(parts[1]));
+                        debugInfo += `- 페이로드: ${JSON.stringify(payload, null, 2)}\n`;
+                    } catch (e) {
+                        debugInfo += `- 페이로드 파싱 실패: ${e.message}\n`;
+                    }
+                } else {
+                    debugInfo += `- JWT 구조: ❌ 잘못됨 (${parts.length}개 부분)\n`;
+                }
+            } else {
+                debugInfo += `❌ accessToken 쿠키 없음\n`;
+            }
+            
+            debugInfo += `\n📋 모든 쿠키:\n${allCookies || '쿠키 없음'}`;
+            
+            showResponse(debugInfo, 'info');
         }
         
         // 페이지 로드 시 기본값 설정 (예시)
