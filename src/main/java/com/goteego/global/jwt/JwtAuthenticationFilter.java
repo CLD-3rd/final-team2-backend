@@ -106,7 +106,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || uri.startsWith("/login")
                 || uri.startsWith("/index")
                 || uri.startsWith("/oauth2")
-                || uri.startsWith("/.well-known");
+                || uri.startsWith("/.well-known")
+                || uri.equals("/api/travel-posts");
     }
 
     private void setAuthenticationFromAccessToken(String token, HttpServletRequest request) {
