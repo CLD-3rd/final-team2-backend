@@ -57,7 +57,7 @@ public enum ErrorCode {
     EMBEDDING_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 임베딩 생성에 실패했습니다."),
     EMBEDDING_UPDATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 임베딩 업데이트에 실패했습니다."),
     UNAUTHORIZED_PROFILE_ACCESS(HttpStatus.FORBIDDEN, "해당 선호도에 접근할 권한이 없습니다."),
-    INVALID_SEARCH_PARAMETERS(HttpStatus.BAD_REQUEST, "유효하지 않은 검색 파라미터입니다.");
+    INVALID_SEARCH_PARAMETERS(HttpStatus.BAD_REQUEST, "유효하지 않은 검색 파라미터입니다."),
 
     //뱃지 관련
     NOT_FOUND_BADGE_CODE(HttpStatus.NOT_FOUND, "존재하지 않는 뱃지 코드입니다."),
@@ -65,7 +65,7 @@ public enum ErrorCode {
     NOT_FOUND_BADGE(HttpStatus.NOT_FOUND, "해당 뱃지를 찾을 수 없습니다."),
     NOT_FOUND_BADGE_REQUEST(HttpStatus.NOT_FOUND, "해당 피드의 뱃지 요청이 존재하지 않습니다."),
     //피드 관련
-    FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 피드입니다.");
+    FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 피드입니다."),
 
     // 리뷰 관련
     SELF_REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신에게는 리뷰를 작성할 수 없습니다."),
