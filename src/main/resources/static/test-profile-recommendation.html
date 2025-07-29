@@ -100,6 +100,15 @@
         .btn-group {
             text-align: center;
             margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-group button {
+            margin: 5px;
+            min-width: 150px;
         }
         .description {
             color: #666;
@@ -259,6 +268,23 @@
                 <button type="button" onclick="getMyPreference()">내 선호도 확인</button>
                 <button type="button" onclick="clearForm()">폼 초기화</button>
             </div>
+            
+            <!-- 테스트 시나리오 섹션 추가 -->
+            <div class="section-title">🧪 테스트 시나리오</div>
+            <div class="btn-group">
+                <button type="button" onclick="testScenario1()" style="background-color: #28a745;">시나리오 1: 술 좋아하는 사람</button>
+                <button type="button" onclick="testScenario2()" style="background-color: #17a2b8;">시나리오 2: 조용한 힐링파</button>
+                <button type="button" onclick="testScenario3()" style="background-color: #ffc107; color: #333;">시나리오 3: 액티비티파</button>
+                <button type="button" onclick="testScenario4()" style="background-color: #6f42c1;">시나리오 4: 도시 탐험가</button>
+                <button type="button" onclick="testScenario5()" style="background-color: #fd7e14;">시나리오 5: 극단적 케이스</button>
+            </div>
+            
+            <div class="section-title">🔧 테스트 도구</div>
+            <div class="btn-group">
+                <button type="button" onclick="testErrorScenarios()" style="background-color: #dc3545;">에러 시나리오 테스트</button>
+                <button type="button" onclick="testRecommendationAPI()" style="background-color: #20c997;">추천 API 테스트</button>
+                <button type="button" onclick="showCurrentData()" style="background-color: #6c757d;">현재 데이터 확인</button>
+            </div>
         </form>
         
         <div id="response" class="response"></div>
@@ -412,6 +438,141 @@
             const responseDiv = document.getElementById('response');
             responseDiv.innerHTML = `<span class="${type}">${message}</span>`;
             responseDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // ===== 테스트 시나리오 함수들 =====
+        
+        // 시나리오 1: 술 좋아하는 사람
+        function testScenario1() {
+            clearForm();
+            document.getElementById('isAlchol3').checked = true;
+            document.getElementById('isSmoker').checked = true;
+            document.getElementById('isFriendly').checked = true;
+            document.getElementById('isParty').checked = true;
+            document.getElementById('isTaste').checked = true;
+            document.getElementById('isCity').checked = true;
+            showResponse('🍶 시나리오 1: 술 좋아하는 사람 설정 완료\n- 술 좋아함, 흡연, 친화적, 파티 분위기, 맛집 탐방, 도시 위주', 'info');
+        }
+        
+        // 시나리오 2: 조용한 힐링파
+        function testScenario2() {
+            clearForm();
+            document.getElementById('isAlchol1').checked = true;
+            document.getElementById('isQuiet').checked = true;
+            document.getElementById('isListen').checked = true;
+            document.getElementById('isSee').checked = true;
+            document.getElementById('isCafe').checked = true;
+            document.getElementById('isChill').checked = true;
+            document.getElementById('isHeal').checked = true;
+            showResponse('🧘 시나리오 2: 조용한 힐링파 설정 완료\n- 술 안함, 조용함, 경청, 자연 감상, 카페, 느긋함, 힐링', 'info');
+        }
+        
+        // 시나리오 3: 액티비티파
+        function testScenario3() {
+            clearForm();
+            document.getElementById('isAlchol2').checked = true;
+            document.getElementById('isLead').checked = true;
+            document.getElementById('isSearch').checked = true;
+            document.getElementById('isOutdoor').checked = true;
+            document.getElementById('isPicture').checked = true;
+            document.getElementById('isBusy').checked = true;
+            document.getElementById('isMountain').checked = true;
+            showResponse('🏃 시나리오 3: 액티비티파 설정 완료\n- 분위기상 한두잔, 리더십, 정보 탐색, 액티비티, 사진, 알차게, 산', 'info');
+        }
+        
+        // 시나리오 4: 도시 탐험가
+        function testScenario4() {
+            clearForm();
+            document.getElementById('isFriendly').checked = true;
+            document.getElementById('isSearch').checked = true;
+            document.getElementById('isTaste').checked = true;
+            document.getElementById('isShopping').checked = true;
+            document.getElementById('isPicture').checked = true;
+            document.getElementById('isFlex').checked = true;
+            document.getElementById('isCity').checked = true;
+            showResponse('🌆 시나리오 4: 도시 탐험가 설정 완료\n- 친화적, 정보 탐색, 맛집, 쇼핑, 사진, 유연함, 도시', 'info');
+        }
+        
+        // 시나리오 5: 극단적 케이스 (모든 항목 체크)
+        function testScenario5() {
+            clearForm();
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+            showResponse('🔥 시나리오 5: 극단적 케이스 설정 완료\n- 모든 선호도 항목을 체크한 극단적인 케이스', 'warning');
+        }
+        
+        // 에러 시나리오 테스트
+        async function testErrorScenarios() {
+            showResponse('🧪 에러 시나리오 테스트 시작...', 'info');
+            
+            // 1. 인증 토큰 없이 요청
+            try {
+                const response = await fetch(`${BASE_URL}/profile-answers/my`, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                showResponse(`🔒 인증 없이 요청 테스트: ${response.status} ${response.statusText}`, 
+                    response.status === 401 ? 'success' : 'error');
+            } catch (error) {
+                showResponse(`🔒 인증 없이 요청 테스트: ${error.message}`, 'error');
+            }
+            
+            // 2. 잘못된 데이터로 요청
+            try {
+                const response = await fetch(`${BASE_URL}/profile-answers/save-or-update`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ invalidField: 'invalidValue' })
+                });
+                showResponse(`📝 잘못된 데이터 요청 테스트: ${response.status} ${response.statusText}`, 
+                    response.status === 400 ? 'success' : 'error');
+            } catch (error) {
+                showResponse(`📝 잘못된 데이터 요청 테스트: ${error.message}`, 'error');
+            }
+        }
+        
+        // 추천 API 테스트
+        async function testRecommendationAPI() {
+            showResponse('🎯 추천 API 테스트 시작...', 'info');
+            
+            try {
+                // 1. 추천 시스템 상태 확인
+                const statusResponse = await fetch(`${BASE_URL}/recommendation/status`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (statusResponse.ok) {
+                    const status = await statusResponse.json();
+                    showResponse(`📊 추천 시스템 상태: ${JSON.stringify(status, null, 2)}`, 'info');
+                } else {
+                    showResponse(`❌ 추천 시스템 상태 확인 실패: ${statusResponse.status}`, 'error');
+                }
+                
+                // 2. 유효한 임베딩 수 확인
+                const countResponse = await fetch(`${BASE_URL}/recommendation/embeddings/count`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (countResponse.ok) {
+                    const count = await countResponse.text();
+                    showResponse(`🔢 유효한 임베딩 수: ${count}`, 'info');
+                } else {
+                    showResponse(`❌ 임베딩 수 확인 실패: ${countResponse.status}`, 'error');
+                }
+                
+            } catch (error) {
+                showResponse(`❌ 추천 API 테스트 오류: ${error.message}`, 'error');
+            }
+        }
+        
+        // 현재 데이터 확인
+        function showCurrentData() {
+            const data = getPreferenceData();
+            const checkedCount = Object.values(data).filter(Boolean).length;
+            const totalCount = Object.keys(data).length;
+            
+            showResponse(`📋 현재 폼 데이터 상태:\n` +
+                `- 체크된 항목: ${checkedCount}/${totalCount}\n` +
+                `- 데이터: ${JSON.stringify(data, null, 2)}`, 'info');
         }
         
         // 페이지 로드 시 기본값 설정 (예시)
