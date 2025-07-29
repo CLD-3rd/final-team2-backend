@@ -100,6 +100,7 @@
     async function getCurrentUser() {
         try {
             const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
+            console.log(res.data); // 배열 형태의 응답 확인
             document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
         } catch(e) {
             document.getElementById('user-result').textContent = "정보 조회 실패: " + e;
@@ -168,6 +169,7 @@
                 {},
                 { headers: getAuthHeaders() }
             );
+            console.log(res.data);
 
             const chatRoom = res.data;
             console.log('채팅방 생성/조회 결과:', chatRoom);
@@ -201,6 +203,7 @@
 
             const res = await axios.get('/api/chat/my-rooms/direct', {headers: getAuthHeaders()});
             const rooms = res.data;
+            console.log("📥 받은 1:1 채팅방 목록:", rooms); // ✅ 추가된 로그
             container.innerHTML = '';
 
             if (rooms.length === 0) {
@@ -236,6 +239,7 @@
 
             const res = await axios.get('/api/chat/my-rooms/group', {headers: getAuthHeaders()});
             const rooms = res.data;
+            console.log("📥 받은 그룹 채팅방 목록:", rooms); // ✅ 추가된 로그
             container.innerHTML = '';
 
             if (rooms.length === 0) {
@@ -293,6 +297,7 @@
 
             // 기존 메시지 로드
             const res = await axios.get(`/api/chat/rooms/${roomId}/messages`, {headers: getAuthHeaders()});
+            console.log("📥 받은 기존 메시지 목록:", res.data); // ✅ 추가된 로그
             res.data.forEach(msg => {
                 appendMessage(`${msg.senderName}: ${msg.content}`);
             });

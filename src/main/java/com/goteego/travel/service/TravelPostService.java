@@ -13,6 +13,7 @@ import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.travel.TravelPostCreateRequest;
 import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
 import com.goteego.travel.dto.travel.NowTravelPostResponseDto;
+import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
 import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
 import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.travel.dto.PageResponseDto;
@@ -86,13 +87,13 @@ public class TravelPostService {
      * 여행 게시글 상세 조회
      */
     @Transactional
-    public TravelPost getTravelPostDetail(Long postId) {
+    public TravelPostDetailResponseDto getTravelPostDetail(Long postId) {
         TravelPost travelPost = travelPostRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
 
         // 조회수 증가
         travelPost.incrementViewCount();
-        return travelPost;
+        return TravelPostDetailResponseDto.from(travelPost);
     }
 
 
@@ -122,7 +123,7 @@ public class TravelPostService {
                 .recruitLimit(request.getRecruitLimit())
                 .postType(PostType.valueOf(request.getPostType().toUpperCase()))
                 .isAddRecruit(request.getIsAddRecruit())
-                .location("JEJU") // TODO: TravelPostCreateRequest에 location 필드 추가 필요
+                .location(request.getLocationAsEnum())
                 .build();
 
         // 게시글 저장
@@ -140,7 +141,8 @@ public class TravelPostService {
     public ParticipationApplicationResponseDto joinTravelPost(Long travelPostId, User currentUser) {
 
         // 1. 여행 게시글 존재 확인
-        TravelPost travelPost = getTravelPostDetail(travelPostId);
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
 
         // 2. 참가 신청 검증
         validateJoinTravelPost(travelPost, currentUser);

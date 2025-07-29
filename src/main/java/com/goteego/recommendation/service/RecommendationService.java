@@ -103,6 +103,7 @@ public class RecommendationService {
      */
     @Transactional
     public UserEmbedding createOrUpdateUserEmbedding(Long userId, String embedding) {
+        // ===== 내부로직: 기존 임베딩 조회 및 생성/업데이트 처리 =====
         Optional<UserEmbedding> existingEmbedding = userEmbeddingRepository.findByUserId(userId);
         
         if (existingEmbedding.isPresent()) {
@@ -125,6 +126,7 @@ public class RecommendationService {
      * @return 임베딩이 유효한지 여부
      */
     public boolean isValidUserEmbedding(Long userId) {
+        // ===== 내부로직: 임베딩 존재 및 유효성 검증 =====
         Optional<UserEmbedding> userEmbedding = userEmbeddingRepository.findByUserId(userId);
         return userEmbedding.isPresent() && userEmbedding.get().isValid();
     }
@@ -135,6 +137,7 @@ public class RecommendationService {
      * @return 유효한 임베딩을 가진 사용자 수
      */
     public Long countValidEmbeddings() {
+        // ===== 내부로직: 유효한 임베딩 개수 집계 =====
         return userEmbeddingRepository.countValidEmbeddings();
     }
     
@@ -145,6 +148,7 @@ public class RecommendationService {
      * @return 해당 사용자들의 임베딩 목록
      */
     public List<UserEmbedding> getUserEmbeddings(List<Long> userIds) {
+        // ===== 내부로직: 다중 사용자 임베딩 조회 =====
         return userEmbeddingRepository.findByUserIdIn(userIds);
     }
 
@@ -156,6 +160,7 @@ public class RecommendationService {
      * @return 사용자 ID와 유사도 점수의 Map
      */
     public Map<Long, Double> calculateSimilaritiesForUsers(Long currentUserId, List<Long> targetUserIds) {
+        // ===== 내부로직: 입력값 검증 및 벡터 유사도 계산 =====
         if (currentUserId == null || targetUserIds.isEmpty()) {
             return Map.of();
         }
@@ -164,7 +169,6 @@ public class RecommendationService {
             log.debug("=== 배치 유사도 계산 시작 ===");
             log.debug("currentUserId: {}, targetUserIds: {}", currentUserId, targetUserIds);
             
-            // 현재 사용자의 임베딩 조회
             Optional<UserEmbedding> currentUserEmbedding = userEmbeddingRepository.findByUserId(currentUserId);
             
             if (currentUserEmbedding.isEmpty()) {
@@ -172,13 +176,11 @@ public class RecommendationService {
                 return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
             }
 
-            // 한 번의 쿼리로 모든 유사도 계산
             List<Object[]> similarities = userEmbeddingRepository.calculateAllSimilarities(
                 currentUserEmbedding.get().getUserEmbedding(), 
                 currentUserId
             );
             
-            // 결과를 Map으로 변환
             Map<Long, Double> similarityMap = similarities.stream()
                     .filter(result -> targetUserIds.contains((Long) result[0]))
                     .collect(Collectors.toMap(
@@ -186,7 +188,6 @@ public class RecommendationService {
                             result -> (Double) result[2]
                     ));
             
-            // 누락된 사용자들에 대해 기본값 설정
             targetUserIds.forEach(id -> similarityMap.putIfAbsent(id, 0.5));
             
             log.debug("계산된 유사도 맵: {}", similarityMap);
@@ -195,6 +196,27 @@ public class RecommendationService {
         } catch (Exception e) {
             log.error("배치 유사도 계산 중 에러 발생: {}", e.getMessage(), e);
             return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
+        }
+    }
+    
+    /**
+     * 사용자 임베딩 삭제
+     * 
+     * @param userId 삭제할 사용자 ID
+     */
+    @Transactional
+    public void deleteUserEmbedding(Long userId) {
+        // ===== 내부로직: 임베딩 존재 확인 및 삭제 처리 =====
+        try {
+            Optional<UserEmbedding> userEmbedding = userEmbeddingRepository.findByUserId(userId);
+            if (userEmbedding.isPresent()) {
+                userEmbeddingRepository.delete(userEmbedding.get());
+                log.info("사용자 임베딩 삭제 완료 - userId: {}", userId);
+            } else {
+                log.warn("삭제할 사용자 임베딩이 존재하지 않음 - userId: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("사용자 임베딩 삭제 중 오류 발생 - userId: {}, error: {}", userId, e.getMessage(), e);
         }
     }
 } 
