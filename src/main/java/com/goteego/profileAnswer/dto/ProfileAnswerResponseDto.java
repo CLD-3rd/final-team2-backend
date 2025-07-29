@@ -98,7 +98,7 @@ public class ProfileAnswerResponseDto {
                 .isBeach(profileAnswer.getIsBeach())
                 .isMountain(profileAnswer.getIsMountain())
                 .createdAt(profileAnswer.getCreatedAt().toLocalDate())
-                .modifiedAt(profileAnswer.getModifiedAt().toLocalDate())
+                .modifiedAt(profileAnswer.getLastModifiedAt().toLocalDate())
                 .build();
     }
 } 
