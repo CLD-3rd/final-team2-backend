@@ -13,6 +13,7 @@ import com.goteego.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -59,8 +60,10 @@ public class TravelPostController {
      * @param requestDto 게시글 생성 요청 데이터
      * @return 생성된 여행 게시글
      */
-    @PostMapping("/requests")
-    public ResponseEntity<BeforeTravelPostResponseDto> createTravelPost(@Valid @RequestBody TravelPostCreateRequest requestDto, @AuthenticationPrincipal User user) {
+    @PostMapping(value = "/requests", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<BeforeTravelPostResponseDto> createTravelPost(
+            @Valid @ModelAttribute TravelPostCreateRequest requestDto,
+            @AuthenticationPrincipal User user) {
 
         User currentUser = userService.getUserById(user.getId());
         BeforeTravelPostResponseDto travelPostResponseDto = travelPostService.registerTravelPost(currentUser, requestDto);

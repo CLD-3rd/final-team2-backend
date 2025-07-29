@@ -26,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -125,19 +126,23 @@ public class TravelPostService {
         // 채팅방 생성 및 저장 (ChatRoomService에게 책임 위임)
         ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(user, user.getNickname());
 
+        MultipartFile userUploadedImage = request.getImage();
+        // + 이미지 S3에 업로드 후, imageUrl return 로직 추가
+        String imageUrl = "https://aws.com";
+
         // 게시글 생성
         TravelPost travelPost = TravelPost.builder()
                 .user(user)
                 .chatRoom(groupChatRoom)
                 .title(request.getTitle())
                 .content(request.getContent())
+                .location(request.getLocation())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
-                .imageUrl(request.getImageUrl())
+                .imageUrl(imageUrl)
                 .recruitLimit(request.getRecruitLimit())
                 .postType(PostType.valueOf(request.getPostType().toUpperCase()))
                 .isAddRecruit(request.getIsAddRecruit())
-                .location("JEJU") // TODO: TravelPostCreateRequest에 location 필드 추가 필요
                 .build();
 
         // 게시글 저장
