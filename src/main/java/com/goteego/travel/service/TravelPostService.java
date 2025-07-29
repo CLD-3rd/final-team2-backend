@@ -127,7 +127,7 @@ public class TravelPostService {
         ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(user, user.getNickname());
 
         MultipartFile userUploadedImage = request.getImage();
-        // + 이미지 S3에 업로드 후, imageUrl return 로직 추가
+        // TODO: + 이미지 S3에 업로드 후, imageUrl return 로직 추가
         String imageUrl = "https://aws.com";
 
         // 게시글 생성
@@ -195,8 +195,12 @@ public class TravelPostService {
     public TravelPost updateTravelPost(Long travelPostId, Long userId, TravelPostUpdateRequest request) {
         TravelPost travelPost = findTravelPostWithAuthorization(travelPostId, userId);
 
+        MultipartFile userUploadedImage = request.getImage();
+        // TODO: + 이미지 S3에 업로드 후, imageUrl return 로직 추가
+        String imageUrl = "https://aws-update.com";
+
         // 게시글 수정 (도메인 객체의 비즈니스 로직 활용)
-        travelPost.update(request);
+        travelPost.update(request, imageUrl);
 
         return travelPostRepository.save(travelPost);
     }

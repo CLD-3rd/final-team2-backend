@@ -3,11 +3,7 @@ package com.goteego.travel.controller;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
-import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
-import com.goteego.travel.dto.travel.TravelPostCreateRequest;
-import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
-import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
-import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
+import com.goteego.travel.dto.travel.*;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
@@ -124,7 +120,7 @@ public class TravelPostController {
     @PutMapping("/{travelPostId}")
     public ResponseEntity<TravelPost> updateTravelPost(
             @PathVariable("travelPostId") Long travelPostId,
-            @Valid @RequestBody TravelPostUpdateRequest requestDto,
+            @Valid @ModelAttribute TravelPostUpdateRequest requestDto,
             @AuthenticationPrincipal User user) {
 
         Long currentUserId = user.getId();

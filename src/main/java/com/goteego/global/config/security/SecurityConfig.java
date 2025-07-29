@@ -1,6 +1,7 @@
 package com.goteego.global.config.security;
 
 import com.goteego.global.auth.OAuth2SuccessHandler;
+import com.goteego.global.jwt.JwtAuthenticationFilter;
 import com.goteego.user.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -40,13 +42,13 @@ public class SecurityConfig {
             "/ws/**"
     };
 
-    private final OAuth2SuccessHandler oAuth2SuccessHandler; // ✅ 주입받기
     private final CustomOAuth2UserService customOAuth2UserService;
     @Value("${frontend.url}")
     private String frontendUrl;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, OAuth2SuccessHandler oAuth2SuccessHandler,
+                                           JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         log.info("[SecurityConfig] 기본 보안 설정 시작");
 
         http
@@ -65,7 +67,8 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutSuccessUrl("/")
                         .invalidateHttpSession(true)
-                );
+                ).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }
@@ -73,9 +76,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedOrigins(List.of(frontendUrl)); // * 대신 명시적으로 작성
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
