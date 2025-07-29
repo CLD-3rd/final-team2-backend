@@ -25,13 +25,21 @@ public class SecurityConfig {
             "/",
             "/favicon.ico",
             "/api/public/**",
+            "/api/travel-posts/**",  // 임시 추가
+            "/api/schedule/**",      // 임시 추가
+            "/api/users/**",         // 임시 추가
+            "/api/recommendation/**", // 임시 추가
+            "/api/review/**", //임시 추가
             "/error",
             "/index.html",
             "/oauth2/**",
             "/login",
             "/.well-known/**",
             "/static/**",
-            "/ws/**"
+            "/ws/**",
+            "/api/user/badge/**", // 임시 추가
+            "/api/admin/badge/**", // 임시 추가
+            "/api/feed/**"
     };
     private final OAuth2SuccessHandler oAuth2SuccessHandler; // ✅ 주입받기
     private final CustomOAuth2UserService customOAuth2UserService;
