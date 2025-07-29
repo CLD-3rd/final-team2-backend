@@ -79,4 +79,29 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     WHERE pa.travelPost.id = :postId AND pa.status <> 'REJECTED'
     """)
     List<ParticipationApplication> findNonRejectedByPostId(@Param("postId") Long postId);
+    /**
+     * 리뷰 작성자와 대상자가 같은 여행에 참여했는지 확인 (둘다 참여 2, 혼자참여 1, 아무도 참여안함 0)
+     * @param postId
+     * @param reviewerId
+     * @param revieweeId
+     * @return
+     */
+    @Query("""
+    SELECT (COUNT(DISTINCT u.id) = 2)
+    FROM User u
+    WHERE u.id IN (:reviewerId, :revieweeId)
+    AND (
+        u.id = (SELECT tp.user.id FROM TravelPost tp WHERE tp.id = :postId)
+        OR u.id IN (
+            SELECT pa.user.id FROM ParticipationApplication pa
+            WHERE pa.travelPost.id = :postId AND pa.status = 'APPROVED'
+        )
+    )
+    """)
+        Boolean existsByPostIdAndUserIdsApproved(@Param("postId") Long postId,
+                                                 @Param("reviewerId") Long reviewerId,
+                                                 @Param("revieweeId") Long revieweeId);
+
+
+
 } 
