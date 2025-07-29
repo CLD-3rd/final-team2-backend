@@ -103,19 +103,26 @@ public class RecommendationService {
      */
     @Transactional
     public UserEmbedding createOrUpdateUserEmbedding(Long userId, String embedding) {
+        log.info("=== 사용자 임베딩 생성/업데이트 시작 ===");
+        log.info("요청 사용자 ID: {}, 임베딩 길이: {}", userId, embedding.length());
+        
         // ===== 내부로직: 기존 임베딩 조회 및 생성/업데이트 처리 =====
         Optional<UserEmbedding> existingEmbedding = userEmbeddingRepository.findByUserId(userId);
         
         if (existingEmbedding.isPresent()) {
             UserEmbedding userEmbedding = existingEmbedding.get();
             userEmbedding.updateEmbedding(embedding);
-            return userEmbeddingRepository.save(userEmbedding);
+            UserEmbedding updatedEmbedding = userEmbeddingRepository.save(userEmbedding);
+            log.info("사용자 임베딩 업데이트 완료 - userId: {}", userId);
+            return updatedEmbedding;
         } else {
             UserEmbedding newEmbedding = UserEmbedding.builder()
                     .userId(userId)
                     .userEmbedding(embedding)
                     .build();
-            return userEmbeddingRepository.save(newEmbedding);
+            UserEmbedding savedEmbedding = userEmbeddingRepository.save(newEmbedding);
+            log.info("사용자 임베딩 생성 완료 - userId: {}", userId);
+            return savedEmbedding;
         }
     }
     

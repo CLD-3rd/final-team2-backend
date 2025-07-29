@@ -36,9 +36,12 @@ public class ProfileAnswerController {
      */
     @GetMapping("/my")
     public ResponseEntity<ProfileAnswerResponseDto> getMyProfileAnswer(@AuthenticationPrincipal User user) {
+        log.info("=== 내 사용자 선호도 조회 API 호출 ===");
+        log.info("요청 사용자: {} (ID: {})", user.getNickname(), user.getId());
+        
         ProfileAnswerResponseDto profileAnswer = profileAnswerService.getProfileAnswer(user);
         
-        log.info("내 사용자 선호도 조회 - userId: {}", user.getId());
+        log.info("내 사용자 선호도 조회 완료 - userId: {}", user.getId());
         
         return ResponseEntity.ok(profileAnswer);
     }
@@ -108,9 +111,13 @@ public class ProfileAnswerController {
             @RequestBody ProfileAnswerRequestDto requestDto,
             @AuthenticationPrincipal User user) {
         
+        log.info("=== 사용자 선호도 저장/수정 API 호출 ===");
+        log.info("요청 사용자: {} (ID: {})", user.getNickname(), user.getId());
+        log.debug("요청 데이터: {}", requestDto);
+        
         ProfileAnswer profileAnswer = profileAnswerService.saveOrUpdateProfileAnswer(user, requestDto);
         
-        log.info("사용자 선호도 저장 또는 수정 - userId: {}, answerId: {}", user.getId(), profileAnswer.getId());
+        log.info("사용자 선호도 저장 또는 수정 완료 - userId: {}, answerId: {}", user.getId(), profileAnswer.getId());
         
         return ResponseEntity.ok(profileAnswer);
     }
