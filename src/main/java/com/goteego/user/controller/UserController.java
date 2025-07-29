@@ -8,6 +8,7 @@ import com.goteego.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,7 +35,7 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal User user) {
         if (user == null) {
-            return ResponseEntity.ok(null);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // ✅ 401
         }
         return ResponseEntity.ok(UserResponse.from(user));
     }
