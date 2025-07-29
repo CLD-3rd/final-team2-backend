@@ -26,21 +26,16 @@ import java.time.LocalDateTime;
 public class ProfileAnswer extends BaseEntity {
     
     /**
-     * 사용자 선호도 고유 식별자 (Primary Key)
-     * 자동 증가하는 ID 값
-     */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    private Long id;
-    
-    /**
      * 사용자
      * User 엔티티와 OneToOne 관계
      */
+    @Id
+    @Column(name = "user_id")
+    private Long id;
+    
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
     @MapsId
+    @JoinColumn(name = "user_id")
     private User user;
     
     // 🍶 술 관련 선호도
@@ -142,6 +137,7 @@ public class ProfileAnswer extends BaseEntity {
                         Boolean isOutdoor, Boolean isChill, Boolean isBusy, Boolean isFlex, 
                         Boolean isCity, Boolean isHeal, Boolean isBeach, Boolean isMountain) {
         this.user = user;
+        this.id = user.getId();
         this.isAlchol3 = isAlchol3;
         this.isAlchol2 = isAlchol2;
         this.isAlchol1 = isAlchol1;
@@ -211,6 +207,6 @@ public class ProfileAnswer extends BaseEntity {
      * @return 작성자 여부
      */
     public boolean isAuthor(Long userId) {
-        return this.user.getId().equals(userId);
+        return this.id.equals(userId);
     }
 } 

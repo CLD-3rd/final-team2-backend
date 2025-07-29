@@ -73,7 +73,7 @@ public class ProfileAnswerResponseDto {
      */
     public static ProfileAnswerResponseDto from(ProfileAnswer profileAnswer) {
         return ProfileAnswerResponseDto.builder()
-                .userId(profileAnswer.getUser().getId())
+                .userId(profileAnswer.getId())
                 .isAlchol3(profileAnswer.getIsAlchol3())
                 .isAlchol2(profileAnswer.getIsAlchol2())
                 .isAlchol1(profileAnswer.getIsAlchol1())
