@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed API 테스트</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .test-section h2 {
+            color: #555;
+            margin-top: 0;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .location-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .location-option {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            background-color: white;
+        }
+        .location-option:hover {
+            background-color: #f0f0f0;
+        }
+        .location-option.selected {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐾 Feed API 테스트 페이지</h1>
+        
+        <!-- 피드 목록 조회 테스트 -->
+        <div class="test-section">
+            <h2>📋 피드 목록 조회</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>제목 검색:</label>
+                        <input type="text" id="searchTitle" placeholder="검색할 제목을 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label>작성자 검색:</label>
+                        <input type="text" id="searchAuthor" placeholder="검색할 작성자를 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label>지역:</label>
+                        <select id="searchRegion">
+                            <option value="">전체</option>
+                            <option value="JEJU">제주</option>
+                            <option value="SEOUL">서울</option>
+                            <option value="BUSAN">부산</option>
+                            <option value="DAEGU">대구</option>
+                            <option value="DAEJEON">대전</option>
+                            <option value="JEONJU">전주</option>
+                            <option value="GWANGJU">광주</option>
+                            <option value="GYEONGJU">경주</option>
+                            <option value="GANGNEUNG">강릉</option>
+                            <option value="SOKCHO">속초</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>정렬:</label>
+                        <select id="searchSort">
+                            <option value="recent">최신순</option>
+                            <option value="view">조회순</option>
+                            <option value="like">좋아요순</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>페이지:</label>
+                        <input type="number" id="searchPage" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>페이지 크기:</label>
+                        <input type="number" id="searchSize" value="6" min="1" max="20">
+                    </div>
+                </div>
+            </div>
+            <button onclick="getFeeds()">피드 목록 조회</button>
+            <div id="feedsResponse" class="response"></div>
+        </div>
+
+        <!-- 피드 생성 테스트 -->
+        <div class="test-section">
+            <h2>✏️ 피드 생성</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>제목:</label>
+                        <input type="text" id="createTitle" placeholder="피드 제목을 입력하세요" required>
+                    </div>
+                    <div class="form-group">
+                        <label>내용:</label>
+                        <textarea id="createContent" placeholder="피드 내용을 입력하세요" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>이미지 URL:</label>
+                        <input type="url" id="createImageUrl" placeholder="이미지 URL을 입력하세요">
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>지역:</label>
+                        <div class="location-options">
+                            <div class="location-option" data-value="JEJU">제주</div>
+                            <div class="location-option" data-value="SEOUL">서울</div>
+                            <div class="location-option" data-value="BUSAN">부산</div>
+                            <div class="location-option" data-value="DAEGU">대구</div>
+                            <div class="location-option" data-value="DAEJEON">대전</div>
+                            <div class="location-option" data-value="JEONJU">전주</div>
+                            <div class="location-option" data-value="GWANGJU">광주</div>
+                            <div class="location-option" data-value="GYEONGJU">경주</div>
+                            <div class="location-option" data-value="GANGNEUNG">강릉</div>
+                            <div class="location-option" data-value="SOKCHO">속초</div>
+                        </div>
+                        <input type="hidden" id="createLocation" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="createBadgeRequest"> 배지 요청
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <button onclick="createFeed()">피드 생성</button>
+            <div id="createResponse" class="response"></div>
+        </div>
+
+        <!-- 피드 상세 조회 테스트 -->
+        <div class="test-section">
+            <h2>🔍 피드 상세 조회</h2>
+            <div class="form-group">
+                <label>피드 ID:</label>
+                <input type="number" id="detailFeedId" placeholder="조회할 피드 ID를 입력하세요" required>
+            </div>
+            <button onclick="getFeedDetail()">피드 상세 조회</button>
+            <div id="detailResponse" class="response"></div>
+        </div>
+
+        <!-- 피드 수정 테스트 -->
+        <div class="test-section">
+            <h2>✏️ 피드 수정</h2>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>피드 ID:</label>
+                        <input type="number" id="updateFeedId" placeholder="수정할 피드 ID를 입력하세요" required>
+                    </div>
+                    <div class="form-group">
+                        <label>제목:</label>
+                        <input type="text" id="updateTitle" placeholder="수정할 제목을 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label>내용:</label>
+                        <textarea id="updateContent" placeholder="수정할 내용을 입력하세요"></textarea>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>이미지 URL:</label>
+                        <input type="url" id="updateImageUrl" placeholder="수정할 이미지 URL을 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label>지역:</label>
+                        <select id="updateLocation">
+                            <option value="">변경하지 않음</option>
+                            <option value="JEJU">제주</option>
+                            <option value="SEOUL">서울</option>
+                            <option value="BUSAN">부산</option>
+                            <option value="DAEGU">대구</option>
+                            <option value="DAEJEON">대전</option>
+                            <option value="JEONJU">전주</option>
+                            <option value="GWANGJU">광주</option>
+                            <option value="GYEONGJU">경주</option>
+                            <option value="GANGNEUNG">강릉</option>
+                            <option value="SOKCHO">속초</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="updateBadgeRequest"> 배지 요청
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <button onclick="updateFeed()">피드 수정</button>
+            <div id="updateResponse" class="response"></div>
+        </div>
+
+        <!-- 피드 삭제 테스트 -->
+        <div class="test-section">
+            <h2>🗑️ 피드 삭제</h2>
+            <div class="form-group">
+                <label>피드 ID:</label>
+                <input type="number" id="deleteFeedId" placeholder="삭제할 피드 ID를 입력하세요" required>
+            </div>
+            <button onclick="deleteFeed()" style="background-color: #dc3545;">피드 삭제</button>
+            <div id="deleteResponse" class="response"></div>
+        </div>
+
+        <!-- 댓글 생성 테스트 -->
+        <div class="test-section">
+            <h2>💬 댓글 생성</h2>
+            <div class="form-group">
+                <label>피드 ID:</label>
+                <input type="number" id="commentFeedId" placeholder="댓글을 달 피드 ID를 입력하세요" required>
+            </div>
+            <div class="form-group">
+                <label>댓글 내용:</label>
+                <textarea id="commentContent" placeholder="댓글 내용을 입력하세요" required></textarea>
+            </div>
+            <button onclick="createComment()">댓글 생성</button>
+            <div id="commentResponse" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        // 지역 선택 기능
+        document.querySelectorAll('.location-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.location-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                document.getElementById('createLocation').value = this.dataset.value;
+            });
+        });
+
+        // API 호출 함수들
+        async function getFeeds() {
+            const title = document.getElementById('searchTitle').value;
+            const author = document.getElementById('searchAuthor').value;
+            const region = document.getElementById('searchRegion').value;
+            const sort = document.getElementById('searchSort').value;
+            const page = document.getElementById('searchPage').value;
+            const size = document.getElementById('searchSize').value;
+
+            const params = new URLSearchParams();
+            if (title) params.append('title', title);
+            if (author) params.append('author', author);
+            if (region) params.append('region', region);
+            params.append('sort', sort);
+            params.append('page', page);
+            params.append('size', size);
+
+            try {
+                const response = await fetch(`/api/feed?${params}`);
+                const data = await response.json();
+                displayResponse('feedsResponse', response.ok, data);
+            } catch (error) {
+                displayResponse('feedsResponse', false, { error: error.message });
+            }
+        }
+
+        async function createFeed() {
+            const title = document.getElementById('createTitle').value;
+            const content = document.getElementById('createContent').value;
+            const imageUrl = document.getElementById('createImageUrl').value;
+            const location = document.getElementById('createLocation').value;
+            const badgeRequest = document.getElementById('createBadgeRequest').checked;
+
+            if (!title || !content) {
+                alert('제목과 내용은 필수입니다.');
+                return;
+            }
+
+            const requestData = {
+                title: title,
+                content: content,
+                imageUrl: imageUrl || null,
+                location: location || null,
+                badgeRequest: badgeRequest
+            };
+
+            try {
+                const response = await fetch('/api/feed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                const data = await response.json();
+                displayResponse('createResponse', response.ok, data);
+            } catch (error) {
+                displayResponse('createResponse', false, { error: error.message });
+            }
+        }
+
+        async function getFeedDetail() {
+            const feedId = document.getElementById('detailFeedId').value;
+            if (!feedId) {
+                alert('피드 ID를 입력하세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/feed/${feedId}`);
+                const data = await response.json();
+                displayResponse('detailResponse', response.ok, data);
+            } catch (error) {
+                displayResponse('detailResponse', false, { error: error.message });
+            }
+        }
+
+        async function updateFeed() {
+            const feedId = document.getElementById('updateFeedId').value;
+            const title = document.getElementById('updateTitle').value;
+            const content = document.getElementById('updateContent').value;
+            const imageUrl = document.getElementById('updateImageUrl').value;
+            const location = document.getElementById('updateLocation').value;
+            const badgeRequest = document.getElementById('updateBadgeRequest').checked;
+
+            if (!feedId) {
+                alert('피드 ID를 입력하세요.');
+                return;
+            }
+
+            const requestData = {};
+            if (title) requestData.title = title;
+            if (content) requestData.content = content;
+            if (imageUrl) requestData.imageUrl = imageUrl;
+            if (location) requestData.location = location;
+            requestData.badgeRequest = badgeRequest;
+
+            try {
+                const response = await fetch(`/api/feed/${feedId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                const data = await response.json();
+                displayResponse('updateResponse', response.ok, data);
+            } catch (error) {
+                displayResponse('updateResponse', false, { error: error.message });
+            }
+        }
+
+        async function deleteFeed() {
+            const feedId = document.getElementById('deleteFeedId').value;
+            if (!feedId) {
+                alert('피드 ID를 입력하세요.');
+                return;
+            }
+
+            if (!confirm('정말로 이 피드를 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/feed/${feedId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.text();
+                displayResponse('deleteResponse', response.ok, { message: data });
+            } catch (error) {
+                displayResponse('deleteResponse', false, { error: error.message });
+            }
+        }
+
+        async function createComment() {
+            const feedId = document.getElementById('commentFeedId').value;
+            const content = document.getElementById('commentContent').value;
+
+            if (!feedId || !content) {
+                alert('피드 ID와 댓글 내용을 입력하세요.');
+                return;
+            }
+
+            const requestData = {
+                content: content
+            };
+
+            try {
+                const response = await fetch(`/api/feed/${feedId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                const data = await response.json();
+                displayResponse('commentResponse', response.ok, data);
+            } catch (error) {
+                displayResponse('commentResponse', false, { error: error.message });
+            }
+        }
+
+        function displayResponse(elementId, success, data) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `response ${success ? 'success' : 'error'}`;
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>본인 선호도 조사</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .checkbox-item:hover {
+            background-color: #e9ecef;
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+        .emoji {
+            font-size: 1.3em;
+            margin-right: 8px;
+        }
+        .section-title {
+            color: #007bff;
+            font-size: 1.2em;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #007bff;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 15px;
+            margin-bottom: 15px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #17a2b8; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .btn-group {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 본인 여행 선호도 조사</h1>
+        <p class="description">
+            여행할 때의 성향과 선호도를 알려주세요.<br>
+            이 정보는 나와 비슷한 여행 성향을 가진 동행자를 찾는 데 사용됩니다.
+        </p>
+        
+        <form id="preferenceForm">
+            <div class="section-title">🍶 술 관련 선호도</div>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isAlchol3">
+                    <span class="emoji">🍶</span>
+                    <label for="isAlchol3">술 좋아해요</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isAlchol2">
+                    <span class="emoji">🍻</span>
+                    <label for="isAlchol2">분위기상 한두 잔 정도</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isAlchol1">
+                    <span class="emoji">🚫</span>
+                    <label for="isAlchol1">술은 즐기지 않아요</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isSmoker">
+                    <span class="emoji">🚬</span>
+                    <label for="isSmoker">흡연 유무</label>
+                </div>
+            </div>
+            
+            <div class="section-title">🤝 성격 관련 선호도</div>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isFriendly">
+                    <span class="emoji">🤝</span>
+                    <label for="isFriendly">새로운 사람과도 금방 친해져요</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isQuiet">
+                    <span class="emoji">🤫</span>
+                    <label for="isQuiet">조용한 분위기를 좋아해요</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isLead">
+                    <span class="emoji">🧭</span>
+                    <label for="isLead">앞장서서 리드하는 편이에요</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isParty">
+                    <span class="emoji">😎</span>
+                    <label for="isParty">분위기를 띄우는 걸 좋아해요</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isSearch">
+                    <span class="emoji">🤓</span>
+                    <label for="isSearch">여행 중에도 정보를 꼼꼼히 찾는 편이에요</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isListen">
+                    <span class="emoji">👂</span>
+                    <label for="isListen">다른 사람 의견을 잘 들어주는 편이에요</label>
+                </div>
+            </div>
+            
+            <div class="section-title">🏞 활동 관련 선호도</div>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isSee">
+                    <span class="emoji">🏞</span>
+                    <label for="isSee">자연 경관 감상</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isCafe">
+                    <span class="emoji">🧘</span>
+                    <label for="isCafe">카페/휴식</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isTaste">
+                    <span class="emoji">🍽</span>
+                    <label for="isTaste">맛집 탐방</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isPicture">
+                    <span class="emoji">📸</span>
+                    <label for="isPicture">사진 촬영</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isShopping">
+                    <span class="emoji">🛍</span>
+                    <label for="isShopping">쇼핑</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isOutdoor">
+                    <span class="emoji">🏃</span>
+                    <label for="isOutdoor">액티비티(서핑 등산 등)</label>
+                </div>
+            </div>
+            
+            <div class="section-title">💤 여행 스타일</div>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isChill">
+                    <span class="emoji">💤</span>
+                    <label for="isChill">느긋하게 여유롭게</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isBusy">
+                    <span class="emoji">🕘</span>
+                    <label for="isBusy">빡빡하고 알차게</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isFlex">
+                    <span class="emoji">❔</span>
+                    <label for="isFlex">상황에 따라 유동적으로</label>
+                </div>
+            </div>
+            
+            <div class="section-title">🌆 여행지 유형</div>
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isCity">
+                    <span class="emoji">🌆</span>
+                    <label for="isCity">도시/핫플 위주</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isHeal">
+                    <span class="emoji">🏞</span>
+                    <label for="isHeal">자연/힐링 위주</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isBeach">
+                    <span class="emoji">🏖</span>
+                    <label for="isBeach">바다/해변</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="isMountain">
+                    <span class="emoji">🗻</span>
+                    <label for="isMountain">산/등산</label>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" onclick="saveOrUpdatePreference()">선호도 저장</button>
+                <button type="button" onclick="getMyPreference()">내 선호도 확인</button>
+                <button type="button" onclick="clearForm()">폼 초기화</button>
+            </div>
+        </form>
+        
+        <div id="response" class="response"></div>
+    </div>
+    
+    <script>
+        const BASE_URL = 'http://localhost:8080/api';
+        
+        // 인증 헤더 가져오기
+        function getAuthHeaders() {
+            const accessToken = getCookie('accessToken');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (accessToken) {
+                headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+            
+            return headers;
+        }
+        
+        // 쿠키에서 특정 값 가져오기
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.startsWith(name + '=')) {
+                    return cookie.substring(name.length + 1);
+                }
+            }
+            return null;
+        }
+        
+        // 선호도 데이터 수집
+        function getPreferenceData() {
+            return {
+                isAlchol3: document.getElementById('isAlchol3').checked,
+                isAlchol2: document.getElementById('isAlchol2').checked,
+                isAlchol1: document.getElementById('isAlchol1').checked,
+                isSmoker: document.getElementById('isSmoker').checked,
+                isFriendly: document.getElementById('isFriendly').checked,
+                isQuiet: document.getElementById('isQuiet').checked,
+                isLead: document.getElementById('isLead').checked,
+                isParty: document.getElementById('isParty').checked,
+                isSearch: document.getElementById('isSearch').checked,
+                isListen: document.getElementById('isListen').checked,
+                isSee: document.getElementById('isSee').checked,
+                isCafe: document.getElementById('isCafe').checked,
+                isTaste: document.getElementById('isTaste').checked,
+                isPicture: document.getElementById('isPicture').checked,
+                isShopping: document.getElementById('isShopping').checked,
+                isOutdoor: document.getElementById('isOutdoor').checked,
+                isChill: document.getElementById('isChill').checked,
+                isBusy: document.getElementById('isBusy').checked,
+                isFlex: document.getElementById('isFlex').checked,
+                isCity: document.getElementById('isCity').checked,
+                isHeal: document.getElementById('isHeal').checked,
+                isBeach: document.getElementById('isBeach').checked,
+                isMountain: document.getElementById('isMountain').checked
+            };
+        }
+        
+        // 선호도 저장 또는 수정
+        async function saveOrUpdatePreference() {
+            try {
+                showResponse('⏳ 선호도를 저장하고 있습니다...', 'info');
+                
+                const response = await fetch(`${BASE_URL}/profile-answers/save-or-update`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(getPreferenceData())
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showResponse('✅ 선호도가 성공적으로 저장되었습니다!\n\n저장된 데이터:\n' + JSON.stringify(result, null, 2), 'success');
+                } else {
+                    const errorData = await response.json();
+                    showResponse('❌ 저장 중 오류가 발생했습니다.\n\n오류 정보:\n' + JSON.stringify(errorData, null, 2), 'error');
+                }
+            } catch (error) {
+                showResponse('❌ 네트워크 오류: ' + error.message, 'error');
+            }
+        }
+        
+        // 내 선호도 조회
+        async function getMyPreference() {
+            try {
+                showResponse('⏳ 내 선호도를 조회하고 있습니다...', 'info');
+                
+                const response = await fetch(`${BASE_URL}/profile-answers/my`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showResponse('📋 내 선호도 정보\n\n' + JSON.stringify(result, null, 2), 'info');
+                    
+                    // 폼에 기존 데이터 채우기
+                    fillFormWithData(result);
+                } else {
+                    const errorData = await response.json();
+                    if (response.status === 404) {
+                        showResponse('⚠️ 아직 선호도가 등록되지 않았습니다.\n선호도를 선택하고 저장해주세요.', 'warning');
+                    } else {
+                        showResponse('❌ 조회 중 오류가 발생했습니다.\n\n오류 정보:\n' + JSON.stringify(errorData, null, 2), 'error');
+                    }
+                }
+            } catch (error) {
+                showResponse('❌ 네트워크 오류: ' + error.message, 'error');
+            }
+        }
+        
+        // 폼에 데이터 채우기
+        function fillFormWithData(data) {
+            document.getElementById('isAlchol3').checked = data.isAlchol3 || false;
+            document.getElementById('isAlchol2').checked = data.isAlchol2 || false;
+            document.getElementById('isAlchol1').checked = data.isAlchol1 || false;
+            document.getElementById('isSmoker').checked = data.isSmoker || false;
+            document.getElementById('isFriendly').checked = data.isFriendly || false;
+            document.getElementById('isQuiet').checked = data.isQuiet || false;
+            document.getElementById('isLead').checked = data.isLead || false;
+            document.getElementById('isParty').checked = data.isParty || false;
+            document.getElementById('isSearch').checked = data.isSearch || false;
+            document.getElementById('isListen').checked = data.isListen || false;
+            document.getElementById('isSee').checked = data.isSee || false;
+            document.getElementById('isCafe').checked = data.isCafe || false;
+            document.getElementById('isTaste').checked = data.isTaste || false;
+            document.getElementById('isPicture').checked = data.isPicture || false;
+            document.getElementById('isShopping').checked = data.isShopping || false;
+            document.getElementById('isOutdoor').checked = data.isOutdoor || false;
+            document.getElementById('isChill').checked = data.isChill || false;
+            document.getElementById('isBusy').checked = data.isBusy || false;
+            document.getElementById('isFlex').checked = data.isFlex || false;
+            document.getElementById('isCity').checked = data.isCity || false;
+            document.getElementById('isHeal').checked = data.isHeal || false;
+            document.getElementById('isBeach').checked = data.isBeach || false;
+            document.getElementById('isMountain').checked = data.isMountain || false;
+        }
+        
+        // 폼 초기화
+        function clearForm() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            showResponse('🔄 폼이 초기화되었습니다.', 'info');
+        }
+        
+        // 응답 표시
+        function showResponse(message, type) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = `<span class="${type}">${message}</span>`;
+            responseDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // 페이지 로드 시 기본값 설정 (예시)
+        window.onload = function() {
+            // 로그인 상태 확인
+            const accessToken = getCookie('accessToken');
+            if (!accessToken) {
+                showResponse('⚠️ 로그인이 필요합니다. 먼저 로그인해주세요.', 'warning');
+                return;
+            }
+            
+            // 기본 선호도 설정 (사용자가 쉽게 시작할 수 있도록)
+            document.getElementById('isFriendly').checked = true;
+            document.getElementById('isSee').checked = true;
+            document.getElementById('isCafe').checked = true;
+            document.getElementById('isChill').checked = true;
+            document.getElementById('isCity').checked = true;
+            
+            showResponse('🎯 여행 선호도 조사에 오신 것을 환영합니다!\n원하는 항목들을 선택하고 "선호도 저장" 버튼을 눌러주세요.', 'info');
+        };
+    </script>
+</body>
+</html> 
