@@ -330,16 +330,19 @@ public class ProfileAnswerService {
             vector[i] = 0;
         }
         
-        // 배열을 문자열로 변환
-        StringBuilder sb = new StringBuilder("[");
+        // PostgreSQL vector 형식으로 변환 (중괄호 사용)
+        StringBuilder sb = new StringBuilder("{");
         for (int i = 0; i < vector.length; i++) {
             sb.append(vector[i]);
             if (i < vector.length - 1) {
                 sb.append(",");
             }
         }
-        sb.append("]");
+        sb.append("}");
         
-        return sb.toString();
+        String vectorString = sb.toString();
+        log.info("생성된 PostgreSQL vector 문자열: {}", vectorString);
+        
+        return vectorString;
     }
 } 
