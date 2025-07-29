@@ -2,6 +2,7 @@ package com.goteego.travel.service;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.service.ChatRoomService;
+import com.goteego.global.dto.PageInfo;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
@@ -54,15 +55,17 @@ public class TravelPostService {
     public TravelPostResponseWrapper getTravelPosts(PostType postType, int page, int size, Long currentUserId) {
 
         Pageable pageable = PageRequest.of(page, size);
+
         Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDescWithUser(postType, currentUserId, pageable);
+        PageInfo pageInfo = PageInfo.from(travelPostPage);
 
         // PostType에 따라 다른 DTO 변환
         if (postType == PostType.BEFORE) {
             List<BeforeTravelPostResponseDto> content = convertToBeforeDtoList(travelPostPage.getContent(), currentUserId);
-            return TravelPostResponseWrapper.before(content);
+            return TravelPostResponseWrapper.before(content, pageInfo);
         } else {
             List<NowTravelPostResponseDto> content = convertToNowDtoList(travelPostPage.getContent(), currentUserId);
-            return TravelPostResponseWrapper.now(content);
+            return TravelPostResponseWrapper.now(content, pageInfo);
         }
     }
 
@@ -72,10 +75,11 @@ public class TravelPostService {
     public TravelPostResponseWrapper getTravelPostsDefault(PostType postType, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<TravelPost> travelPosts = travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, pageable);
+        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, pageable);
+        PageInfo pageInfo = PageInfo.from(travelPostPage);
 
         if (postType == PostType.BEFORE) {
-            List<BeforeTravelPostResponseDto> beforePosts = travelPosts.getContent().stream()
+            List<BeforeTravelPostResponseDto> beforePosts = travelPostPage.getContent().stream()
                     .map(tp -> BeforeTravelPostResponseDto.from(
                             tp,
                             null, // currentUserId 없음 (익명)
@@ -83,19 +87,15 @@ public class TravelPostService {
                             null, // similarity 없음
                             0))
                     .toList();
-
-            return TravelPostResponseWrapper.before(beforePosts);
-
+            return TravelPostResponseWrapper.before(beforePosts, pageInfo);
         } else if (postType == PostType.NOW) {
-            List<NowTravelPostResponseDto> nowPosts = travelPosts.getContent().stream()
+            List<NowTravelPostResponseDto> nowPosts = travelPostPage.getContent().stream()
                     .map(tp -> NowTravelPostResponseDto.from(
                             tp, null, tp.getUser().getNickname(), null
                     ))
                     .toList();
-
-            return TravelPostResponseWrapper.now(nowPosts);
+            return TravelPostResponseWrapper.now(nowPosts, pageInfo);
         }
-
         throw new BusinessException(ErrorCode.UNSUPPORTED_POST_TYPE);
     }
 
