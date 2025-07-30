@@ -2,6 +2,7 @@ package com.goteego.travel.service;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.service.ChatRoomService;
+import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.dto.PageInfo;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,23 +49,50 @@ public class TravelPostService {
     private final ChatRoomService chatRoomService;
 
     /**
-     * 여행 게시글 목록 조회 (PostType별 다른 응답 구조)
+     * 여행 게시글 목록 조회
+     * - PostType(BEFORE / NOW)에 따라 다른 DTO 변환
+     * - 검색 조건(제목, 작성자, 지역) 및 정렬 조건(sort) 적용
+     * - 로그인 사용자 기반 similarity 정렬 처리
      *
-     * @param postType
-     * @param page
-     * @param size
-     * @param user
-     * @return
+     * @param postType  게시글 타입 (BEFORE / NOW)
+     * @param page      페이지 번호
+     * @param size      페이지 크기
+     * @param condition 검색 및 정렬 조건
+     * @param user      로그인 사용자 정보 (null 허용)
+     * @return 게시글 목록 + 페이지 정보
      */
-    public TravelPostResponseWrapper getTravelPosts(PostType postType, int page, int size, User user) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, pageable);
-        PageInfo pageInfo = PageInfo.from(travelPostPage);
-
-        // 로그인 여부 확인
+    public TravelPostResponseWrapper getTravelPosts(PostType postType,
+                                                    int page,
+                                                    int size,
+                                                    TravelPostSearchCondition condition,
+                                                    User user) {
+        // ✅ 로그인 여부 확인
         Long currentUserId = (user != null) ? user.getId() : null;
 
-        // PostType에 따라 다른 DTO 변환
+        // ✅ 정렬 조건
+        Pageable pageable = PageRequest.of(page, size, getSortOption(postType, condition.sort()));
+
+        // ✅ location 검증 및 변환
+        Location locationEnum = null;
+        if (condition.location() != null && !condition.location().isBlank()) {
+            try {
+                locationEnum = Location.fromDisplayName(condition.location());
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException(ErrorCode.UNSUPPORTED_LOCATION);
+            }
+        }
+
+        // ✅ Repository 호출 (검색 조건 적용)
+        Page<TravelPost> travelPostPage = travelPostRepository.getTravelPostsWithCondition(
+                postType,
+                condition.title(),
+                condition.author(),
+                locationEnum,
+                pageable
+        );
+        PageInfo pageInfo = PageInfo.from(travelPostPage);
+
+        // ✅ PostType에 따라 다른 DTO 변환
         if (postType == PostType.BEFORE) {
             List<BeforeTravelPostResponseDto> content = convertToDtoList(
                     travelPostPage.getContent(),
@@ -76,6 +105,7 @@ public class TravelPostService {
                     }
             );
             return TravelPostResponseWrapper.before(content, pageInfo);
+
         } else if (postType == PostType.NOW) {
             List<NowTravelPostResponseDto> content = convertToDtoList(
                     travelPostPage.getContent(),
@@ -84,13 +114,14 @@ public class TravelPostService {
             );
             return TravelPostResponseWrapper.now(content, pageInfo);
         }
+
         throw new BusinessException(ErrorCode.UNSUPPORTED_POST_TYPE);
     }
 
     /**
      * 여행 게시글 상세 조회
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public TravelPostDetailResponseDto getTravelPostDetail(Long postId) {
         TravelPost travelPost = travelPostRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
@@ -241,6 +272,28 @@ public class TravelPostService {
      */
     private User getValidatedUser(Long userId) {
         return userService.getUserById(userId);
+    }
+
+    /**
+     * 게시글 정렬 옵션 처리
+     * - BEFORE: recent(최신순), view(조회수순)
+     * - NOW: 항상 최신순
+     *
+     * @param postType 게시글 타입 (BEFORE / NOW)
+     * @param sort     정렬 기준 (recent / view), 기본값: recent
+     * @return Sort 객체
+     */
+    private Sort getSortOption(PostType postType, String sort) {
+        // 기본 정렬 기준
+        String sortKey = (sort == null || sort.isBlank()) ? "recent" : sort.toLowerCase();
+
+        return switch (postType) {
+            case BEFORE -> switch (sortKey) {
+                case "recent" -> Sort.by(Sort.Direction.DESC, "createdAt");
+                default -> Sort.by(Sort.Direction.DESC, "viewCount");
+            };
+            case NOW -> Sort.by(Sort.Direction.DESC, "createdAt"); // NOW는 항상 최신순
+        };
     }
 
     /**

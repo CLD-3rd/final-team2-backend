@@ -11,6 +11,7 @@ public enum ErrorCode {
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력 값입니다"),
     BAD_CREDENTIALS(HttpStatus.UNAUTHORIZED, "잘못된 인증 정보입니다"),
     BLANK_INPUT_VALUE(HttpStatus.BAD_REQUEST, "빈 값이 입력되었습니다"),
+    UNSUPPORTED_LOCATION(HttpStatus.BAD_REQUEST, "지원되지 않는 지역입니다"),
 
     //Auth
     AUTH_NOT_FOUND(HttpStatus.UNAUTHORIZED, "시큐리티 인증 정보를 찾을 수 없습니다."),

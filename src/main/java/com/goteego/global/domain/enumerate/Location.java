@@ -1,6 +1,9 @@
 package com.goteego.global.domain.enumerate;
 
 import com.goteego.badge.domain.enumerate.BadgeCode;
+
+import java.util.Arrays;
+
 /**
  * 위치 정보 Enum
  * 여행지 위치를 나타내는 공통 열거형
@@ -26,9 +29,17 @@ public enum Location {
         this.badgeCode = badgeCode;
     }
 
+    public static Location fromDisplayName(String displayName) {
+        return Arrays.stream(Location.values())
+                .filter(location -> location.getDisplayName().equals(displayName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 지역명입니다: " + displayName));
+    }
+
     public String getDisplayName() {
         return displayName;
     }
+
     public BadgeCode toBadgeCode() {
         return badgeCode;
     }
