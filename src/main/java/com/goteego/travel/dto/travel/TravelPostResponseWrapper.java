@@ -1,10 +1,11 @@
 package com.goteego.travel.dto.travel;
 
+import com.goteego.global.dto.PageInfo;
 import com.goteego.travel.domain.enumerate.PostType;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -17,28 +18,31 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class TravelPostResponseWrapper {
-    
+
     private PostType postType;
     private List<BeforeTravelPostResponseDto> beforePosts; // BEFORE 타입일 때
     private List<NowTravelPostResponseDto> nowPosts; // NOW 타입일 때
-    
+    private PageInfo pageInfo;
+
     /**
      * BEFORE 타입 응답 생성
      */
-    public static TravelPostResponseWrapper before(List<BeforeTravelPostResponseDto> posts) {
+    public static TravelPostResponseWrapper before(List<BeforeTravelPostResponseDto> posts, PageInfo pageInfo) {
         return TravelPostResponseWrapper.builder()
                 .postType(PostType.BEFORE)
                 .beforePosts(posts)
+                .pageInfo(pageInfo)
                 .build();
     }
-    
+
     /**
      * NOW 타입 응답 생성
      */
-    public static TravelPostResponseWrapper now(List<NowTravelPostResponseDto> posts) {
+    public static TravelPostResponseWrapper now(List<NowTravelPostResponseDto> posts, PageInfo pageInfo) {
         return TravelPostResponseWrapper.builder()
                 .postType(PostType.NOW)
                 .nowPosts(posts)
+                .pageInfo(pageInfo)
                 .build();
     }
 } 

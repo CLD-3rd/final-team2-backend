@@ -18,17 +18,49 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final List<String> WHITELIST = List.of(
+            "/",
+            "/login/**",
+            "/index/**",
+            "/oauth2/**",
+            "/.well-known/**",
+            "/api/travel-posts/**", // GET만 허용
+            "/api/feed/**",         // GET만 허용
+            "/ws/**"
+    );
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+
+        AntPathMatcher pathMatcher = new AntPathMatcher();
+
+        // ✅ GET 요청일 때만 화이트리스트 매칭
+        if (method.equalsIgnoreCase("GET")) {
+            for (String pattern : WHITELIST) {
+                if (pathMatcher.match(pattern, uri)) {
+                    log.debug("✅ JWT 필터 스킵 (화이트리스트): {}", uri);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -37,13 +69,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-
-        // 여기 경로는 Jwt Filter 무시
-        if (shouldSkipFilter(uri)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         String accessToken = CookieUtil.getTokenFromCookie(request, "accessToken");
         String refreshToken = CookieUtil.getTokenFromCookie(request, "refreshToken");
 
@@ -99,14 +124,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private boolean shouldSkipFilter(String uri) {
-        return uri.equals("/")
-                || uri.startsWith("/login")
-                || uri.startsWith("/index")
-                || uri.startsWith("/oauth2")
-                || uri.startsWith("/.well-known");
     }
 
     private void setAuthenticationFromAccessToken(String token, HttpServletRequest request) {
