@@ -9,6 +9,10 @@ import com.goteego.chat.service.ChatService;
 import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -68,10 +72,16 @@ public class ChatRoomController {
      ************** 공통 **************
      *********************************/
     // 특정 채팅방의 메시지 내역 조회 (roomId: 채팅방의 UUID)
+//    @GetMapping("/rooms/{roomId}/messages")
+//    public ResponseEntity<List<DirectMessageResponse>> getChatMessages(@PathVariable String roomId) {
+//        List<DirectMessageResponse> messages = chatService.findChatMessages(roomId);
+//        return ResponseEntity.ok(messages);
+//    }
     @GetMapping("/rooms/{roomId}/messages")
-    public ResponseEntity<List<DirectMessageResponse>> getChatMessages(@PathVariable String roomId) {
-        List<DirectMessageResponse> messages = chatService.findChatMessages(roomId);
-        return ResponseEntity.ok(messages);
+    public ResponseEntity<Slice<DirectMessageResponse>> loadMessages(
+            @PathVariable String roomId,
+            @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(chatService.findChatMessages(roomId, pageable));
     }
 
 }

@@ -15,6 +15,8 @@ import com.goteego.chat.repository.ChatMessageRepository;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -142,11 +144,15 @@ public class ChatService {
     /**
      * 특정 채팅방의 메시지 내역 조회
      */
-    public List<DirectMessageResponse> findChatMessages(String roomId) {
-        return chatMessageRepository.findByRoomIdOrderByTimestampAsc(roomId)
-                .stream()
-                .map(DirectMessageResponse::fromEntity)
-                .collect(Collectors.toList());
+//    public List<DirectMessageResponse> findChatMessages(String roomId) {
+//        return chatMessageRepository.findByRoomIdOrderByTimestampAsc(roomId)
+//                .stream()
+//                .map(DirectMessageResponse::fromEntity)
+//                .collect(Collectors.toList());
+//    }
+    public Slice<DirectMessageResponse> findChatMessages(String roomId, Pageable pageable) {
+        Slice<ChatMessage> messageSlice = chatMessageRepository.findByRoomIdOrderByTimestampDesc(roomId, pageable);
+        return messageSlice.map(DirectMessageResponse::fromEntity);
     }
 
 
