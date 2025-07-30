@@ -3,14 +3,14 @@ package com.goteego.travel.service;
 import com.goteego.chat.service.ChatRoomService;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
-import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.ParticipationApplication;
+import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.enumerate.ParticipationStatus;
 import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
 import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
-import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
+import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -33,27 +33,27 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ScheduleService {
-    
+
     private final TravelPostRepository travelPostRepository;
     private final ParticipationApplicationRepository participationApplicationRepository;
     private final UserService userService;
     private final ChatRoomService chatRoomService;
-    
+
     /**
      * 내 일정 조회 (BEFORE 타입만 - 작성자이거나 참여자인 게시글)
      */
     public List<BeforeTravelPostResponseDto> getMySchedules(Long userId, int page, int size) {
         List<TravelPost> allSchedules = travelPostRepository.findMySchedulesWithUser(userId);
-        
+
         // BEFORE 타입만 필터링
         List<TravelPost> beforeSchedules = allSchedules.stream()
                 .filter(tp -> tp.getPostType() == PostType.BEFORE)
                 .collect(Collectors.toList());
-        
+
         // 페이징 처리
         int start = page * size;
         int end = Math.min(start + size, beforeSchedules.size());
-        
+
         if (start >= beforeSchedules.size()) {
             return List.of();
         }
@@ -67,9 +67,7 @@ public class ScheduleService {
                     Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
                     return BeforeTravelPostResponseDto.from(
                             tp,
-                            tp.getUser().getId(),
                             tp.getUser().getNickname(),
-                            null, // similarity는 이 컨텍스트에선 필요 없다면 null
                             approvedParticipantCount
                     );
                 })
@@ -77,17 +75,15 @@ public class ScheduleService {
     }
 
 
-
-
     //======================================================준형===================================================//
 
-    
+
     /**
      * 참가자 상태 변경 (승인/거절) -> 승인 시, 게시글 채팅방에 초대
      */
     @Transactional
     public ParticipationApplicationResponseDto updateParticipantStatus(Long travelPostId, Long participantUserId,
-                                                            ParticipationStatus newStatus, Long currentUserId) {
+                                                                       ParticipationStatus newStatus, Long currentUserId) {
 
         User participant = userService.getUserById(participantUserId);
 
@@ -97,13 +93,13 @@ public class ScheduleService {
         if (!travelPost.isAuthor(currentUserId)) {
             throw new RuntimeException("오직 게시글 작성자만 참가 요청을 처리할 수 있습니다.");
         }
-        
+
         // 2. 참여 신청 조회
         ParticipationApplication participationApplication = participationApplicationRepository
-                                                            .findByTravelPostIdAndUserId(travelPostId, participantUserId).orElseThrow(() ->
-                                                            new NotFoundException(ErrorCode.APPLICATION_NOT_FOUND));
+                .findByTravelPostIdAndUserId(travelPostId, participantUserId).orElseThrow(() ->
+                        new NotFoundException(ErrorCode.APPLICATION_NOT_FOUND));
 
-        
+
         // 3. 상태 변경 가능 여부 확인
         if (newStatus == ParticipationStatus.APPROVED && !participationApplication.canBeApproved()) {
             throw new RuntimeException("Application cannot be approved in current status: " + participationApplication.getStatus());
@@ -111,7 +107,7 @@ public class ScheduleService {
         if (newStatus == ParticipationStatus.REJECTED && !participationApplication.canBeRejected()) {
             throw new RuntimeException("Application cannot be rejected in current status: " + participationApplication.getStatus());
         }
-        
+
         // 4. 상태 변경
         participationApplication.updateStatus(newStatus);
         participationApplicationRepository.flush(); // 명시적 flush
@@ -165,17 +161,10 @@ public class ScheduleService {
     //===========================================================================================================//
 
 
-
-
-
-
-
-
     //====================================================재신=====================================================//
 
 
-    
-        /**
+    /**
      * 특정 게시글의 대기 중인 참가자 수 조회
      *
      * @param travelPostId 여행 게시글 ID
@@ -183,7 +172,7 @@ public class ScheduleService {
      */
     public Long getPendingParticipantCount(Long travelPostId) {
         return participationApplicationRepository.countByTravelPostIdAndStatus(
-            travelPostId, ParticipationStatus.PENDING);
+                travelPostId, ParticipationStatus.PENDING);
     }
 
     /**
@@ -194,21 +183,20 @@ public class ScheduleService {
      */
     public Long getApprovedParticipantCount(Long travelPostId) {
         return participationApplicationRepository.countByTravelPostIdAndStatus(
-            travelPostId, ParticipationStatus.APPROVED);
+                travelPostId, ParticipationStatus.APPROVED);
     }
 
 
-    
     /**
      * 진행 상태 계산
-     * 
+     *
      * @param startTime 시작일
-     * @param endTime 종료일
+     * @param endTime   종료일
      * @return 진행 상태 (UPCOMING/ONGOING/COMPLETED)
      */
     public String calculateProgressStatus(LocalDate startTime, LocalDate endTime) {
         LocalDate now = LocalDate.now();
-        
+
         if (now.isBefore(startTime)) {
             return "UPCOMING";
         } else if (now.isAfter(endTime)) {
@@ -217,24 +205,24 @@ public class ScheduleService {
             return "ONGOING";
         }
     }
-    
+
     /**
      * 사용자가 특정 게시글의 작성자인지 확인
-     * 
+     *
      * @param travelPostId 게시글 ID
-     * @param userId 사용자 ID
+     * @param userId       사용자 ID
      * @return 작성자인지 여부
      */
     public boolean isAuthor(Long travelPostId, Long userId) {
         Optional<TravelPost> travelPostOpt = travelPostRepository.findById(travelPostId);
         return travelPostOpt.isPresent() && travelPostOpt.get().isAuthor(userId);
     }
-    
+
     /**
      * 사용자가 특정 게시글에 참가 신청했는지 확인
-     * 
+     *
      * @param travelPostId 게시글 ID
-     * @param userId 사용자 ID
+     * @param userId       사용자 ID
      * @return 참가 신청 여부
      */
     public boolean hasParticipationApplication(Long travelPostId, Long userId) {
@@ -246,20 +234,20 @@ public class ScheduleService {
     /**
      * 모집 상태 업데이트
      * 승인된 참가자 수를 확인하여 모집 완료 여부를 결정
-     * 
+     *
      * @param travelPost 여행 게시글
      */
     private void updateRecruitmentStatus(TravelPost travelPost) {
         Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(
-            travelPost.getId(), ParticipationStatus.APPROVED);
-        
+                travelPost.getId(), ParticipationStatus.APPROVED);
+
         // 승인된 참가자 수가 모집 인원에 도달하면 모집 완료
         boolean isRecruiting = approvedCount < travelPost.getRecruitLimit();
         travelPost.updateRecruitStatus(isRecruiting);
-        
+
         travelPostRepository.save(travelPost);
-        
-        log.info("모집 상태 업데이트 - travelPostId: {}, approvedCount: {}, recruitLimit: {}, isRecruiting: {}", 
+
+        log.info("모집 상태 업데이트 - travelPostId: {}, approvedCount: {}, recruitLimit: {}, isRecruiting: {}",
                 travelPost.getId(), approvedCount, travelPost.getRecruitLimit(), isRecruiting);
     }
 } 

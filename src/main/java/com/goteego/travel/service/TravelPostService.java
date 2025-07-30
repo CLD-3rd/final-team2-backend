@@ -2,25 +2,18 @@ package com.goteego.travel.service;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.service.ChatRoomService;
+import com.goteego.global.dto.PageInfo;
+import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
-import com.goteego.global.error.exception.BusinessException;
-import com.goteego.travel.domain.TravelPost;
+import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.travel.domain.ParticipationApplication;
+import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.enumerate.ParticipationStatus;
 import com.goteego.travel.domain.enumerate.PostType;
-
-import com.goteego.travel.dto.travel.TravelPostCreateRequest;
-import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
-import com.goteego.travel.dto.travel.NowTravelPostResponseDto;
-import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
-import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
-import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
-import com.goteego.travel.dto.PageResponseDto;
-import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
-import com.goteego.travel.repository.TravelPostRepository;
+import com.goteego.travel.dto.travel.*;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
-import com.goteego.recommendation.service.RecommendationService;
+import com.goteego.travel.repository.TravelPostRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -30,13 +23,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import com.goteego.user.domain.OauthInfo;
-import com.goteego.user.domain.UserRole;
+import java.util.function.Function;
 
 /**
  * 여행 게시글 서비스
@@ -48,45 +39,58 @@ import com.goteego.user.domain.UserRole;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TravelPostService {
-    
+
     private final TravelPostRepository travelPostRepository;
     private final ParticipationApplicationRepository participationApplicationRepository;
     private final RecommendationService recommendationService;
     private final UserService userService;
     private final ChatRoomService chatRoomService;
-    
+
     /**
      * 여행 게시글 목록 조회 (PostType별 다른 응답 구조)
+     *
+     * @param postType
+     * @param page
+     * @param size
+     * @param user
+     * @return
      */
-    public TravelPostResponseWrapper getTravelPosts(PostType postType, int page, int size, Long currentUserId) {
-
+    public TravelPostResponseWrapper getTravelPosts(PostType postType, int page, int size, User user) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDescWithUser(postType, currentUserId, pageable);
-        
+        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, pageable);
+        PageInfo pageInfo = PageInfo.from(travelPostPage);
+
+        // 로그인 여부 확인
+        Long currentUserId = (user != null) ? user.getId() : null;
+
         // PostType에 따라 다른 DTO 변환
         if (postType == PostType.BEFORE) {
-            List<BeforeTravelPostResponseDto> content = convertToBeforeDtoList(travelPostPage.getContent(), currentUserId);
-            return TravelPostResponseWrapper.before(content);
-        } else {
-            List<NowTravelPostResponseDto> content = convertToNowDtoList(travelPostPage.getContent(), currentUserId);
-            return TravelPostResponseWrapper.now(content);
+            List<BeforeTravelPostResponseDto> content = convertToDtoList(
+                    travelPostPage.getContent(),
+                    currentUserId,
+                    ctx -> {
+                        Long approvedCount = participationApplicationRepository
+                                .countByTravelPostIdAndStatus(ctx.tp().getId(), ParticipationStatus.APPROVED);
+                        int approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
+                        return BeforeTravelPostResponseDto.from(ctx.tp(), ctx.nickname(), approvedParticipantCount);
+                    }
+            );
+            return TravelPostResponseWrapper.before(content, pageInfo);
+        } else if (postType == PostType.NOW) {
+            List<NowTravelPostResponseDto> content = convertToDtoList(
+                    travelPostPage.getContent(),
+                    currentUserId,
+                    ctx -> NowTravelPostResponseDto.from(ctx.tp(), ctx.nickname())
+            );
+            return TravelPostResponseWrapper.now(content, pageInfo);
         }
+        throw new BusinessException(ErrorCode.UNSUPPORTED_POST_TYPE);
     }
-    
-
-
-
-
-
-
-
-
-
 
     /**
      * 여행 게시글 상세 조회
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public TravelPostDetailResponseDto getTravelPostDetail(Long postId) {
         TravelPost travelPost = travelPostRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
@@ -96,122 +100,107 @@ public class TravelPostService {
         return TravelPostDetailResponseDto.from(travelPost);
     }
 
-
-
-
-
-    // =====================================================준형======================================================= //
-    
     /**
      * 여행 게시글 생성
      */
     @Transactional
-    public BeforeTravelPostResponseDto registerTravelPost(User user, TravelPostCreateRequest request) {
+    public Long createTravelPost(PostType postType, Long userId, TravelPostRequest request) {
 
-        // 채팅방 생성 및 저장 (ChatRoomService에게 책임 위임)
-        ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(user, user.getNickname());
+        User currentUser = getValidatedUser(userId);
 
-        // 게시글 생성
-        TravelPost travelPost = TravelPost.builder()
-                .user(user)
-                .chatRoom(groupChatRoom)
-                .title(request.getTitle())
-                .content(request.getContent())
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
-                .imageUrl(request.getImageUrl())
-                .recruitLimit(request.getRecruitLimit())
-                .postType(PostType.valueOf(request.getPostType().toUpperCase()))
-                .isAddRecruit(request.getIsAddRecruit())
-                .location(request.getLocationAsEnum())
-                .build();
+        TravelPost createdTravelPost;
 
-        // 게시글 저장
-        TravelPost savedTravelPost = travelPostRepository.save(travelPost);
+        if (postType == PostType.BEFORE) {
+            ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(currentUser, currentUser.getNickname());
+            String imageUrl = uploadImage(request.getImage());
 
-        return BeforeTravelPostResponseDto.from(savedTravelPost, user.getId(), user.getNickname(), 0.5, 0);
+            createdTravelPost = TravelPost.builder()
+                    .user(currentUser)
+                    .title(request.getTitle())
+                    .location(request.getLocationAsEnum())
+                    .postType(postType)
+                    .chatRoom(groupChatRoom)
+                    .content(request.getContent())
+                    .startTime(request.getStartTime())
+                    .endTime(request.getEndTime())
+                    .imageUrl(imageUrl)
+                    .recruitLimit(request.getRecruitLimit())
+                    .isAddRecruit(request.getIsAddRecruit())
+                    .build();
+        } else if (postType == PostType.NOW) {
+            createdTravelPost = TravelPost.builder()
+                    .user(currentUser)
+                    .title(request.getTitle())
+                    .location(request.getLocationAsEnum())
+                    .postType(postType)
+                    .build();
+        } else {
+            throw new BusinessException(ErrorCode.UNSUPPORTED_POST_TYPE);
+        }
+
+        TravelPost savedTravelPost = travelPostRepository.save(createdTravelPost);
+        return savedTravelPost.getId();
     }
-
-
-
-    /**
-     * 여행 게시글 참가 신청
-     */
-    @Transactional
-    public ParticipationApplicationResponseDto joinTravelPost(Long travelPostId, User currentUser) {
-
-        // 1. 여행 게시글 존재 확인
-        TravelPost travelPost = travelPostRepository.findById(travelPostId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
-
-        // 2. 참가 신청 검증
-        validateJoinTravelPost(travelPost, currentUser);
-
-        // 3. 참가 신청 생성
-        ParticipationApplication application = ParticipationApplication.builder()
-                .travelPost(travelPost)
-                .user(currentUser)
-                .status(ParticipationStatus.PENDING)
-                .build();
-
-        ParticipationApplication savedApplication = participationApplicationRepository.save(application);
-
-        // 4. 사용자 정보 조회
-        User user = getSafeUserInfo(currentUser.getId());
-
-        log.info("참가 신청 생성 - travelPostId: {}, userId: {}, applicationId: {}", travelPostId, currentUser.getId(), savedApplication.getId());
-
-        return ParticipationApplicationResponseDto.from(savedApplication, user);
-    }
-
-
-
-
-    // =====================================================준형======================================================= //
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // =====================================================재신======================================================= //
 
     /**
      * 여행 게시글 수정
      */
     @Transactional
-    public TravelPost updateTravelPost(Long travelPostId, Long userId, TravelPostUpdateRequest request) {
+    public void updateTravelPost(Long travelPostId, Long userId, TravelPostRequest request) {
+
         TravelPost travelPost = findTravelPostWithAuthorization(travelPostId, userId);
-        
+
+        String imageUrl = null;
+        if (travelPost.getPostType() == PostType.BEFORE) {
+            imageUrl = uploadImage(request.getImage());
+        }
         // 게시글 수정 (도메인 객체의 비즈니스 로직 활용)
-        travelPost.update(request);
-        
-        return travelPostRepository.save(travelPost);
+        travelPost.update(travelPost.getPostType(), request, imageUrl);
     }
 
     /**
      * 여행 게시글 삭제
      */
     @Transactional
-    public String deleteTravelPost(Long travelPostId, Long userId) {
+    public void deleteTravelPost(Long travelPostId, Long userId) {
+
+        getValidatedUser(userId);
+
         TravelPost travelPost = findTravelPostForDeletion(travelPostId, userId);
-        
+
         // 참조 데이터 삭제
         deleteRelatedData(travelPostId);
-        
+
         // 게시글 삭제
         travelPostRepository.delete(travelPost);
-        
-        return "게시글이 성공적으로 삭제되었습니다. (ID: " + travelPostId + ")";
+    }
+
+    /**
+     * 여행 게시글 참가 신청
+     */
+    @Transactional
+    public void joinTravelPost(Long travelPostId, Long userId) {
+
+        // 1. 사용자 정보 조회
+        User currentUser = getValidatedUser(userId);
+
+        // 2. 여행 게시글 존재 확인
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
+
+        // 3. 참가 신청 검증
+        validateJoinTravelPost(travelPost, currentUser);
+
+        // 4. 참가 신청 생성
+        ParticipationApplication application = ParticipationApplication.builder()
+                .travelPost(travelPost)
+                .user(currentUser)
+                .status(ParticipationStatus.PENDING)
+                .build();
+
+        participationApplicationRepository.save(application);
+
+        log.info("참가 신청 생성 - travelPostId: {}, userId: {}", travelPostId, currentUser.getId());
     }
 
     // =====================================================내부 로직======================================================= //
@@ -219,7 +208,7 @@ public class TravelPostService {
     /**
      * 참가 신청 검증 로직
      * - 자기 자신의 게시글 신청 방지
-     * - 중복 신청 방지  
+     * - 중복 신청 방지
      * - 모집 마감 여부 확인
      */
     private void validateJoinTravelPost(TravelPost travelPost, User currentUser) {
@@ -250,18 +239,8 @@ public class TravelPostService {
      * 안전한 사용자 정보 조회
      * - 조회 실패 시 기본 사용자 객체 반환
      */
-    private User getSafeUserInfo(Long userId) {
-        try {
-            return userService.getUserById(userId);
-        } catch (Exception e) {
-            log.warn("사용자 정보 조회 실패 - userId: {}, error: {}", userId, e.getMessage());
-            return User.builder()
-                    .nickname("알 수 없는 사용자")
-                    .profileImgUrl("")
-                    .role(UserRole.USER)
-                    .oauthInfo(OauthInfo.builder().build())
-                    .build();
-        }
+    private User getValidatedUser(Long userId) {
+        return userService.getUserById(userId);
     }
 
     /**
@@ -272,12 +251,12 @@ public class TravelPostService {
     private TravelPost findTravelPostWithAuthorization(Long travelPostId, Long userId) {
         TravelPost travelPost = travelPostRepository.findById(travelPostId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
-        
+
         // 권한 확인 - 작성자만 수정 가능
         if (!travelPost.isAuthor(userId)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED_POST_UPDATE);
         }
-        
+
         return travelPost;
     }
 
@@ -290,17 +269,17 @@ public class TravelPostService {
     private TravelPost findTravelPostForDeletion(Long travelPostId, Long userId) {
         TravelPost travelPost = travelPostRepository.findById(travelPostId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
-        
+
         // 권한 확인 - 작성자만 삭제 가능
         if (!travelPost.isAuthor(userId)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED_POST_DELETE);
         }
-        
+
         // 삭제 가능 여부 확인 (도메인 로직 활용)
         if (!travelPost.canBeDeleted()) {
             throw new BusinessException(ErrorCode.INVALID_POST_DATA);
         }
-        
+
         return travelPost;
     }
 
@@ -313,68 +292,52 @@ public class TravelPostService {
     }
 
     /**
-     * N+1 문제 해결: BEFORE 타입 DTO 변환
-     * - 모든 작성자 ID 수집
-     * - 배치 유사도 계산
-     * - DTO 변환
+     * TravelPost 리스트를 DTO 리스트로 변환합니다.
+     * <p>N+1 문제를 방지하기 위해 작성자 ID를 한 번에 수집하고,
+     * 로그인 사용자가 있을 경우 유사도를 배치 계산한 뒤 DTO를 생성합니다.</p>
+     *
+     * @param travelPosts
+     * @param currentUserId
+     * @param converter
+     * @param <T>
+     * @return
      */
-    private List<BeforeTravelPostResponseDto> convertToBeforeDtoList(List<TravelPost> travelPosts, Long currentUserId) {
-        if (travelPosts.isEmpty()) {
-            return List.of();
-        }
-        
-        // 모든 작성자 ID 수집
-        List<Long> authorIds = travelPosts.stream()
-                .map(tp -> tp.getUser().getId())
-                .distinct()
-                .collect(Collectors.toList());
-        
-        // 한 번에 모든 유사도 계산
-        Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
-        
-        // DTO 변환
-        return travelPosts.stream()
-                .map(tp -> {
-                    Long authorId = tp.getUser().getId();
-                    String authorNickname = tp.getUser().getNickname();
-                    Double similarity = similarityMap.getOrDefault(authorId, 0.5);
-                    // 승인된 참가자 수 조회
-                    Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(tp.getId(), ParticipationStatus.APPROVED);
-                    Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
-                    return BeforeTravelPostResponseDto.from(tp, currentUserId, authorNickname, similarity, approvedParticipantCount);
-                })
-                .collect(Collectors.toList());
-    }
+    private <T> List<T> convertToDtoList(
+            List<TravelPost> travelPosts,
+            Long currentUserId,
+            Function<TravelPostContext, T> converter
+    ) {
+        if (travelPosts.isEmpty()) return List.of();
 
-    /**
-     * N+1 문제 해결: NOW 타입 DTO 변환
-     * - 모든 작성자 ID 수집
-     * - 배치 유사도 계산
-     * - DTO 변환
-     */
-    private List<NowTravelPostResponseDto> convertToNowDtoList(List<TravelPost> travelPosts, Long currentUserId) {
-        if (travelPosts.isEmpty()) {
-            return List.of();
+        List<TravelPost> sortedPosts;
+
+        if (currentUserId != null) {
+            // 작성자 ID 수집
+            List<Long> authorIds = travelPosts.stream()
+                    .map(tp -> tp.getUser().getId())
+                    .distinct()
+                    .toList();
+
+            // 유사도 계산
+            Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
+
+            // similarity 내림차순 정렬
+            sortedPosts = travelPosts.stream()
+                    .sorted((tp1, tp2) -> {
+                        double sim1 = similarityMap.getOrDefault(tp1.getUser().getId(), 0.0);
+                        double sim2 = similarityMap.getOrDefault(tp2.getUser().getId(), 0.0);
+                        return Double.compare(sim2, sim1); // 높은 similarity 먼저
+                    })
+                    .toList();
+        } else {
+            // 비로그인 사용자는 정렬 불필요 → 원본 그대로
+            sortedPosts = travelPosts;
         }
-        
-        // 모든 작성자 ID 수집
-        List<Long> authorIds = travelPosts.stream()
-                .map(tp -> tp.getUser().getId())
-                .distinct()
-                .collect(Collectors.toList());
-        
-        // 한 번에 모든 유사도 계산
-        Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
-        
+
         // DTO 변환
-        return travelPosts.stream()
-                .map(tp -> {
-                    Long authorId = tp.getUser().getId();
-                    String authorNickname = tp.getUser().getNickname();
-                    Double similarity = similarityMap.getOrDefault(authorId, 0.5);
-                    return NowTravelPostResponseDto.from(tp, currentUserId, authorNickname, similarity);
-                })
-                .collect(Collectors.toList());
+        return sortedPosts.stream()
+                .map(tp -> converter.apply(new TravelPostContext(tp, currentUserId, tp.getUser().getNickname())))
+                .toList();
     }
 
     /**
@@ -386,7 +349,15 @@ public class TravelPostService {
         return recommendationService.calculateSimilaritiesForUsers(currentUserId, targetUserIds);
     }
 
-
-    // =====================================================재신======================================================= //
-
+    /**
+     * 이미지 업로드 로직 분리
+     */
+    private String uploadImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            return null; // 기본 이미지 URL 또는 null
+        }
+        // 실제 S3 업로드 로직 호출 (ImageService)
+//        S3Service.upload(image);
+        return "/test/image";
+    }
 }

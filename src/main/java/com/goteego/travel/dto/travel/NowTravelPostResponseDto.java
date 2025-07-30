@@ -1,13 +1,10 @@
 package com.goteego.travel.dto.travel;
 
 import com.goteego.travel.domain.TravelPost;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-
-import java.time.LocalDateTime;
-import java.util.List;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 현지동행모집글 응답 DTO (NOW)
@@ -18,38 +15,23 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class NowTravelPostResponseDto {
-    
+
     private Long travelPostId;
     private String title;
     private String location;
     private AuthorDto author;
     private String createdAt;
-    private Double similarity; // 유사도 점수
-    
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class AuthorDto {
-        private Long userId;
-        private String nickname;
-        private String profileImgUrl;
-        // TODO: user_review 테이블 구현 후 추가
-        // private Double rating;
-        // private List<String> tags;
-    }
-    
+
     /**
      * TravelPost 엔티티를 DTO로 변환
      */
-    public static NowTravelPostResponseDto from(TravelPost travelPost, Long currentUserId, String nickname, Double similarity) {
+    public static NowTravelPostResponseDto from(TravelPost travelPost, String nickname) {
         return NowTravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
                 .location(travelPost.getLocation().name())
                 .author(createAuthorDto(travelPost.getUser(), nickname))
                 .createdAt(travelPost.getCreatedAt().toString())
-                .similarity(similarity)
                 .build();
     }
 
@@ -65,5 +47,18 @@ public class NowTravelPostResponseDto {
                 // .rating(null)
                 // .tags(List.of())
                 .build();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class AuthorDto {
+        private Long userId;
+        private String nickname;
+        private String profileImgUrl;
+        // TODO: user_review 테이블 구현 후 추가
+        // private Double rating;
+        // private List<String> tags;
     }
 } 
