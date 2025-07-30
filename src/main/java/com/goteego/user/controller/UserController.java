@@ -21,7 +21,7 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentUser(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(new UserDto(user.getId(), user.getOauthInfo().getOauthEmail()));
+        return ResponseEntity.ok(new UserDto(user.getId(), user.getNickname(), user.getOauthInfo().getOauthEmail()));
     }
     @GetMapping
     public List<UserDto> searchAllUsers(@AuthenticationPrincipal User user) {
