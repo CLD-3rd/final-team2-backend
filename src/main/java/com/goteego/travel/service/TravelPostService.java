@@ -23,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * 여행 게시글 서비스
@@ -47,6 +50,7 @@ public class TravelPostService {
     private final RecommendationService recommendationService;
     private final UserService userService;
     private final ChatRoomService chatRoomService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 여행 게시글 목록 조회
@@ -101,7 +105,7 @@ public class TravelPostService {
                         Long approvedCount = participationApplicationRepository
                                 .countByTravelPostIdAndStatus(ctx.tp().getId(), ParticipationStatus.APPROVED);
                         int approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
-                        return BeforeTravelPostResponseDto.from(ctx.tp(), ctx.nickname(), approvedParticipantCount);
+                        return BeforeTravelPostResponseDto.from(ctx.tp(), ctx.nickname(), approvedParticipantCount, ctx.viewCount());
                     }
             );
             return TravelPostResponseWrapper.before(content, pageInfo);
@@ -126,8 +130,16 @@ public class TravelPostService {
         TravelPost travelPost = travelPostRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
 
-        // 조회수 증가
-        travelPost.incrementViewCount();
+        // [1] Redis에서 조회수 증가
+        String viewCountKey = "post:view:" + postId;
+        Long viewCount = redisTemplate.opsForValue().increment(viewCountKey);
+
+        // [2] 30번 조회할 때 마다 DB 반영
+        if (viewCount % 30 == 0) { //
+            travelPost.updateViewCount(viewCount);
+            travelPostRepository.save(travelPost);
+        }
+
         return TravelPostDetailResponseDto.from(travelPost);
     }
 
@@ -389,8 +401,25 @@ public class TravelPostService {
 
         // DTO 변환
         return sortedPosts.stream()
-                .map(tp -> converter.apply(new TravelPostContext(tp, currentUserId, tp.getUser().getNickname())))
+                .map(tp -> {
+                    // Redis 조회수 확인
+                    Long redisViewCounts = getViewCountFromRedis(tp.getId());
+                    TravelPostContext travelPostContext = new TravelPostContext(tp, currentUserId, tp.getUser().getNickname(),
+                                                                    redisViewCounts != null ? redisViewCounts : tp.getViewCount());
+                    return converter.apply(travelPostContext);
+                })
                 .toList();
+    }
+
+    private Long getViewCountFromRedis(Long postId) {
+        try {
+            String key = "post:view:" + postId;
+            Object value = redisTemplate.opsForValue().get(key);
+            return value != null ? Long.parseLong(value.toString()) : null;
+        } catch (Exception e) {
+            log.warn("Redis 조회수 조회 실패 postId: {}", postId, e);
+            return null;
+        }
     }
 
     /**

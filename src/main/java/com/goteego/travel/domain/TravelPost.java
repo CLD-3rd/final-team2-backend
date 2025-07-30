@@ -128,6 +128,11 @@ public class TravelPost extends BaseEntity {
         this.viewCount++;
     }
 
+    // 조회수 업데이트
+    public void updateViewCount(Long viewCount) {
+        this.viewCount += viewCount;
+    }
+
     // 작성자 본인 확인
     public boolean isAuthor(Long userId) {
         return this.user.getId().equals(userId);
