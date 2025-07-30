@@ -1,13 +1,11 @@
 package com.goteego.travel.controller;
 
 import com.goteego.travel.domain.enumerate.PostType;
-import com.goteego.travel.dto.travel.TravelPostCreateRequest;
 import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
+import com.goteego.travel.dto.travel.TravelPostRequest;
 import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
-import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.user.domain.User;
-import com.goteego.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 public class TravelPostController {
 
     private final TravelPostService travelPostService;
-    private final UserService userService;
 
     /**
      * 여행 게시글 목록 조회
@@ -48,7 +45,7 @@ public class TravelPostController {
 
         PostType currentPostType = PostType.valueOf(postType.toUpperCase());
         TravelPostResponseWrapper travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, user);
-
+        log.info("✅ [TravelPost] 여행 게시글 목록 조회 성공 - {}", currentPostType);
         return ResponseEntity.ok(travelPosts);
     }
 
@@ -65,9 +62,7 @@ public class TravelPostController {
             @PathVariable("travelPostId") Long travelPostId) {
 
         TravelPostDetailResponseDto travelPostDetail = travelPostService.getTravelPostDetail(travelPostId);
-
-        log.info("여행 게시글 상세 조회 - travelPostId: {}, title: {}", travelPostId, travelPostDetail.getTitle());
-
+        log.info("✅ [TravelPost] 여행 게시글 상세 조회 성공 - travelPostId: {}, title: {}", travelPostId, travelPostDetail.getTitle());
         return ResponseEntity.ok(travelPostDetail);
     }
 
@@ -83,15 +78,13 @@ public class TravelPostController {
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> createTravelPost(
-            @Valid @ModelAttribute TravelPostCreateRequest requestDto,
+            @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
+            @Valid @ModelAttribute TravelPostRequest requestDto,
             @AuthenticationPrincipal User user) {
 
-        User currentUser = userService.getUserById(user.getId());
-        Long newTravelPostId = travelPostService.registerTravelPost(currentUser, requestDto);
-
-        log.info("여행 게시글 생성 - travelPostId: {}, userId: {}",
-                newTravelPostId, user.getId());
-
+        PostType currentPostType = PostType.valueOf(postType.toUpperCase());
+        Long createdTravelPostId = travelPostService.createTravelPost(currentPostType, user.getId(), requestDto);
+        log.info("✅ [TravelPost] 여행 게시글 생성 성공 - {}, travelPostId: {}, userNickName: {}", currentPostType, createdTravelPostId, user.getNickname());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -109,14 +102,11 @@ public class TravelPostController {
     @PutMapping("/{travelPostId}")
     public ResponseEntity<Void> updateTravelPost(
             @PathVariable("travelPostId") Long travelPostId,
-            @Valid @ModelAttribute TravelPostUpdateRequest requestDto,
+            @Valid @ModelAttribute TravelPostRequest requestDto,
             @AuthenticationPrincipal User user) {
 
-        Long currentUserId = user.getId();
-        travelPostService.updateTravelPost(travelPostId, currentUserId, requestDto);
-
-        log.info("여행 게시글 수정 - travelPostId: {}, userId: {}", travelPostId, currentUserId);
-
+        travelPostService.updateTravelPost(travelPostId, user.getId(), requestDto);
+        log.info("✅ [TravelPost] 여행 게시글 수정 성공 - travelPostId: {}, userNickName: {}", travelPostId, user.getNickname());
         return ResponseEntity.noContent().build();
     }
 
@@ -134,11 +124,8 @@ public class TravelPostController {
             @PathVariable("travelPostId") Long travelPostId,
             @AuthenticationPrincipal User user) {
 
-        Long currentUserId = user.getId();
-        travelPostService.deleteTravelPost(travelPostId, currentUserId);
-
-        log.info("여행 게시글 삭제 - travelPostId: {}, userId: {}", travelPostId, currentUserId);
-
+        travelPostService.deleteTravelPost(travelPostId, user.getId());
+        log.info("✅ [TravelPost] 여행 게시글 삭제 성공 - travelPostId: {}, userNickName: {}", travelPostId, user.getNickname());
         return ResponseEntity.noContent().build();
     }
 
@@ -156,12 +143,8 @@ public class TravelPostController {
             @PathVariable("travelPostId") Long travelPostId,
             @AuthenticationPrincipal User user) {
 
-        User currentUser = userService.getUserById(user.getId());
-        travelPostService.joinTravelPost(travelPostId, currentUser);
-
-        log.info("참가 신청 - travelPostId: {}, userId: {}",
-                travelPostId, currentUser.getId());
-
+        travelPostService.joinTravelPost(travelPostId, user.getId());
+        log.info("✅ [TravelPost] 여행 게시글 참가 신청 성공 - travelPostId: {}, userNickName: {}", travelPostId, user.getNickname());
         return ResponseEntity.ok().build();
     }
 }

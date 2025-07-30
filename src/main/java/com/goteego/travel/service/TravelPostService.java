@@ -14,9 +14,7 @@ import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.travel.*;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
 import com.goteego.travel.repository.TravelPostRepository;
-import com.goteego.user.domain.OauthInfo;
 import com.goteego.user.domain.User;
-import com.goteego.user.domain.UserRole;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -107,31 +104,41 @@ public class TravelPostService {
      * 여행 게시글 생성
      */
     @Transactional
-    public Long registerTravelPost(User user, TravelPostCreateRequest request) {
-        // 채팅방 생성 및 저장 (ChatRoomService에게 책임 위임)
-        ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(user, user.getNickname());
+    public Long createTravelPost(PostType postType, Long userId, TravelPostRequest request) {
 
-        MultipartFile userUploadedImage = request.getImage();
-        // TODO: + 이미지 S3에 업로드 후, imageUrl return 로직 추가
-        String imageUrl = "https://aws.com";
+        User currentUser = getValidatedUser(userId);
 
-        // 게시글 생성
-        TravelPost travelPost = TravelPost.builder()
-                .user(user)
-                .chatRoom(groupChatRoom)
-                .title(request.getTitle())
-                .content(request.getContent())
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
-                .imageUrl(imageUrl)
-                .recruitLimit(request.getRecruitLimit())
-                .postType(PostType.valueOf(request.getPostType().toUpperCase()))
-                .isAddRecruit(request.getIsAddRecruit())
-                .location(request.getLocationAsEnum())
-                .build();
+        TravelPost createdTravelPost;
 
-        // 게시글 저장
-        TravelPost savedTravelPost = travelPostRepository.save(travelPost);
+        if (postType == PostType.BEFORE) {
+            ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(currentUser, currentUser.getNickname());
+            String imageUrl = uploadImage(request.getImage());
+
+            createdTravelPost = TravelPost.builder()
+                    .user(currentUser)
+                    .title(request.getTitle())
+                    .location(request.getLocationAsEnum())
+                    .postType(postType)
+                    .chatRoom(groupChatRoom)
+                    .content(request.getContent())
+                    .startTime(request.getStartTime())
+                    .endTime(request.getEndTime())
+                    .imageUrl(imageUrl)
+                    .recruitLimit(request.getRecruitLimit())
+                    .isAddRecruit(request.getIsAddRecruit())
+                    .build();
+        } else if (postType == PostType.NOW) {
+            createdTravelPost = TravelPost.builder()
+                    .user(currentUser)
+                    .title(request.getTitle())
+                    .location(request.getLocationAsEnum())
+                    .postType(postType)
+                    .build();
+        } else {
+            throw new BusinessException(ErrorCode.UNSUPPORTED_POST_TYPE);
+        }
+
+        TravelPost savedTravelPost = travelPostRepository.save(createdTravelPost);
         return savedTravelPost.getId();
     }
 
@@ -139,15 +146,16 @@ public class TravelPostService {
      * 여행 게시글 수정
      */
     @Transactional
-    public void updateTravelPost(Long travelPostId, Long userId, TravelPostUpdateRequest request) {
+    public void updateTravelPost(Long travelPostId, Long userId, TravelPostRequest request) {
+
         TravelPost travelPost = findTravelPostWithAuthorization(travelPostId, userId);
 
-        MultipartFile userUploadedImage = request.getImage();
-        // TODO: + 이미지 S3에 업로드 후, imageUrl return 로직 추가
-        String imageUrl = "https://aws-update.com";
-
+        String imageUrl = null;
+        if (travelPost.getPostType() == PostType.BEFORE) {
+            imageUrl = uploadImage(request.getImage());
+        }
         // 게시글 수정 (도메인 객체의 비즈니스 로직 활용)
-        travelPost.update(request, imageUrl);
+        travelPost.update(travelPost.getPostType(), request, imageUrl);
     }
 
     /**
@@ -155,6 +163,9 @@ public class TravelPostService {
      */
     @Transactional
     public void deleteTravelPost(Long travelPostId, Long userId) {
+
+        getValidatedUser(userId);
+
         TravelPost travelPost = findTravelPostForDeletion(travelPostId, userId);
 
         // 참조 데이터 삭제
@@ -168,10 +179,10 @@ public class TravelPostService {
      * 여행 게시글 참가 신청
      */
     @Transactional
-    public void joinTravelPost(Long travelPostId, User currentUser) {
+    public void joinTravelPost(Long travelPostId, Long userId) {
 
         // 1. 사용자 정보 조회
-        User user = getSafeUserInfo(currentUser.getId());
+        User currentUser = getValidatedUser(userId);
 
         // 2. 여행 게시글 존재 확인
         TravelPost travelPost = travelPostRepository.findById(travelPostId)
@@ -228,20 +239,8 @@ public class TravelPostService {
      * 안전한 사용자 정보 조회
      * - 조회 실패 시 기본 사용자 객체 반환
      */
-    private User getSafeUserInfo(Long userId) {
-        try {
-            return userService.getUserById(userId);
-        } catch (Exception e) {
-            log.warn("사용자 정보 조회 실패 - userId: {}, error: {}", userId, e.getMessage());
-            return User.builder()
-                    .nickname("알 수 없는 사용자")
-                    .profileImgUrl("")
-                    .role(UserRole.USER)
-                    .oauthInfo(OauthInfo.builder().build())
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-        }
+    private User getValidatedUser(Long userId) {
+        return userService.getUserById(userId);
     }
 
     /**
@@ -309,7 +308,7 @@ public class TravelPostService {
             Function<TravelPostContext, T> converter
     ) {
         if (travelPosts.isEmpty()) return List.of();
-        
+
         List<TravelPost> sortedPosts;
 
         if (currentUserId != null) {
@@ -348,5 +347,17 @@ public class TravelPostService {
      */
     private Map<Long, Double> calculateSimilaritiesForUsers(Long currentUserId, List<Long> targetUserIds) {
         return recommendationService.calculateSimilaritiesForUsers(currentUserId, targetUserIds);
+    }
+
+    /**
+     * 이미지 업로드 로직 분리
+     */
+    private String uploadImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            return null; // 기본 이미지 URL 또는 null
+        }
+        // 실제 S3 업로드 로직 호출 (ImageService)
+//        S3Service.upload(image);
+        return "/test/image";
     }
 }

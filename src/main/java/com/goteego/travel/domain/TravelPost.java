@@ -3,8 +3,10 @@ package com.goteego.travel.domain;
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.global.domain.BaseEntity;
 import com.goteego.global.domain.enumerate.Location;
+import com.goteego.global.error.exception.BusinessException;
+import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.travel.domain.enumerate.PostType;
-import com.goteego.travel.dto.travel.TravelPostUpdateRequest;
+import com.goteego.travel.dto.travel.TravelPostRequest;
 import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -78,9 +80,15 @@ public class TravelPost extends BaseEntity {
     //=========비즈니스 로직==========
 
     // 게시글 수정 (DTO 기반)
-    public void update(TravelPostUpdateRequest request, String imageUrl) {
-        validateUpdateData(request.getTitle(), request.getContent(), request.getStartTime(),
-                request.getEndTime(), request.getRecruitLimit());
+    public void update(PostType postType, TravelPostRequest request, String imageUrl) {
+        if (postType == PostType.BEFORE) {
+            validateUpdateData(request.getTitle(), request.getContent(), request.getStartTime(),
+                    request.getEndTime(), request.getRecruitLimit());
+        } else if (postType == PostType.NOW) {
+            if (title == null || title.trim().isEmpty()) {
+                throw new IllegalArgumentException("제목은 필수입니다.");
+            }
+        } else throw new BusinessException(ErrorCode.UNSUPPORTED_POST_TYPE);
 
         this.title = request.getTitle();
         this.content = request.getContent();
@@ -88,7 +96,6 @@ public class TravelPost extends BaseEntity {
         this.endTime = request.getEndTime();
         this.imageUrl = imageUrl;
         this.recruitLimit = request.getRecruitLimit();
-        this.postType = PostType.valueOf(request.getPostType().toUpperCase());
         this.isAddRecruit = request.getIsAddRecruit();
         this.location = request.getLocationAsEnum();
     }
