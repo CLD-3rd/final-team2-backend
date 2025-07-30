@@ -4,7 +4,7 @@ import com.goteego.feed.domain.Feed;
 import com.goteego.feed.dto.request.FeedCreateRequest;
 import com.goteego.feed.dto.request.FeedUpdateRequest;
 import com.goteego.feed.dto.response.FeedCreateResponseDto;
-import com.goteego.feed.dto.response.FeedDetailResponseDto;
+import com.goteego.feed.dto.response.FeedDetailResponse;
 import com.goteego.feed.dto.response.FeedListResponse;
 import com.goteego.feed.dto.response.FeedResponseDto;
 import com.goteego.feed.service.FeedService;
@@ -45,15 +45,17 @@ public class FeedController {
     }
 
     /**
-     * 피드 상세 조회
+     * 피드 상세 조회 API
+     * 주어진 피드 ID에 대한 상세 정보를 조회하여 반환합니다.
+     *
+     * @param feedId 조회할 피드의 ID
+     * @return 피드 상세 정보를 담은 `FeedDetailResponse` 객체
      */
     @GetMapping("/{feedId}")
-    public ResponseEntity<FeedDetailResponseDto> getFeedDetail(@PathVariable("feedId") Long feedId) {
-        FeedDetailResponseDto feedDetail = feedService.getFeedDetail(feedId);
+    public ResponseEntity<FeedDetailResponse> getFeedDetail(@PathVariable("feedId") Long feedId) {
 
-        log.info("피드 상세 조회 - feedId: {}, title: {}, commentCount: {}",
-                feedId, feedDetail.getTitle(), feedDetail.getComments().size());
-
+        FeedDetailResponse feedDetail = feedService.getFeedDetail(feedId);
+        log.info("✅ [Feed] 피드 상세 조회 성공 - feedId: {}, title: {}", feedId, feedDetail.title());
         return ResponseEntity.ok(feedDetail);
     }
 

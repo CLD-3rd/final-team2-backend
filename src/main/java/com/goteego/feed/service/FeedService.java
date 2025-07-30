@@ -6,8 +6,8 @@ import com.goteego.badge.repository.LandmarkBadgeRequestReposiroty;
 import com.goteego.feed.domain.Feed;
 import com.goteego.feed.dto.request.FeedCreateRequest;
 import com.goteego.feed.dto.request.FeedUpdateRequest;
-import com.goteego.feed.dto.response.FeedCommentResponseDto;
-import com.goteego.feed.dto.response.FeedDetailResponseDto;
+import com.goteego.feed.dto.response.FeedCommentResponse;
+import com.goteego.feed.dto.response.FeedDetailResponse;
 import com.goteego.feed.dto.response.FeedListResponse;
 import com.goteego.feed.dto.response.FeedResponse;
 import com.goteego.feed.repository.FeedRepository;
@@ -16,6 +16,7 @@ import com.goteego.global.dto.PageInfo;
 import com.goteego.global.dto.SearchCondition;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
+import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -88,21 +89,26 @@ public class FeedService {
 
     /**
      * 피드 상세 정보 조회
+     * 주어진 피드 ID에 해당하는 피드를 조회하고, 관련된 댓글 목록을 가져와 피드의 상세 정보를 반환합니다.
+     * 또한 피드 조회 시 조회수를 증가시킵니다.
+     *
+     * @param feedId 조회할 피드의 ID
+     * @return 피드의 상세 정보와 관련된 댓글 목록을 포함한 `FeedDetailResponse` 객체
      */
     @Transactional
-    public FeedDetailResponseDto getFeedDetail(Long feedId) {
+    public FeedDetailResponse getFeedDetail(Long feedId) {
         // 피드 조회
         Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
+
+        // 코멘트 목록 조회
+        List<FeedCommentResponse> comments = feedCommentService.getCommentsByFeedId(feedId);
 
         // 조회수 증가
         feed.incrementViewCount();
 
-        // 코멘트 목록 조회
-        List<FeedCommentResponseDto> comments = feedCommentService.getCommentsByFeedId(feedId);
-
-        // FeedDetailResponseDto로 변환하여 반환
-        return FeedDetailResponseDto.from(feed, comments);
+        // FeedDetailResponse로 변환하여 반환
+        return FeedDetailResponse.from(feed, comments);
     }
 
     /**
