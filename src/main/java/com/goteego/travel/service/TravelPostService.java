@@ -90,7 +90,7 @@ public class TravelPostService {
     /**
      * 여행 게시글 상세 조회
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public TravelPostDetailResponseDto getTravelPostDetail(Long postId) {
         TravelPost travelPost = travelPostRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
