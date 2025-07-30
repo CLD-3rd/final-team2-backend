@@ -1,10 +1,12 @@
 package com.goteego.travel.repository;
 
+import com.goteego.global.domain.enumerate.Location;
 import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.enumerate.PostType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,16 +19,33 @@ import java.util.List;
 public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
 
     /**
-     * 게시글 타입별 목록 조회
+     * 게시글 검색 조건에 따라 TravelPost 목록을 조회하는 메서드
+     * - PostType, 제목, 작성자, 지역 조건 필터링
+     * - N+1 문제 해결을 위해 User 엔티티를 즉시 로딩 (EntityGraph 사용)
+     * - 페이징 및 정렬 지원 (Pageable)
+     *
+     * @param postType 게시글 타입 (BEFORE / NOW)
+     * @param title    검색할 게시글 제목 (null 허용)
+     * @param author   검색할 작성자 닉네임 (null 허용)
+     * @param location 검색할 지역 (null 허용)
+     * @param pageable 페이징 및 정렬 정보
+     * @return 조건에 맞는 게시글 Page 객체
      */
+    @EntityGraph(attributePaths = {"user"})
     @Query("""
-            SELECT tp FROM TravelPost tp
-            WHERE tp.postType = :postType
-            ORDER BY tp.createdAt DESC
+                SELECT tp FROM TravelPost tp
+                WHERE tp.postType = :postType
+                AND (:title IS NULL OR tp.title LIKE %:title%)
+                AND (:author IS NULL OR tp.user.nickname LIKE %:author%)
+                AND (:location IS NULL OR tp.location = :location)
             """)
-    Page<TravelPost> findByPostTypeOrderByCreatedAtDesc(
+    Page<TravelPost> getTravelPostsWithCondition(
             @Param("postType") PostType postType,
-            Pageable pageable);
+            @Param("title") String title,
+            @Param("author") String author,
+            @Param("location") Location location,
+            Pageable pageable
+    );
 
     /**
      * 게시글 타입 별 개수 조회 (현재 사용자 제외)
@@ -34,7 +53,6 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     @Query("SELECT COUNT(tp) FROM TravelPost tp WHERE tp.postType = :postType AND tp.user.id != :currentUserId")
     Long countByPostType(@Param("postType") PostType postType,
                          @Param("currentUserId") Long currentUserId);
-
 
     /**
      * 조회수 증가
@@ -53,7 +71,6 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
     @Modifying
     @Query("DELETE FROM ParticipationApplication pa WHERE pa.travelPost.id = :postId")
     void deleteParticipationApplications(@Param("postId") Long postId);
-
 
     /**
      * 내 일정 조회 (작성자이거나 참여자인 게시글) - N+1 문제 해결을 위한 JOIN FETCH
@@ -78,29 +95,28 @@ public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
             WHERE pa.travelPost.id = :postId AND pa.status <> 'REJECTED'
             """)
     List<ParticipationApplication> findNonRejectedByPostId(@Param("postId") Long postId);
+
     /**
      * 리뷰 작성자와 대상자가 같은 여행에 참여했는지 확인 (둘다 참여 2, 혼자참여 1, 아무도 참여안함 0)
+     *
      * @param postId
      * @param reviewerId
      * @param revieweeId
      * @return
      */
     @Query("""
-    SELECT (COUNT(DISTINCT u.id) = 2)
-    FROM User u
-    WHERE u.id IN (:reviewerId, :revieweeId)
-    AND (
-        u.id = (SELECT tp.user.id FROM TravelPost tp WHERE tp.id = :postId)
-        OR u.id IN (
-            SELECT pa.user.id FROM ParticipationApplication pa
-            WHERE pa.travelPost.id = :postId AND pa.status = 'APPROVED'
-        )
-    )
-    """)
-        Boolean existsByPostIdAndUserIdsApproved(@Param("postId") Long postId,
-                                                 @Param("reviewerId") Long reviewerId,
-                                                 @Param("revieweeId") Long revieweeId);
-
-
-
-} 
+            SELECT (COUNT(DISTINCT u.id) = 2)
+            FROM User u
+            WHERE u.id IN (:reviewerId, :revieweeId)
+            AND (
+                u.id = (SELECT tp.user.id FROM TravelPost tp WHERE tp.id = :postId)
+                OR u.id IN (
+                    SELECT pa.user.id FROM ParticipationApplication pa
+                    WHERE pa.travelPost.id = :postId AND pa.status = 'APPROVED'
+                )
+            )
+            """)
+    Boolean existsByPostIdAndUserIdsApproved(@Param("postId") Long postId,
+                                             @Param("reviewerId") Long reviewerId,
+                                             @Param("revieweeId") Long revieweeId);
+}
