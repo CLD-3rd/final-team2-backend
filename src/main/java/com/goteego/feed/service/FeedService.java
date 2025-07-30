@@ -1,5 +1,8 @@
 package com.goteego.feed.service;
 
+import com.goteego.badge.domain.LandmarkBadgeRequest;
+import com.goteego.badge.domain.enumerate.BadgeStatus;
+import com.goteego.badge.repository.LandmarkBadgeRequestReposiroty;
 import com.goteego.feed.domain.Feed;
 import com.goteego.global.domain.enumerate.Location;
 import com.goteego.feed.domain.enumerate.FeedSortType;
@@ -36,6 +39,7 @@ public class FeedService {
     private final FeedRepository feedRepository;
     private final UserRepository userRepository;
     private final FeedCommentService feedCommentService;
+    private final LandmarkBadgeRequestReposiroty landmarkBadgeRequestReposiroty;
     
     /**
      * 피드 목록을 조회하는 메서드
@@ -153,9 +157,27 @@ public class FeedService {
                 .build();
         
         // 데이터베이스에 저장
-        return feedRepository.save(feed);
+        Feed savedFeed = feedRepository.save(feed);
+        // 뱃지 요청
+        this.requestBadgeByFeed(savedFeed);
+        return savedFeed;
     }
     
+    /**
+     * 뱃지요청 저장 매서드
+     * @param feed
+     */
+    @Transactional
+    public void requestBadgeByFeed(Feed feed) {
+        //뱃지요청
+            if (Boolean.TRUE.equals(feed.getBadgeRequest())) {
+                LandmarkBadgeRequest request = LandmarkBadgeRequest.builder()
+                        .feed(feed)
+                        .status(BadgeStatus.PENDING)
+                        .build();
+                landmarkBadgeRequestReposiroty.save(request);
+            }
+        }
     /**
      * 피드 정보를 수정하는 메서드
      */

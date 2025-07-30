@@ -45,7 +45,35 @@ public enum ErrorCode {
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "참여 요청이 존재하지 않습니다."),
     ALREADY_APPLIED(HttpStatus.CONFLICT, "이미 참가 신청한 게시글입니다."),
     RECRUITMENT_FULL(HttpStatus.CONFLICT, "모집 인원이 마감되었습니다."),
-    SELF_APPLICATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신의 게시글에는 참가 신청할 수 없습니다.");
+    SELF_APPLICATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신의 게시글에는 참가 신청할 수 없습니다."),
+
+
+    // ProfileAnswer 관련
+    PROFILE_ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자 선호도를 찾을 수 없습니다."),
+    PROFILE_ANSWER_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용자 선호도가 존재합니다."),
+    INVALID_PROFILE_DATA(HttpStatus.BAD_REQUEST, "유효하지 않은 선호도 데이터입니다."),
+    PROFILE_ANSWER_CREATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "선호도 생성에 실패했습니다."),
+    PROFILE_ANSWER_UPDATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "선호도 수정에 실패했습니다."),
+    PROFILE_ANSWER_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "선호도 삭제에 실패했습니다."),
+    EMBEDDING_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 임베딩 생성에 실패했습니다."),
+    EMBEDDING_UPDATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "사용자 임베딩 업데이트에 실패했습니다."),
+    UNAUTHORIZED_PROFILE_ACCESS(HttpStatus.FORBIDDEN, "해당 선호도에 접근할 권한이 없습니다."),
+    INVALID_SEARCH_PARAMETERS(HttpStatus.BAD_REQUEST, "유효하지 않은 검색 파라미터입니다."),
+
+    //뱃지 관련
+    NOT_FOUND_BADGE_CODE(HttpStatus.NOT_FOUND, "존재하지 않는 뱃지 코드입니다."),
+    INVALID_BADGE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 뱃지 타입입니다."),
+    NOT_FOUND_BADGE(HttpStatus.NOT_FOUND, "해당 뱃지를 찾을 수 없습니다."),
+    NOT_FOUND_BADGE_REQUEST(HttpStatus.NOT_FOUND, "해당 피드의 뱃지 요청이 존재하지 않습니다."),
+    //피드 관련
+    FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 피드입니다."),
+
+    // 리뷰 관련
+    SELF_REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신에게는 리뷰를 작성할 수 없습니다."),
+    INVALID_REVIEW_TARGET(HttpStatus.BAD_REQUEST, "같은 여행에 참여하지 않은 대상자입니다."),
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
+    REVIEW_DUPLICATE(HttpStatus.CONFLICT, "중복된 리뷰입니다."),
+    TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다.");
 
     private final HttpStatus status;
     private final String message;

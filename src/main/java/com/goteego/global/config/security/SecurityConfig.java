@@ -28,18 +28,25 @@ public class SecurityConfig {
     private static final String[] PUBLIC_URLS = {
             "/",
             "/favicon.ico",
+            "/index.html",
+            "/static/**",
+            "/.well-known/**",
+            "/login",
+            "/error",
+            "/oauth2/**",
+            "/ws/**",
             "/api/public/**",
             "/api/feed/**",  // 임시 추가
             "/api/users/me",
             "/api/schedule/**",      // 임시 추가
             "/api/recommendation/**", // 임시 추가
-            "/error",
-            "/index.html",
-            "/oauth2/**",
-            "/login",
-            "/.well-known/**",
-            "/static/**",
-            "/ws/**"
+            "/api/travel-posts/**",  // 임시 추가
+            "/api/schedule/**",      // 임시 추가
+            "/api/users/**",         // 임시 추가
+            "/api/recommendation/**", // 임시 추가
+            "/api/review/**", //임시 추가
+            "/api/user/badge/**", // 임시 추가
+            "/api/admin/badge/**", // 임시 추가
     };
 
     private final CustomOAuth2UserService customOAuth2UserService;

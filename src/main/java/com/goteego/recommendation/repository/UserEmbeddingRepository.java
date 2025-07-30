@@ -2,10 +2,13 @@ package com.goteego.recommendation.repository;
 
 import com.goteego.recommendation.domain.UserEmbedding;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,7 +79,7 @@ public interface UserEmbeddingRepository extends JpaRepository<UserEmbedding, Lo
      * 
      * @return 유효한 임베딩을 가진 사용자 수
      */
-    @Query("SELECT COUNT(ue) FROM UserEmbedding ue WHERE ue.userEmbedding IS NOT NULL AND ue.userEmbedding != ''")
+    @Query(value = "SELECT COUNT(ue.user_id) FROM user_embeddings ue WHERE ue.user_embedding IS NOT NULL AND LENGTH(ue.user_embedding::text) > 2", nativeQuery = true)
     Long countValidEmbeddings();
     
     /**
@@ -87,4 +90,22 @@ public interface UserEmbeddingRepository extends JpaRepository<UserEmbedding, Lo
      */
     @Query("SELECT ue FROM UserEmbedding ue WHERE ue.userId IN :userIds")
     List<UserEmbedding> findByUserIdIn(@Param("userIds") List<Long> userIds);
+    
+    /**
+     * 벡터 임베딩 삽입 또는 업데이트 (Native Query)
+     * PostgreSQL vector 타입을 올바르게 처리
+     * 
+     * @param userId 사용자 ID
+     * @param embedding 벡터 문자열 (예: "{1,0,1,0,...}")
+     * @param modifiedAt 수정 시간
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "INSERT INTO user_embeddings (user_id, user_embedding, modified_at) " +
+                   "VALUES (:userId, CAST(:embedding AS vector), :modifiedAt) " +
+                   "ON CONFLICT (user_id) DO UPDATE SET user_embedding = CAST(:embedding AS vector), modified_at = :modifiedAt",
+           nativeQuery = true)
+    void insertOrUpdateEmbedding(@Param("userId") Long userId,
+                                 @Param("embedding") String embedding,
+                                 @Param("modifiedAt") LocalDateTime modifiedAt);
 } 
