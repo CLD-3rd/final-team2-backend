@@ -9,6 +9,29 @@
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <script src="/js/shared-websocket.js"></script>
+    <style>
+        .loader {
+            padding: 10px;
+            text-align: center;
+            color: #666;
+        }
+        .chat-messages {
+            overflow-y: auto;
+            height: calc(100vh - 150px);
+            padding: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .no-messages {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
 <div class="chat-container">
@@ -56,6 +79,9 @@
     let recipientId = null;
     let isGroupChat = false;
     let currentRoomTitle = "";
+    let currentPage = 0;
+    let hasMoreMessages = true;
+    let isLoadingMessages = false;
 
     // ===== 공통 유틸리티 함수 =====
     function getAuthHeaders() {
@@ -76,12 +102,21 @@
         return null;
     }
 
-    function appendMessage(msg) {
+    function appendMessage(msg, isNew = true) {
         const messagesDiv = document.getElementById('messages');
         const div = document.createElement('div');
-        div.textContent = msg;
-        messagesDiv.appendChild(div);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        div.className = 'message';
+        div.innerHTML = `
+            <strong>${msg.senderName}</strong>: ${msg.content}
+            <small>${new Date(msg.timestamp).toLocaleTimeString()}</small>
+        `;
+
+        if (isNew) {
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } else {
+            messagesDiv.insertBefore(div, messagesDiv.firstChild);
+        }
     }
 
     function logout() {
@@ -100,7 +135,6 @@
     async function getCurrentUser() {
         try {
             const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
-            console.log(res.data); // 배열 형태의 응답 확인
             document.getElementById('user-result').textContent = JSON.stringify(res.data, null, 2);
         } catch(e) {
             document.getElementById('user-result').textContent = "정보 조회 실패: " + e;
@@ -116,20 +150,14 @@
         }
     }
 
-
-    /**
-     * ✅ [신규] 모든 사용자 목록을 불러오는 함수
-     */
     async function loadAllUsers() {
         try {
-            // 다른 목록은 숨김 처리
             document.getElementById('direct-chat-room-list').style.display = 'none';
             document.getElementById('group-chat-room-list').style.display = 'none';
             const container = document.getElementById('all-users-list');
             container.style.display = 'block';
             container.innerHTML = '<p>사용자 목록을 불러오는 중...</p>';
 
-            // GET /api/users API 호출 (자신을 제외한 모든 유저)
             const res = await axios.get('/api/users', { headers: getAuthHeaders() });
             const users = res.data;
             container.innerHTML = '';
@@ -155,36 +183,21 @@
         }
     }
 
-
-
-
-    /**
-     * ✅ [수정] 1:1 채팅 시작 함수 (백엔드 API에 맞게 수정)
-     */
     async function startDirectChat(otherUserId) {
         try {
-            // POST /api/chat/direct/{otherUserId} API 호출
             const res = await axios.post(
                 `/api/chat/direct/${otherUserId}`,
                 {},
                 { headers: getAuthHeaders() }
             );
-            console.log(res.data);
 
             const chatRoom = res.data;
-            console.log('채팅방 생성/조회 결과:', chatRoom);
-
-            // 채팅방으로 이동
             enterChatRoom(chatRoom.roomId, otherUserId, false);
-
-            // DM 목록 새로고침
             loadDirectChatRooms();
 
         } catch(e) {
             console.error('1:1 채팅 시작 실패:', e);
             if (e.response) {
-                console.error('응답 데이터:', e.response.data);
-                console.error('상태 코드:', e.response.status);
                 alert('1:1 채팅 시작에 실패했습니다: ' + (e.response.data.message || e.response.statusText));
             } else {
                 alert('1:1 채팅 시작에 실패했습니다: ' + e.message);
@@ -192,7 +205,132 @@
         }
     }
 
-    // ===== 채팅방 관련 함수 =====
+    async function loadMoreMessages() {
+        if (!hasMoreMessages || isLoadingMessages) return;
+
+        isLoadingMessages = true;
+        const messagesDiv = document.getElementById('messages');
+        const prevScrollHeight = messagesDiv.scrollHeight;
+
+        const loader = document.createElement('div');
+        loader.className = 'loader';
+        loader.textContent = '메시지 불러오는 중...';
+        messagesDiv.insertBefore(loader, messagesDiv.firstChild);
+
+        try {
+            const res = await axios.get(`/api/chat/rooms/${currentRoomId}/messages`, {
+                headers: getAuthHeaders(),
+                params: {
+                    page: currentPage + 1,
+                    size: 20,
+                    sort: 'timestamp,desc'
+                }
+            });
+
+            const messageSlice = res.data;
+            const messages = messageSlice.content;
+
+            if (messages.length === 0) {
+                hasMoreMessages = false;
+                return;
+            }
+
+            messages.forEach(msg => {
+                appendMessage(msg, false);
+            });
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight - prevScrollHeight;
+            currentPage++;
+
+        } catch (e) {
+            console.error('메시지 로드 실패:', e);
+        } finally {
+            loader.remove();
+            isLoadingMessages = false;
+        }
+    }
+
+    function handleScroll() {
+        const messagesDiv = document.getElementById('messages');
+        if (messagesDiv.scrollTop === 0 && hasMoreMessages && !isLoadingMessages) {
+            loadMoreMessages();
+        }
+    }
+
+    async function enterChatRoom(roomId, otherUserId, isGroup) {
+        try {
+            document.querySelectorAll('.chat-room-item.active').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            const roomItem = document.querySelector(`.chat-room-item[data-room-id="${roomId}"]`);
+            if (roomItem) {
+                roomItem.classList.add('active');
+            }
+
+            currentRoomId = roomId;
+            recipientId = otherUserId;
+            isGroupChat = isGroup;
+            currentPage = 0;
+            hasMoreMessages = true;
+            isLoadingMessages = false;
+
+            const roomTitle = roomItem ?
+                roomItem.querySelector('p strong').textContent :
+                (isGroup ? '그룹 채팅방' : '1:1 채팅방');
+            document.getElementById('current-chat-title').textContent = roomTitle;
+
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            messagesDiv.removeEventListener('scroll', handleScroll);
+
+            document.getElementById('chat-input-box').style.display = 'block';
+
+            const res = await axios.get(`/api/chat/rooms/${roomId}/messages`, {
+                headers: getAuthHeaders(),
+                params: {
+                    page: 0,
+                    size: 20,
+                    sort: 'timestamp,desc'
+                }
+            });
+            console.log("############################");
+            console.log("채팅방 들어갔을 때 받는 데이터", res.data);
+            console.log("############################");
+            const messages = res.data.content || [];
+
+            if (messages.length === 0) {
+                messagesDiv.innerHTML = '<p class="no-messages">채팅 기록이 없습니다</p>';
+            } else {
+                messages.reverse().forEach(msg => {
+                    appendMessage(msg, true);
+                });
+            }
+
+            await window.wsManager.connect();
+            window.wsManager.cleanupChatSubscriptions();
+
+            const callback = (message) => {
+                const msg = JSON.parse(message.body);
+                if (!isGroup || msg.roomId === roomId) {
+                    appendMessage({
+                        senderName: msg.senderName,
+                        content: msg.content,
+                        timestamp: msg.timestamp,
+                        type: msg.type
+                    }, true);
+                }
+            };
+
+            window.wsManager.subscribeChat(roomId, isGroup, callback);
+            messagesDiv.addEventListener('scroll', handleScroll);
+
+        } catch(e) {
+            console.error('채팅방 입장 실패:', e);
+            alert('채팅방 연결 실패: ' + (e.response?.data?.message || e.message));
+        }
+    }
+
     async function loadDirectChatRooms() {
         try {
             document.getElementById('group-chat-room-list').style.display = 'none';
@@ -203,7 +341,6 @@
 
             const res = await axios.get('/api/chat/my-rooms/direct', {headers: getAuthHeaders()});
             const rooms = res.data;
-            console.log("📥 받은 1:1 채팅방 목록:", rooms); // ✅ 추가된 로그
             container.innerHTML = '';
 
             if (rooms.length === 0) {
@@ -239,7 +376,6 @@
 
             const res = await axios.get('/api/chat/my-rooms/group', {headers: getAuthHeaders()});
             const rooms = res.data;
-            console.log("📥 받은 그룹 채팅방 목록:", rooms); // ✅ 추가된 로그
             container.innerHTML = '';
 
             if (rooms.length === 0) {
@@ -265,62 +401,6 @@
         }
     }
 
-    async function enterChatRoom(roomId, otherUserId, isGroup) {
-        try {
-            // 기존 활성화된 채팅방 비활성화
-            document.querySelectorAll('.chat-room-item.active').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            // 현재 채팅방 활성화
-            const roomItem = document.querySelector(`.chat-room-item[data-room-id="${roomId}"]`);
-            if (roomItem) {
-                roomItem.classList.add('active');
-            }
-
-            currentRoomId = roomId;
-            recipientId = otherUserId;
-            isGroupChat = isGroup;
-
-            // 채팅창 제목 설정
-            const roomTitle = roomItem ?
-                roomItem.querySelector('p strong').textContent :
-                (isGroup ? '그룹 채팅방' : '1:1 채팅방');
-            document.getElementById('current-chat-title').textContent = roomTitle;
-
-            // 메시지 영역 초기화
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML = '';
-
-            // 채팅 입력창 표시
-            document.getElementById('chat-input-box').style.display = 'block';
-
-            // 기존 메시지 로드
-            const res = await axios.get(`/api/chat/rooms/${roomId}/messages`, {headers: getAuthHeaders()});
-            console.log("📥 받은 기존 메시지 목록:", res.data); // ✅ 추가된 로그
-            res.data.forEach(msg => {
-                appendMessage(`${msg.senderName}: ${msg.content}`);
-            });
-
-            // WebSocket 연결 및 구독
-            await window.wsManager.connect();
-            window.wsManager.cleanupChatSubscriptions();
-
-            const callback = (message) => {
-                const msg = JSON.parse(message.body);
-                if (!isGroup || msg.roomId === roomId) {
-                    appendMessage(`${msg.senderName}: ${msg.content}`);
-                }
-            };
-
-            window.wsManager.subscribeChat(roomId, isGroup, callback);
-
-        } catch(e) {
-            console.error('채팅방 입장 실패:', e);
-            alert('채팅방 연결 실패. 새로고침 해주세요.');
-        }
-    }
-
     function sendMessage() {
         const input = document.getElementById('messageInput');
         const content = input.value.trim();
@@ -332,7 +412,6 @@
         }
 
         const message = {
-            roomId: currentRoomId,
             content: content,
             type: "TALK"
         };
@@ -359,13 +438,12 @@
 
         try {
             await window.wsManager.connect();
-            loadDirectChatRooms(); // 기본으로 1:1 채팅방 목록 로드
+            loadDirectChatRooms();
         } catch (error) {
             console.error("웹소켓 연결 실패:", error);
         }
     };
 
-    // 페이지 언로드 시 채팅 구독 정리
     window.addEventListener('beforeunload', () => {
         if (window.wsManager) {
             window.wsManager.cleanupChatSubscriptions();

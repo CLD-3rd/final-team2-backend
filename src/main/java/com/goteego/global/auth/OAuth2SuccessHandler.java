@@ -62,10 +62,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         // ✅ 리디렉션
 //        response.sendRedirect("/dashboard.html");
-//        response.sendRedirect("/post.html");
+        response.sendRedirect("/post.html");
 
-        response.sendRedirect(frontendUrl);
-        log.info("Redirecting to frontend: {}", frontendUrl);
+//        response.sendRedirect(frontendUrl);
+//        log.info("Redirecting to frontend: {}", frontendUrl);
 
     }
 }

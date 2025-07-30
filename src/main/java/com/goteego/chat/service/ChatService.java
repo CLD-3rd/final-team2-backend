@@ -12,9 +12,13 @@ import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
 import com.goteego.chat.repository.ChatMessageRepository;
+import com.goteego.user.dto.UserDto;
 import com.goteego.user.repository.UserRepository;
+import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +33,10 @@ import java.util.stream.Collectors;
 public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomRepository chatRoomRepository;
+    private final UserRepository userRepository;
 
     private final String DIRECT_MESSAGE_PATH = "/queue/messages";
     private final String GROUP_MESSAGE_PATH = "/sub/chat/room/";
@@ -44,10 +49,13 @@ public class ChatService {
     @Transactional
     public void sendDirectMessage(String roomId, DirectMessageRequest directMessageRequest, Long senderId) {
         // 1. 발신자 조회
-        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalStateException("USER NOT FOUND"));
+//        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalStateException("USER NOT FOUND"));
+        UserDto sender = userService.getUser(senderId);
+
         // 2. 수신자 조회
-        User recipient = userRepository.findById(directMessageRequest.getRecipientId())
-                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+//        User recipient = userRepository.findById(directMessageRequest.getRecipientId())
+//                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+        UserDto recipient = userService.getUser(directMessageRequest.getRecipientId());
 
         log.info("sender id = {}", sender.getId());
         log.info("recipient id = {}", recipient.getId());
@@ -67,7 +75,7 @@ public class ChatService {
 
         // 4. 수신자에게 알림 전송
         NotificationResponse notification = new NotificationResponse(
-                sender.getOauthInfo().getOauthEmail(), // 알림 제목
+                sender.getEmail(), // 알림 제목
                 message.getContent(), // 알림 내용 (메시지 내용)
                 sender.getId(),
                 sender.getNickname(),
@@ -91,7 +99,8 @@ public class ChatService {
         log.info("roomId = {}", roomId);
 
         // 1. 발신자 조회
-        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalStateException("USER NOT FOUND"));
+//        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalStateException("USER NOT FOUND"));
+        UserDto sender = userService.getUser(senderId);
         log.info("sender id = {}", sender.getId());
 
         // 2. 채팅방 존재 여부 확인 (선택적)
@@ -142,11 +151,15 @@ public class ChatService {
     /**
      * 특정 채팅방의 메시지 내역 조회
      */
-    public List<DirectMessageResponse> findChatMessages(String roomId) {
-        return chatMessageRepository.findByRoomIdOrderByTimestampAsc(roomId)
-                .stream()
-                .map(DirectMessageResponse::fromEntity)
-                .collect(Collectors.toList());
+//    public List<DirectMessageResponse> findChatMessages(String roomId) {
+//        return chatMessageRepository.findByRoomIdOrderByTimestampAsc(roomId)
+//                .stream()
+//                .map(DirectMessageResponse::fromEntity)
+//                .collect(Collectors.toList());
+//    }
+    public Slice<DirectMessageResponse> findChatMessages(String roomId, Pageable pageable) {
+        Slice<ChatMessage> messageSlice = chatMessageRepository.findByRoomIdOrderByTimestampDesc(roomId, pageable);
+        return messageSlice.map(DirectMessageResponse::fromEntity);
     }
 
 

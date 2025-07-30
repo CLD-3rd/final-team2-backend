@@ -120,3 +120,9 @@ body {
 
 .user-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
 .user-list-item button { font-size: 12px; padding: 4px 8px; }
+
+.loader {
+    text-align: center;
+    padding: 10px;
+    color: #999;
+}
