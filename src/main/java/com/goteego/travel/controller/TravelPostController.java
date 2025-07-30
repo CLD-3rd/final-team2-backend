@@ -4,6 +4,7 @@ import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
 import com.goteego.travel.dto.travel.TravelPostRequest;
 import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
+import com.goteego.travel.dto.travel.TravelPostSearchCondition;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.user.domain.User;
 import jakarta.validation.Valid;
@@ -25,26 +26,27 @@ public class TravelPostController {
     private final TravelPostService travelPostService;
 
     /**
-     * 여행 게시글 목록 조회
-     * <p>
-     * PostType(BEFORE/NOW)에 따라 다른 응답 구조를 반환하며,
-     * 페이지네이션을 지원합니다.
+     * 여행 게시글 목록 조회 API
+     * - 게시글 타입(PostType)에 따라 BEFORE / NOW 목록 조회
+     * - 검색 조건(정렬, 제목, 작성자, 지역) 적용
+     * - 페이징 및 정렬 지원
      *
-     * @param postType 조회할 게시글 타입 (BEFORE/NOW)
-     * @param page     페이지 번호 (기본값 0)
-     * @param size     페이지 크기 (기본값 10)
-     * @param user     로그인 사용자 (비로그인 시 null)
-     * @return TravelPostResponseWrapper (게시글 목록 + 페이지 정보)
+     * @param postType  게시글 타입 (BEFORE / NOW)
+     * @param page      페이지 번호 (기본값: 0)
+     * @param size      페이지 크기 (기본값: 12)
+     * @param condition 검색 및 정렬 조건 (sort, title, author, location)
+     * @param user      로그인 사용자 정보 (비로그인 허용)
+     * @return TravelPostResponseWrapper (게시글 리스트 + 페이지 정보)
      */
     @GetMapping
     public ResponseEntity<TravelPostResponseWrapper> getTravelPosts(
             @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "size", defaultValue = "12") int size,
+            @Valid TravelPostSearchCondition condition,
             @AuthenticationPrincipal User user) {
-
         PostType currentPostType = PostType.valueOf(postType.toUpperCase());
-        TravelPostResponseWrapper travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, user);
+        TravelPostResponseWrapper travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, condition, user);
         log.info("✅ [TravelPost] 여행 게시글 목록 조회 성공 - {}", currentPostType);
         return ResponseEntity.ok(travelPosts);
     }
