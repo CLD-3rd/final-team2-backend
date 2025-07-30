@@ -15,7 +15,7 @@ import java.util.List;
 @Getter
 @Builder
 public class FeedDetailResponseDto {
-    
+
     private Long feedId;
     private Long userId;
     private String title;
@@ -29,17 +29,7 @@ public class FeedDetailResponseDto {
     private LocalDate modifiedAt;
     private AuthorDto author;
     private List<FeedCommentResponseDto> comments;
-    
-    /**
-     * 피드 작성자 정보를 담는 내부 클래스
-     */
-    @Getter
-    @Builder
-    public static class AuthorDto {
-        private String nickname;
-        private String profileImage;
-    }
-    
+
     /**
      * Feed 엔티티를 FeedDetailResponseDto로 변환하는 정적 팩토리 메서드
      */
@@ -53,14 +43,22 @@ public class FeedDetailResponseDto {
                 .location(feed.getLocation())
                 .badgeRequest(feed.getBadgeRequest())
                 .viewCount(feed.getViewCount())
-                .likeCount(feed.getLikeCount())
                 .createdAt(feed.getCreatedAt().toLocalDate())
-                .modifiedAt(feed.getModifiedAt() != null ? feed.getModifiedAt().toLocalDate() : null)
                 .author(AuthorDto.builder()
                         .nickname(feed.getAuthor().getNickname())
                         .profileImage(feed.getAuthor().getProfileImgUrl())
                         .build())
                 .comments(comments)
                 .build();
+    }
+
+    /**
+     * 피드 작성자 정보를 담는 내부 클래스
+     */
+    @Getter
+    @Builder
+    public static class AuthorDto {
+        private String nickname;
+        private String profileImage;
     }
 } 

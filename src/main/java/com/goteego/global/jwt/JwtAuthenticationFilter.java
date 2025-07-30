@@ -36,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/oauth2/**",
             "/.well-known/**",
             "/api/travel-posts/**", // GET만 허용
-            "/api/feed/**",         // GET만 허용
+            "/api/feeds/**",         // GET만 허용
             "/ws/**",
             "/index.html"
     );

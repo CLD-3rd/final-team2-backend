@@ -36,7 +36,7 @@ public class SecurityConfig {
             "/oauth2/**",
             "/ws/**",
             "/api/public/**",
-            "/api/feed/**",  // 임시 추가
+            "/api/feeds/**",  // 임시 추가
             "/api/users/me",
             "/api/schedule/**",      // 임시 추가
             "/api/recommendation/**", // 임시 추가

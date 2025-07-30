@@ -4,6 +4,7 @@ import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.service.ChatRoomService;
 import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.dto.PageInfo;
+import com.goteego.global.dto.SearchCondition;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
@@ -61,10 +62,11 @@ public class TravelPostService {
      * @param user      로그인 사용자 정보 (null 허용)
      * @return 게시글 목록 + 페이지 정보
      */
+    @Transactional(readOnly = true)
     public TravelPostResponseWrapper getTravelPosts(PostType postType,
                                                     int page,
                                                     int size,
-                                                    TravelPostSearchCondition condition,
+                                                    SearchCondition condition,
                                                     User user) {
         // ✅ 로그인 여부 확인
         Long currentUserId = (user != null) ? user.getId() : null;
