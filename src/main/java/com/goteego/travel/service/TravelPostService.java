@@ -11,7 +11,6 @@ import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.domain.TravelPost;
 import com.goteego.travel.domain.enumerate.ParticipationStatus;
 import com.goteego.travel.domain.enumerate.PostType;
-import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
 import com.goteego.travel.dto.travel.*;
 import com.goteego.travel.repository.ParticipationApplicationRepository;
 import com.goteego.travel.repository.TravelPostRepository;
@@ -95,7 +94,7 @@ public class TravelPostService {
     /**
      * 여행 게시글 상세 조회
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public TravelPostDetailResponseDto getTravelPostDetail(Long postId) {
         TravelPost travelPost = travelPostRepository.findById(postId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
@@ -110,7 +109,6 @@ public class TravelPostService {
      */
     @Transactional
     public Long registerTravelPost(User user, TravelPostCreateRequest request) {
-
         // 채팅방 생성 및 저장 (ChatRoomService에게 책임 위임)
         ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(user, user.getNickname());
 
@@ -139,40 +137,10 @@ public class TravelPostService {
     }
 
     /**
-     * 여행 게시글 참가 신청
-     */
-    @Transactional
-    public ParticipationApplicationResponseDto joinTravelPost(Long travelPostId, User currentUser) {
-
-        // 1. 여행 게시글 존재 확인
-        TravelPost travelPost = travelPostRepository.findById(travelPostId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
-
-        // 2. 참가 신청 검증
-        validateJoinTravelPost(travelPost, currentUser);
-
-        // 3. 참가 신청 생성
-        ParticipationApplication application = ParticipationApplication.builder()
-                .travelPost(travelPost)
-                .user(currentUser)
-                .status(ParticipationStatus.PENDING)
-                .build();
-
-        ParticipationApplication savedApplication = participationApplicationRepository.save(application);
-
-        // 4. 사용자 정보 조회
-        User user = getSafeUserInfo(currentUser.getId());
-
-        log.info("참가 신청 생성 - travelPostId: {}, userId: {}, applicationId: {}", travelPostId, currentUser.getId(), savedApplication.getId());
-
-        return ParticipationApplicationResponseDto.from(savedApplication, user);
-    }
-
-    /**
      * 여행 게시글 수정
      */
     @Transactional
-    public TravelPost updateTravelPost(Long travelPostId, Long userId, TravelPostUpdateRequest request) {
+    public void updateTravelPost(Long travelPostId, Long userId, TravelPostUpdateRequest request) {
         TravelPost travelPost = findTravelPostWithAuthorization(travelPostId, userId);
 
         MultipartFile userUploadedImage = request.getImage();
@@ -181,15 +149,13 @@ public class TravelPostService {
 
         // 게시글 수정 (도메인 객체의 비즈니스 로직 활용)
         travelPost.update(request, imageUrl);
-
-        return travelPostRepository.save(travelPost);
     }
 
     /**
      * 여행 게시글 삭제
      */
     @Transactional
-    public String deleteTravelPost(Long travelPostId, Long userId) {
+    public void deleteTravelPost(Long travelPostId, Long userId) {
         TravelPost travelPost = findTravelPostForDeletion(travelPostId, userId);
 
         // 참조 데이터 삭제
@@ -197,8 +163,34 @@ public class TravelPostService {
 
         // 게시글 삭제
         travelPostRepository.delete(travelPost);
+    }
 
-        return "게시글이 성공적으로 삭제되었습니다. (ID: " + travelPostId + ")";
+    /**
+     * 여행 게시글 참가 신청
+     */
+    @Transactional
+    public void joinTravelPost(Long travelPostId, User currentUser) {
+
+        // 1. 사용자 정보 조회
+        User user = getSafeUserInfo(currentUser.getId());
+
+        // 2. 여행 게시글 존재 확인
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
+
+        // 3. 참가 신청 검증
+        validateJoinTravelPost(travelPost, currentUser);
+
+        // 4. 참가 신청 생성
+        ParticipationApplication application = ParticipationApplication.builder()
+                .travelPost(travelPost)
+                .user(currentUser)
+                .status(ParticipationStatus.PENDING)
+                .build();
+
+        participationApplicationRepository.save(application);
+
+        log.info("참가 신청 생성 - travelPostId: {}, userId: {}", travelPostId, currentUser.getId());
     }
 
     // =====================================================내부 로직======================================================= //
@@ -348,8 +340,4 @@ public class TravelPostService {
     private Map<Long, Double> calculateSimilaritiesForUsers(Long currentUserId, List<Long> targetUserIds) {
         return recommendationService.calculateSimilaritiesForUsers(currentUserId, targetUserIds);
     }
-
-
-    // =====================================================재신======================================================= //
-
 }
