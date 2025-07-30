@@ -68,7 +68,6 @@ public class ScheduleService {
                     return BeforeTravelPostResponseDto.from(
                             tp,
                             tp.getUser().getNickname(),
-                            null, // similarity는 이 컨텍스트에선 필요 없다면 null
                             approvedParticipantCount
                     );
                 })

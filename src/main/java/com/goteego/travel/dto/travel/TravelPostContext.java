@@ -5,6 +5,5 @@ import com.goteego.travel.domain.TravelPost;
 public record TravelPostContext(
         TravelPost tp,
         Long currentUserId,
-        String nickname,
-        Double similarity) {
+        String nickname) {
 }

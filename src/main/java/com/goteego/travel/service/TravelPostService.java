@@ -28,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -76,7 +75,7 @@ public class TravelPostService {
                         Long approvedCount = participationApplicationRepository
                                 .countByTravelPostIdAndStatus(ctx.tp().getId(), ParticipationStatus.APPROVED);
                         int approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
-                        return BeforeTravelPostResponseDto.from(ctx.tp(), ctx.nickname(), ctx.similarity(), approvedParticipantCount);
+                        return BeforeTravelPostResponseDto.from(ctx.tp(), ctx.nickname(), approvedParticipantCount);
                     }
             );
             return TravelPostResponseWrapper.before(content, pageInfo);
@@ -84,7 +83,7 @@ public class TravelPostService {
             List<NowTravelPostResponseDto> content = convertToDtoList(
                     travelPostPage.getContent(),
                     currentUserId,
-                    ctx -> NowTravelPostResponseDto.from(ctx.tp(), ctx.currentUserId(), ctx.nickname(), ctx.similarity())
+                    ctx -> NowTravelPostResponseDto.from(ctx.tp(), ctx.nickname())
             );
             return TravelPostResponseWrapper.now(content, pageInfo);
         }
@@ -310,25 +309,35 @@ public class TravelPostService {
             Function<TravelPostContext, T> converter
     ) {
         if (travelPosts.isEmpty()) return List.of();
+        
+        List<TravelPost> sortedPosts;
 
-        // 작성자 ID 수집
-        List<Long> authorIds = travelPosts.stream()
-                .map(tp -> tp.getUser().getId())
-                .distinct()
-                .toList();
+        if (currentUserId != null) {
+            // 작성자 ID 수집
+            List<Long> authorIds = travelPosts.stream()
+                    .map(tp -> tp.getUser().getId())
+                    .distinct()
+                    .toList();
 
-        // 유사도 계산
-        Map<Long, Double> similarityMap = (currentUserId != null)
-                ? calculateSimilaritiesForUsers(currentUserId, authorIds)
-                : Collections.emptyMap();
+            // 유사도 계산
+            Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
 
-        return travelPosts.stream()
-                .map(tp -> {
-                    Long authorId = tp.getUser().getId();
-                    String nickname = tp.getUser().getNickname();
-                    Double similarity = similarityMap.getOrDefault(authorId, 0.5);
-                    return converter.apply(new TravelPostContext(tp, currentUserId, nickname, similarity));
-                })
+            // similarity 내림차순 정렬
+            sortedPosts = travelPosts.stream()
+                    .sorted((tp1, tp2) -> {
+                        double sim1 = similarityMap.getOrDefault(tp1.getUser().getId(), 0.0);
+                        double sim2 = similarityMap.getOrDefault(tp2.getUser().getId(), 0.0);
+                        return Double.compare(sim2, sim1); // 높은 similarity 먼저
+                    })
+                    .toList();
+        } else {
+            // 비로그인 사용자는 정렬 불필요 → 원본 그대로
+            sortedPosts = travelPosts;
+        }
+
+        // DTO 변환
+        return sortedPosts.stream()
+                .map(tp -> converter.apply(new TravelPostContext(tp, currentUserId, tp.getUser().getNickname())))
                 .toList();
     }
 

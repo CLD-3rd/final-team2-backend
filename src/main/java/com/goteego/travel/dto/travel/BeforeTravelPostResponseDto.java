@@ -28,12 +28,11 @@ public class BeforeTravelPostResponseDto {
     private Integer maxParticipants; // 모집 인원 제한
     private String imageUrl;
     private String createdAt;
-    private Double similarity; // 유사도 점수
 
     /**
      * TravelPost 엔티티를 DTO로 변환
      */
-    public static BeforeTravelPostResponseDto from(TravelPost travelPost, String nickname, Double similarity, Integer approvedParticipantCount) {
+    public static BeforeTravelPostResponseDto from(TravelPost travelPost, String nickname, Integer approvedParticipantCount) {
         return BeforeTravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
@@ -47,7 +46,6 @@ public class BeforeTravelPostResponseDto {
                 .maxParticipants(travelPost.getRecruitLimit())
                 .imageUrl(travelPost.getImageUrl())
                 .createdAt(travelPost.getCreatedAt().toString())
-                .similarity(similarity)
                 .build();
     }
 
