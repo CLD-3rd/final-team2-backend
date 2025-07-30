@@ -17,15 +17,7 @@ import java.util.List;
 public interface TravelPostRepository extends JpaRepository<TravelPost, Long> {
 
     /**
-     * 게시글 타입별 목록 조회 (현재 사용자 제외) - N+1 문제 해결을 위한 JOIN FETCH
-     */
-    @Query("SELECT tp FROM TravelPost tp JOIN FETCH tp.user WHERE tp.postType = :postType AND tp.user.id != :currentUserId ORDER BY tp.createdAt DESC")
-    Page<TravelPost> findByPostTypeOrderByCreatedAtDescWithUser(@Param("postType") PostType postType,
-                                                                @Param("currentUserId") Long currentUserId,
-                                                                Pageable pageable);
-
-    /**
-     * 게시글 타입별 목록 조회 (익명)
+     * 게시글 타입별 목록 조회
      */
     @Query("""
             SELECT tp FROM TravelPost tp

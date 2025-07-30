@@ -29,9 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 /**
  * 여행 게시글 서비스
@@ -52,54 +53,44 @@ public class TravelPostService {
 
     /**
      * 여행 게시글 목록 조회 (PostType별 다른 응답 구조)
+     *
+     * @param postType
+     * @param page
+     * @param size
+     * @param user
+     * @return
      */
-    public TravelPostResponseWrapper getTravelPosts(PostType postType, int page, int size, Long currentUserId) {
-
+    public TravelPostResponseWrapper getTravelPosts(PostType postType, int page, int size, User user) {
         Pageable pageable = PageRequest.of(page, size);
-
-        Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDescWithUser(postType, currentUserId, pageable);
-        PageInfo pageInfo = PageInfo.from(travelPostPage);
-
-        // PostType에 따라 다른 DTO 변환
-        if (postType == PostType.BEFORE) {
-            List<BeforeTravelPostResponseDto> content = convertToBeforeDtoList(travelPostPage.getContent(), currentUserId);
-            return TravelPostResponseWrapper.before(content, pageInfo);
-        } else {
-            List<NowTravelPostResponseDto> content = convertToNowDtoList(travelPostPage.getContent(), currentUserId);
-            return TravelPostResponseWrapper.now(content, pageInfo);
-        }
-    }
-
-    /**
-     * 여행 게시글 목록 조회 (비로그인 유저 전용)
-     */
-    public TravelPostResponseWrapper getTravelPostsDefault(PostType postType, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-
         Page<TravelPost> travelPostPage = travelPostRepository.findByPostTypeOrderByCreatedAtDesc(postType, pageable);
         PageInfo pageInfo = PageInfo.from(travelPostPage);
 
+        // 로그인 여부 확인
+        Long currentUserId = (user != null) ? user.getId() : null;
+
+        // PostType에 따라 다른 DTO 변환
         if (postType == PostType.BEFORE) {
-            List<BeforeTravelPostResponseDto> beforePosts = travelPostPage.getContent().stream()
-                    .map(tp -> BeforeTravelPostResponseDto.from(
-                            tp,
-                            null, // currentUserId 없음 (익명)
-                            tp.getUser().getNickname(),
-                            null, // similarity 없음
-                            0))
-                    .toList();
-            return TravelPostResponseWrapper.before(beforePosts, pageInfo);
+            List<BeforeTravelPostResponseDto> content = convertToDtoList(
+                    travelPostPage.getContent(),
+                    currentUserId,
+                    ctx -> {
+                        Long approvedCount = participationApplicationRepository
+                                .countByTravelPostIdAndStatus(ctx.tp().getId(), ParticipationStatus.APPROVED);
+                        int approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
+                        return BeforeTravelPostResponseDto.from(ctx.tp(), ctx.nickname(), ctx.similarity(), approvedParticipantCount);
+                    }
+            );
+            return TravelPostResponseWrapper.before(content, pageInfo);
         } else if (postType == PostType.NOW) {
-            List<NowTravelPostResponseDto> nowPosts = travelPostPage.getContent().stream()
-                    .map(tp -> NowTravelPostResponseDto.from(
-                            tp, null, tp.getUser().getNickname(), null
-                    ))
-                    .toList();
-            return TravelPostResponseWrapper.now(nowPosts, pageInfo);
+            List<NowTravelPostResponseDto> content = convertToDtoList(
+                    travelPostPage.getContent(),
+                    currentUserId,
+                    ctx -> NowTravelPostResponseDto.from(ctx.tp(), ctx.currentUserId(), ctx.nickname(), ctx.similarity())
+            );
+            return TravelPostResponseWrapper.now(content, pageInfo);
         }
         throw new BusinessException(ErrorCode.UNSUPPORTED_POST_TYPE);
     }
-
 
     /**
      * 여행 게시글 상세 조회
@@ -114,14 +105,11 @@ public class TravelPostService {
         return TravelPostDetailResponseDto.from(travelPost);
     }
 
-
-    // =====================================================준형======================================================= //
-
     /**
      * 여행 게시글 생성
      */
     @Transactional
-    public BeforeTravelPostResponseDto registerTravelPost(User user, TravelPostCreateRequest request) {
+    public Long registerTravelPost(User user, TravelPostCreateRequest request) {
 
         // 채팅방 생성 및 저장 (ChatRoomService에게 책임 위임)
         ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(user, user.getNickname());
@@ -147,10 +135,8 @@ public class TravelPostService {
 
         // 게시글 저장
         TravelPost savedTravelPost = travelPostRepository.save(travelPost);
-
-        return BeforeTravelPostResponseDto.from(savedTravelPost, user.getId(), user.getNickname(), 0.5, 0);
+        return savedTravelPost.getId();
     }
-
 
     /**
      * 여행 게시글 참가 신청
@@ -181,12 +167,6 @@ public class TravelPostService {
 
         return ParticipationApplicationResponseDto.from(savedApplication, user);
     }
-
-
-    // =====================================================준형======================================================= //
-
-
-    // =====================================================재신======================================================= //
 
     /**
      * 여행 게시글 수정
@@ -322,68 +302,42 @@ public class TravelPostService {
     }
 
     /**
-     * N+1 문제 해결: BEFORE 타입 DTO 변환
-     * - 모든 작성자 ID 수집
-     * - 배치 유사도 계산
-     * - DTO 변환
+     * TravelPost 리스트를 DTO 리스트로 변환합니다.
+     * <p>N+1 문제를 방지하기 위해 작성자 ID를 한 번에 수집하고,
+     * 로그인 사용자가 있을 경우 유사도를 배치 계산한 뒤 DTO를 생성합니다.</p>
+     *
+     * @param travelPosts
+     * @param currentUserId
+     * @param converter
+     * @param <T>
+     * @return
      */
-    private List<BeforeTravelPostResponseDto> convertToBeforeDtoList(List<TravelPost> travelPosts, Long currentUserId) {
-        if (travelPosts.isEmpty()) {
-            return List.of();
-        }
+    private <T> List<T> convertToDtoList(
+            List<TravelPost> travelPosts,
+            Long currentUserId,
+            Function<TravelPostContext, T> converter
+    ) {
+        if (travelPosts.isEmpty()) return List.of();
 
-        // 모든 작성자 ID 수집
+        // 작성자 ID 수집
         List<Long> authorIds = travelPosts.stream()
                 .map(tp -> tp.getUser().getId())
                 .distinct()
-                .collect(Collectors.toList());
+                .toList();
 
-        // 한 번에 모든 유사도 계산
-        Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
+        // 유사도 계산
+        Map<Long, Double> similarityMap = (currentUserId != null)
+                ? calculateSimilaritiesForUsers(currentUserId, authorIds)
+                : Collections.emptyMap();
 
-        // DTO 변환
         return travelPosts.stream()
                 .map(tp -> {
                     Long authorId = tp.getUser().getId();
-                    String authorNickname = tp.getUser().getNickname();
+                    String nickname = tp.getUser().getNickname();
                     Double similarity = similarityMap.getOrDefault(authorId, 0.5);
-                    // 승인된 참가자 수 조회
-                    Long approvedCount = participationApplicationRepository.countByTravelPostIdAndStatus(tp.getId(), ParticipationStatus.APPROVED);
-                    Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
-                    return BeforeTravelPostResponseDto.from(tp, currentUserId, authorNickname, similarity, approvedParticipantCount);
+                    return converter.apply(new TravelPostContext(tp, currentUserId, nickname, similarity));
                 })
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * N+1 문제 해결: NOW 타입 DTO 변환
-     * - 모든 작성자 ID 수집
-     * - 배치 유사도 계산
-     * - DTO 변환
-     */
-    private List<NowTravelPostResponseDto> convertToNowDtoList(List<TravelPost> travelPosts, Long currentUserId) {
-        if (travelPosts.isEmpty()) {
-            return List.of();
-        }
-
-        // 모든 작성자 ID 수집
-        List<Long> authorIds = travelPosts.stream()
-                .map(tp -> tp.getUser().getId())
-                .distinct()
-                .collect(Collectors.toList());
-
-        // 한 번에 모든 유사도 계산
-        Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
-
-        // DTO 변환
-        return travelPosts.stream()
-                .map(tp -> {
-                    Long authorId = tp.getUser().getId();
-                    String authorNickname = tp.getUser().getNickname();
-                    Double similarity = similarityMap.getOrDefault(authorId, 0.5);
-                    return NowTravelPostResponseDto.from(tp, currentUserId, authorNickname, similarity);
-                })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

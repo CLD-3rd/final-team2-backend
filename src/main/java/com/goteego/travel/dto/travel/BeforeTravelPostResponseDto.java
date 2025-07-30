@@ -1,13 +1,10 @@
 package com.goteego.travel.dto.travel;
 
 import com.goteego.travel.domain.TravelPost;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 사전동행모집글 응답 DTO (BEFORE)
@@ -18,7 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class BeforeTravelPostResponseDto {
-    
+
     private Long travelPostId;
     private String title;
     private String content;
@@ -32,21 +29,11 @@ public class BeforeTravelPostResponseDto {
     private String imageUrl;
     private String createdAt;
     private Double similarity; // 유사도 점수
-    
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class AuthorDto {
-        private Long userId;
-        private String nickname;
-        private String profileImgUrl;
-    }
-    
+
     /**
      * TravelPost 엔티티를 DTO로 변환
      */
-    public static BeforeTravelPostResponseDto from(TravelPost travelPost, Long currentUserId, String nickname, Double similarity, Integer approvedParticipantCount) {
+    public static BeforeTravelPostResponseDto from(TravelPost travelPost, String nickname, Double similarity, Integer approvedParticipantCount) {
         return BeforeTravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
@@ -73,5 +60,15 @@ public class BeforeTravelPostResponseDto {
                 .nickname(nickname)
                 .profileImgUrl(user.getProfileImgUrl())
                 .build();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class AuthorDto {
+        private Long userId;
+        private String nickname;
+        private String profileImgUrl;
     }
 } 

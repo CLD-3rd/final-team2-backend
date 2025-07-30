@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+
 
 @Slf4j
 @RestController
@@ -27,6 +29,12 @@ public class TravelPostController {
 
     /**
      * 여행 게시글 목록 조회 (PostType별 다른 응답 구조)
+     *
+     * @param postType
+     * @param page
+     * @param size
+     * @param user
+     * @return
      */
     @GetMapping
     public ResponseEntity<TravelPostResponseWrapper> getTravelPosts(
@@ -36,26 +44,17 @@ public class TravelPostController {
             @AuthenticationPrincipal User user) {
 
         PostType currentPostType = PostType.valueOf(postType.toUpperCase());
-        TravelPostResponseWrapper travelPosts;
-        if (user == null) {
-            // ✅ 비로그인 사용자 → 기본 목록 조회
-            travelPosts = travelPostService.getTravelPostsDefault(currentPostType, page, size);
-        } else {
-            // ✅ 로그인 사용자 → 유사도 분석 기반 조회
-            Long currentUserId = user.getId();
-            travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, currentUserId);
-        }
+        TravelPostResponseWrapper travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, user);
+
         return ResponseEntity.ok(travelPosts);
     }
-
-
-    // =====================================================준형======================================================= //
-
+    
     /**
      * 여행 게시글 생성
      *
-     * @param requestDto 게시글 생성 요청 데이터
-     * @return 생성된 여행 게시글
+     * @param requestDto
+     * @param user
+     * @return
      */
     @PostMapping(value = "/requests", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BeforeTravelPostResponseDto> createTravelPost(
@@ -63,12 +62,14 @@ public class TravelPostController {
             @AuthenticationPrincipal User user) {
 
         User currentUser = userService.getUserById(user.getId());
-        BeforeTravelPostResponseDto travelPostResponseDto = travelPostService.registerTravelPost(currentUser, requestDto);
+        Long newTravelPostId = travelPostService.registerTravelPost(currentUser, requestDto);
 
-        log.info("여행 게시글 생성 - travelPostId: {}, title: {}, userId: {}",
-                travelPostResponseDto.getTravelPostId(), travelPostResponseDto.getTitle(), user.getId());
+        log.info("여행 게시글 생성 - travelPostId: {}, userId: {}",
+                newTravelPostId, user.getId());
 
-        return ResponseEntity.ok(travelPostResponseDto);
+        URI location = URI.create("/api/travel-posts/" + newTravelPostId);
+
+        return ResponseEntity.created(location).build();
     }
 
 
