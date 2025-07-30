@@ -565,7 +565,7 @@
         }
         
         try {
-            const res = await axios.post(`/api/travel-posts/requests/${postId}`, {}, {headers: getAuthHeaders()});
+            const res = await axios.post(`/api/travel-posts/${postId}/participations`, {}, {headers: getAuthHeaders()});
 
             // 성공 메시지 표시
             const container = document.getElementById('travel-result');
@@ -597,42 +597,72 @@
 
     async function createTravelPost(e) {
         e.preventDefault();
-        const data = {
-            title: document.getElementById('tp-title').value,
-            content: document.getElementById('tp-content').value,
-            location: document.getElementById('tp-location').value,
-            startTime: document.getElementById('tp-start').value,
-            endTime: document.getElementById('tp-end').value,
-            recruitLimit: parseInt(document.getElementById('tp-limit').value),
-            postType: document.getElementById('tp-type').value,
-            imageUrl: document.getElementById('tp-img').value || null,
-            isAddRecruit: true
-        };
-        
+
+        // FormData 객체 생성
+        const formData = new FormData();
+        formData.append('title', document.getElementById('tp-title').value);
+        formData.append('content', document.getElementById('tp-content').value);
+        formData.append('location', document.getElementById('tp-location').value);
+        formData.append('startTime', document.getElementById('tp-start').value);
+        formData.append('endTime', document.getElementById('tp-end').value);
+        formData.append('recruitLimit', document.getElementById('tp-limit').value);
+        formData.append('postType', document.getElementById('tp-type').value);
+
+        // 이미지 파일이 있는 경우 추가 (실제 파일 업로드 시)
+        const imageInput = document.getElementById('tp-img');
+        if (imageInput.files && imageInput.files[0]) {
+            formData.append('image', imageInput.files[0]);
+        } else if (imageInput.value) {
+            // URL만 있는 경우
+            formData.append('imageUrl', imageInput.value);
+        }
+
+        formData.append('isAddRecruit', 'true');
+
         try {
-            const res = await axios.post('/api/travel-posts/requests', data, {headers: getAuthHeaders()});
+            const res = await axios.post('/api/travel-posts', formData, {
+                headers: {
+                    ...getAuthHeaders(),
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
             document.getElementById('travel-result').innerHTML = `
-                <div class="success-message">
-                    <h3>✅ 게시글 작성 완료!</h3>
-                    <p><strong>게시글 ID:</strong> ${res.data.travelPostId}</p>
-                    <p><strong>제목:</strong> ${res.data.title}</p>
-                    <p>게시글이 성공적으로 작성되었습니다.</p>
-                </div>
-            `;
-            
+            <div class="success-message">
+                <h3>✅ 게시글 작성 완료!</h3>
+                <p><strong>게시글 ID:</strong> ${res.data.travelPostId || res.data.id}</p>
+                <p><strong>제목:</strong> ${res.data.title}</p>
+                <p>게시글이 성공적으로 작성되었습니다.</p>
+            </div>
+        `;
+
             // 폼 초기화
             document.getElementById('createTravelPostForm').reset();
-            
+
             // 게시글 목록 새로고침
             setTimeout(() => {
                 getTravelPosts();
                 loadScheduleData();
             }, 1000);
-            
-        } catch(e) { 
-            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+
+        } catch(e) {
+            console.error('게시글 작성 실패:', e);
+            document.getElementById('travel-result').innerHTML = `
+            <div class="error-message">
+                <h3>❌ 게시글 작성 실패</h3>
+                <p>${e.response?.data?.message || e.message}</p>
+                ${e.response?.data?.errors ?
+                `<ul>${e.response.data.errors.map(err => `<li>${err.field}: ${err.message}</li>`).join('')}</ul>`
+                : ''}
+            </div>
+        `;
         }
     }
+
+
+
+
+
 
     async function updateTravelPost(postId) {
         if (!postId) {
