@@ -15,6 +15,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
@@ -44,6 +46,9 @@ public class TravelPost extends BaseEntity {
 
     private String title;
     private String content;
+
+    @OneToMany(mappedBy = "travelPost", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<ParticipationApplication> participationApplications = new ArrayList<>();
 
     /**
      * 여행지 위치 정보 (공통 Location enum 사용)

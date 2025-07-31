@@ -8,6 +8,7 @@ import com.goteego.global.dto.SearchCondition;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.error.exception.UnauthorizedAccessException;
 import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.travel.domain.ParticipationApplication;
 import com.goteego.travel.domain.TravelPost;
@@ -193,18 +194,35 @@ public class TravelPostService {
 
     /**
      * 여행 게시글 삭제
+     * <p>
+     * - 게시글을 삭제하기 전에 다음 조건을 검증:<br>
+     * 1. 게시글이 존재하는지 확인<br>
+     * 2. 요청자가 게시글 작성자인지 권한 검증<br>
+     * 3. 해당 게시글에 승인된 참여자(approved)가 없는지 확인
+     * <p>
+     * 모든 조건을 만족하면 게시글을 삭제합니다.
+     *
+     * @param travelPostId 삭제할 게시글 ID
+     * @param userId       요청한 사용자 ID
      */
     @Transactional
     public void deleteTravelPost(Long travelPostId, Long userId) {
+        // 1. 게시글 조회
+        TravelPost travelPost = travelPostRepository.findById(travelPostId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
 
-        getValidatedUser(userId);
+        // 2. 작성자 권한 검증
+        if (!travelPost.getUser().getId().equals(userId)) {
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_POST_DELETE);
+        }
 
-        TravelPost travelPost = findTravelPostForDeletion(travelPostId, userId);
+        // 3. 승인된 참여자 존재 여부 확인
+        boolean hasApprovedParticipants = participationApplicationRepository.existsByTravelPostIdAndStatus(travelPostId, ParticipationStatus.APPROVED);
+        if (hasApprovedParticipants) {
+            throw new BusinessException(ErrorCode.CANNOT_DELETE_TRAVEL_POST_WITH_APPROVED_PARTICIPANTS);
+        }
 
-        // 참조 데이터 삭제
-        deleteRelatedData(travelPostId);
-
-        // 게시글 삭제
+        // 4. 게시글 삭제
         travelPostRepository.delete(travelPost);
     }
 
@@ -313,37 +331,6 @@ public class TravelPostService {
         }
 
         return travelPost;
-    }
-
-    /**
-     * 삭제 권한 확인 및 게시글 조회
-     * - 게시글 존재 여부 확인
-     * - 작성자 권한 확인
-     * - 삭제 가능 여부 확인
-     */
-    private TravelPost findTravelPostForDeletion(Long travelPostId, Long userId) {
-        TravelPost travelPost = travelPostRepository.findById(travelPostId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.POST_NOT_FOUND));
-
-        // 권한 확인 - 작성자만 삭제 가능
-        if (!travelPost.isAuthor(userId)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_POST_DELETE);
-        }
-
-        // 삭제 가능 여부 확인 (도메인 로직 활용)
-        if (!travelPost.canBeDeleted()) {
-            throw new BusinessException(ErrorCode.INVALID_POST_DATA);
-        }
-
-        return travelPost;
-    }
-
-    /**
-     * 관련 데이터 삭제
-     * - 참가 신청 데이터 삭제
-     */
-    private void deleteRelatedData(Long travelPostId) {
-        travelPostRepository.deleteParticipationApplications(travelPostId);
     }
 
     /**

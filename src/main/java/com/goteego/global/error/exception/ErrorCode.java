@@ -41,6 +41,7 @@ public enum ErrorCode {
     UNAUTHORIZED_POST_DELETE(HttpStatus.FORBIDDEN, "게시글 삭제 권한이 없습니다."),
     INVALID_POST_DATA(HttpStatus.BAD_REQUEST, "잘못된 게시글 데이터입니다."),
     UNSUPPORTED_POST_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 게시글 타입입니다."),
+    CANNOT_DELETE_TRAVEL_POST_WITH_APPROVED_PARTICIPANTS(HttpStatus.BAD_REQUEST, "승인된 참여자가 있어 게시글을 삭제할 수 없습니다."),
 
     // 참여 요청 관련
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "참여 요청이 존재하지 않습니다."),
