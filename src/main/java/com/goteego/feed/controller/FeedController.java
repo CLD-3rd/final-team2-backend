@@ -13,6 +13,8 @@ import com.goteego.user.domain.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -60,21 +62,20 @@ public class FeedController {
     }
 
     /**
-     * 피드 생성
+     * 피드 생성 API
+     *
+     * @param request 피드를 생성하기 위한 데이터 (제목, 내용, 위치, 배지 요청 여부, 이미지 등)
+     * @param user    현재 인증된 사용자 정보 (피드를 생성하는 사용자)
+     * @return 피드 생성 성공 시 HTTP 201 상태 코드 반환
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FeedCreateResponseDto> createFeed(
-            @RequestBody FeedCreateRequest requestDto,
+            @Valid @ModelAttribute FeedCreateRequest request,
             @AuthenticationPrincipal User user) {
 
-        Feed feed = feedService.createFeed(user.getId(), requestDto);
-
-        FeedCreateResponseDto responseDto = FeedCreateResponseDto.from(feed);
-
-        log.info("피드 생성 - feedId: {}, title: {}, userId: {}",
-                feed.getId(), feed.getTitle(), user.getId());
-
-        return ResponseEntity.ok(responseDto);
+        Long createdFeedId = feedService.createFeed(user.getId(), request);
+        log.info("✅ [Feed] 피드 생성 성공 - travelPostId: {}, userNickName: {}", createdFeedId, user.getNickname());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     /**

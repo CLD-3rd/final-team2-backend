@@ -74,8 +74,14 @@ public enum ErrorCode {
     INVALID_REVIEW_TARGET(HttpStatus.BAD_REQUEST, "같은 여행에 참여하지 않은 대상자입니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_DUPLICATE(HttpStatus.CONFLICT, "중복된 리뷰입니다."),
-    TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다.");
+    TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다."),
 
+    // 파일 관련
+    INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 형식입니다."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
+    UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 유형입니다. jpg 또는 png 파일만 허용됩니다."),
+    ;
+    
     private final HttpStatus status;
     private final String message;
 

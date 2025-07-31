@@ -16,9 +16,10 @@ import com.goteego.global.dto.PageInfo;
 import com.goteego.global.dto.SearchCondition;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
+import com.goteego.global.error.exception.InvalidFileException;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
-import com.goteego.user.repository.UserRepository;
+import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -41,9 +43,10 @@ import java.util.List;
 public class FeedService {
 
     private final FeedRepository feedRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final FeedCommentService feedCommentService;
     private final LandmarkBadgeRequestReposiroty landmarkBadgeRequestReposiroty;
+    private final int MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     /**
      * 피드 목록 조회
@@ -113,28 +116,34 @@ public class FeedService {
 
     /**
      * 피드 생성
+     *
+     * @param userId  현재 피드를 생성하는 사용자의 ID
+     * @param request 피드 생성에 필요한 데이터 (제목, 내용, 이미지, 위치 등)
+     * @return 생성된 피드의 ID
      */
     @Transactional
-    public Feed createFeed(Long userId, FeedCreateRequest requestDto) {
-        // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+    public Long createFeed(Long userId, FeedCreateRequest request) {
+        // 사용자 조회 - 현재 피드를 생성하려는 사용자 정보 조회
+        User currentUser = userService.getUserById(userId);
 
-        // 피드 엔티티 생성
-        Feed feed = Feed.builder()
-                .author(user)
-                .title(requestDto.getTitle())
-                .content(requestDto.getContent())
-                .imageUrl(requestDto.getImageUrl())
-                .location(requestDto.getLocation())
-                .badgeRequest(requestDto.getBadgeRequest())
+        // 이미지 업로드 처리 - 이미지가 있으면 업로드 후 URL 반환
+        String imageUrl = uploadImage(request.getImage());
+
+        // 피드 엔티티 생성 - 피드의 제목, 내용, 이미지 URL, 위치, 배지 요청 여부 등 설정
+        Feed newFeed = Feed.builder()
+                .author(currentUser)
+                .title(request.getTitle())
+                .content(request.getContent())
+                .imageUrl(imageUrl)
+                .location(Location.fromString(request.getLocation()))
+                .badgeRequest(request.getBadgeRequest())
                 .build();
 
-        // 데이터베이스에 저장
-        Feed savedFeed = feedRepository.save(feed);
-        // 뱃지 요청
-        this.requestBadgeByFeed(savedFeed);
-        return savedFeed;
+        // 피드 저장 - 생성된 피드를 데이터베이스에 저장하고 저장된 피드 반환
+        Feed savedFeed = feedRepository.save(newFeed);
+
+        // 생성된 피드의 ID 반환
+        return savedFeed.getId();
     }
 
     /**
@@ -211,5 +220,31 @@ public class FeedService {
             case "recent" -> Sort.by(Sort.Direction.DESC, "createdAt");
             default -> Sort.by(Sort.Direction.DESC, "viewCount");
         };
+    }
+
+    /**
+     * 이미지 업로드 로직 분리
+     */
+    private String uploadImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            return null; // 기본 이미지 URL 또는 null을 반환
+        }
+
+        // 파일 크기 체크 (5MB 제한)
+        if (image.getSize() > MAX_FILE_SIZE) {
+            throw new InvalidFileException(ErrorCode.FILE_SIZE_EXCEEDED);
+        }
+
+        // 파일 형식 체크 (jpg, png만 허용)
+        String fileName = image.getOriginalFilename();
+        if (!(fileName.endsWith(".jpg") || fileName.endsWith(".png"))) {
+            throw new InvalidFileException(ErrorCode.INVALID_FILE_FORMAT);
+        }
+
+        // 실제 업로드 로직 (S3 서비스 호출 등)
+        // 예: S3Service.upload(image);
+
+        // 업로드 후 S3 또는 스토리지에서 반환된 URL
+        return "/test/image"; // 예시 URL (실제로는 S3 URL이 반환될 것입니다)
     }
 }
