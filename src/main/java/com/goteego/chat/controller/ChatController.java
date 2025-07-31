@@ -24,7 +24,7 @@ public class ChatController {
     // 1:1 채팅
     @Transactional
     @MessageMapping("/chat.direct.send/{roomId}")
-    public void sendDirectMessage(@Payload DirectMessageRequest directMessageRequest, @DestinationVariable String roomId, Principal principal) {
+    public void sendDirectMessage(@Payload DirectMessageRequest directMessageRequest, @DestinationVariable(value = "roomId") String roomId, Principal principal) {
         Long senderId = getUserId(principal);
         chatService.sendDirectMessage(roomId, directMessageRequest, senderId);
     }
@@ -32,7 +32,7 @@ public class ChatController {
     // 그룹 채팅
     @Transactional
     @MessageMapping("/chat.group.send/{roomId}")
-    public void sendDirectMessage(@Payload GroupMessageRequest groupMessageRequest, @DestinationVariable String roomId, Principal principal) {
+    public void sendDirectMessage(@Payload GroupMessageRequest groupMessageRequest, @DestinationVariable(value = "roomId") String roomId, Principal principal) {
         Long senderId = getUserId(principal);
         chatService.sendGroupMessage(roomId, groupMessageRequest, senderId);
     }
