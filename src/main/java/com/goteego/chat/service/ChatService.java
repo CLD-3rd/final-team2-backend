@@ -3,6 +3,7 @@ package com.goteego.chat.service;
 
 import com.goteego.chat.domain.ChatMessage;
 import com.goteego.chat.domain.ChatRoom;
+import com.goteego.chat.domain.enumerate.MessageType;
 import com.goteego.chat.dto.message.DirectMessageRequest;
 import com.goteego.chat.dto.message.DirectMessageResponse;
 import com.goteego.chat.dto.message.GroupMessageRequest;
@@ -36,7 +37,6 @@ public class ChatService {
     private final UserService userService;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomRepository chatRoomRepository;
-    private final UserRepository userRepository;
 
     private final String DIRECT_MESSAGE_PATH = "/queue/messages";
     private final String GROUP_MESSAGE_PATH = "/sub/chat/room/";
@@ -49,45 +49,26 @@ public class ChatService {
     @Transactional
     public void sendDirectMessage(String roomId, DirectMessageRequest directMessageRequest, Long senderId) {
         // 1. 발신자 조회
-//        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalStateException("USER NOT FOUND"));
         UserDto sender = userService.getUser(senderId);
 
         // 2. 수신자 조회
-//        User recipient = userRepository.findById(directMessageRequest.getRecipientId())
-//                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
         UserDto recipient = userService.getUser(directMessageRequest.getRecipientId());
 
         log.info("sender id = {}", sender.getId());
         log.info("recipient id = {}", recipient.getId());
 
-        ChatMessage message = chatMessageRepository.save(
-                ChatMessage.create(
-                        roomId,
-                        sender.getId(),
-                        sender.getNickname(),
-                        directMessageRequest.getContent(),
-                        directMessageRequest.getType()
-                )
-        );
+        // 3. 메시지 DB 저장
+        ChatMessage message = createAndSaveMessage(roomId, directMessageRequest.getContent(), directMessageRequest.getType(), sender);
 
-        // 3. 메시지 전송
-        sendToEachOther(message.toDirectMessageDto(), sender.getId(), recipient.getId());
+        // 4. 메시지 전송 (수신자와 발신자 모두에게 전송)
+        messagingTemplate.convertAndSendToUser(String.valueOf(recipient.getId()), DIRECT_MESSAGE_PATH, message); // 수신자에게
+        messagingTemplate.convertAndSendToUser(String.valueOf(sender.getId()), DIRECT_MESSAGE_PATH, message);    // 발신자에게
 
-        // 4. 수신자에게 알림 전송
-        NotificationResponse notification = new NotificationResponse(
-                sender.getEmail(), // 알림 제목
-                message.getContent(), // 알림 내용 (메시지 내용)
-                sender.getId(),
-                sender.getNickname(),
-                roomId
-        );
+        // 5. 알림 메시지 임시 저장
+        NotificationResponse notification= NotificationResponse.create(sender.getEmail(), message.getContent(), sender.getId(), sender.getNickname(), roomId);
+
+        // 6. 수신자에게 알림 전송
         messagingTemplate.convertAndSendToUser(recipient.getId().toString(), NOTIFICATION_PATH, notification);
-    }
-
-    // sendDirectMessage의 내부 메서드
-    private void sendToEachOther(DirectMessageResponse message, Long senderId, Long recipientId) {
-        messagingTemplate.convertAndSendToUser(recipientId.toString(), DIRECT_MESSAGE_PATH, message);
-        messagingTemplate.convertAndSendToUser(senderId.toString(), DIRECT_MESSAGE_PATH, message);
     }
 
     /**
@@ -99,25 +80,15 @@ public class ChatService {
         log.info("roomId = {}", roomId);
 
         // 1. 발신자 조회
-//        User sender = userRepository.findById(senderId).orElseThrow(() -> new IllegalStateException("USER NOT FOUND"));
         UserDto sender = userService.getUser(senderId);
-        log.info("sender id = {}", sender.getId());
 
         // 2. 채팅방 존재 여부 확인 (선택적)
         ChatRoom chatRoom = chatRoomRepository.findByRoomId(roomId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.CHATROOM_NOT_FOUND));
-        log.info("Group Chat Room UUID id = {}", chatRoom.getRoomId());
 
         // 3. 메시지 저장
-        ChatMessage message = chatMessageRepository.save(
-                ChatMessage.create(
-                        roomId,
-                        sender.getId(),
-                        sender.getNickname(),
-                        groupMessageRequest.getContent(),
-                        groupMessageRequest.getType()
-                )
-        );
+        ChatMessage message = chatMessageRepository.save(ChatMessage.create(roomId, sender.getId(), sender.getNickname(),
+                                                            groupMessageRequest.getContent(),groupMessageRequest.getType()));
 
         // 4. 그룹 채팅방에 메시지 전송(브로드캐스트)
         messagingTemplate.convertAndSend(GROUP_MESSAGE_PATH + roomId, message.toGroupMessageDto());
@@ -130,19 +101,9 @@ public class ChatService {
             log.info("참여자 ID: {}, 이메일: {}", participantUser.getId(), participantUser.getOauthInfo().getOauthEmail());
 
             if (!participantUser.getId().equals(senderId)) {
-                NotificationResponse notification = new NotificationResponse(
-                        chatRoom.getName(),
-                        message.getContent(),
-                        sender.getId(),
-                        sender.getNickname(),
-                        roomId
-                );
+                NotificationResponse notification= NotificationResponse.create(chatRoom.getName(), message.getContent(), sender.getId(), sender.getNickname(), roomId);
                 log.info("알림 전송 대상: {}", participantUser.getId());
-                messagingTemplate.convertAndSendToUser(
-                        participantUser.getId().toString(),
-                        NOTIFICATION_PATH,
-                        notification
-                );
+                messagingTemplate.convertAndSendToUser(participantUser.getId().toString(), NOTIFICATION_PATH, notification);
             }
         });
     }
@@ -151,17 +112,15 @@ public class ChatService {
     /**
      * 특정 채팅방의 메시지 내역 조회
      */
-//    public List<DirectMessageResponse> findChatMessages(String roomId) {
-//        return chatMessageRepository.findByRoomIdOrderByTimestampAsc(roomId)
-//                .stream()
-//                .map(DirectMessageResponse::fromEntity)
-//                .collect(Collectors.toList());
-//    }
     public Slice<DirectMessageResponse> findChatMessages(String roomId, Pageable pageable) {
         Slice<ChatMessage> messageSlice = chatMessageRepository.findByRoomIdOrderByTimestampDesc(roomId, pageable);
         return messageSlice.map(DirectMessageResponse::fromEntity);
     }
 
 
+    //===============================내부로직===============================//
+    private ChatMessage createAndSaveMessage(String roomId, String content, MessageType type, UserDto sender) {
+        return chatMessageRepository.save(ChatMessage.create(roomId, sender.getId(), sender.getNickname(), content, type));
+    }
 
 }

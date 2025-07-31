@@ -71,12 +71,6 @@ public class ChatRoomController {
     /**********************************
      ************** 공통 **************
      *********************************/
-    // 특정 채팅방의 메시지 내역 조회 (roomId: 채팅방의 UUID)
-//    @GetMapping("/rooms/{roomId}/messages")
-//    public ResponseEntity<List<DirectMessageResponse>> getChatMessages(@PathVariable String roomId) {
-//        List<DirectMessageResponse> messages = chatService.findChatMessages(roomId);
-//        return ResponseEntity.ok(messages);
-//    }
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<Slice<DirectMessageResponse>> loadMessages(
             @PathVariable String roomId,
