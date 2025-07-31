@@ -8,6 +8,7 @@ import com.goteego.feed.repository.FeedCommentRepository;
 import com.goteego.feed.repository.FeedRepository;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.error.exception.UnauthorizedAccessException;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -86,23 +87,27 @@ public class FeedCommentService {
     }
 
     /**
-     * 코멘트 정보를 수정하는 메서드
+     * 피드 댓글 수정
+     * 주어진 댓글 ID에 해당하는 댓글을 수정하는 서비스 메서드입니다.
+     * 댓글 작성자만 자신의 댓글을 수정할 수 있으며, 수정 요청이 성공하면 댓글 내용을 업데이트합니다.
+     *
+     * @param commentId 수정할 댓글의 ID
+     * @param userId    댓글을 수정하려는 사용자 ID
+     * @param request   수정할 댓글 내용이 포함된 요청 객체
      */
     @Transactional
-    public FeedComment updateComment(Long commentId, Long userId, String content) {
-        // 코멘트 조회
+    public void updateComment(Long commentId, Long userId, FeedCommentPostRequest request) {
+        // 댓글 조회: commentId에 해당하는 댓글을 데이터베이스에서 조회
         FeedComment comment = feedCommentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.COMMENT_NOT_FOUND));
 
-        // 작성자 권한 검증
-        if (!comment.isAuthor(userId)) {
-            throw new IllegalArgumentException("댓글 작성자만 수정할 수 있습니다.");
+        // 작성자 권한 검증: 요청한 사용자가 해당 댓글의 작성자인지 확인
+        if (!comment.getAuthor().getId().equals(userId)) {
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_COMMENT_UPDATE);
         }
 
-        // 코멘트 내용 수정
-        comment.update(content);
-
-        return comment;
+        // 댓글 정보 수정
+        comment.update(request.content());
     }
 
     /**

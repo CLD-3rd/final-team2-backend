@@ -61,17 +61,21 @@ public enum ErrorCode {
     UNAUTHORIZED_PROFILE_ACCESS(HttpStatus.FORBIDDEN, "해당 선호도에 접근할 권한이 없습니다."),
     INVALID_SEARCH_PARAMETERS(HttpStatus.BAD_REQUEST, "유효하지 않은 검색 파라미터입니다."),
 
-    //뱃지 관련
+    // 뱃지 관련
     NOT_FOUND_BADGE_CODE(HttpStatus.NOT_FOUND, "존재하지 않는 뱃지 코드입니다."),
     INVALID_BADGE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 뱃지 타입입니다."),
     NOT_FOUND_BADGE(HttpStatus.NOT_FOUND, "해당 뱃지를 찾을 수 없습니다."),
     NOT_FOUND_BADGE_REQUEST(HttpStatus.NOT_FOUND, "해당 피드의 뱃지 요청이 존재하지 않습니다."),
 
-    //피드 관련
-    FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 피드입니다."),
-    UNAUTHORIZED_FEED_UPDATE(HttpStatus.FORBIDDEN, "피드 수정 권한이 없습니다."),
-    UNAUTHORIZED_FEED_DELETE(HttpStatus.FORBIDDEN, "피드 삭제 권한이 없습니다."),
+    // 피드 관련
+    FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다."),
+    UNAUTHORIZED_FEED_UPDATE(HttpStatus.FORBIDDEN, "해당 피드에 대한 수정 권한이 없습니다."),
+    UNAUTHORIZED_FEED_DELETE(HttpStatus.FORBIDDEN, "해당 피드에 대한 삭제 권한이 없습니다."),
 
+    // 댓글 관련
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글이 존재하지 않습니다."),
+    UNAUTHORIZED_COMMENT_UPDATE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 수정 권한이 없습니다."),
+    UNAUTHORIZED_COMMENT_DELETE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 삭제 권한이 없습니다."),
     // 리뷰 관련
     SELF_REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신에게는 리뷰를 작성할 수 없습니다."),
     INVALID_REVIEW_TARGET(HttpStatus.BAD_REQUEST, "같은 여행에 참여하지 않은 대상자입니다."),

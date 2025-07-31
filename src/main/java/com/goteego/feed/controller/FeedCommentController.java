@@ -1,6 +1,5 @@
 package com.goteego.feed.controller;
 
-import com.goteego.feed.domain.FeedComment;
 import com.goteego.feed.dto.request.FeedCommentPostRequest;
 import com.goteego.feed.dto.response.FeedCommentResponse;
 import com.goteego.feed.service.FeedCommentService;
@@ -55,7 +54,7 @@ public class FeedCommentController {
      * @return 201 Created
      */
     @PostMapping
-    public ResponseEntity<FeedComment> createComment(
+    public ResponseEntity<Void> createComment(
             @PathVariable("feedId") Long feedId,
             @RequestBody FeedCommentPostRequest request,
             @AuthenticationPrincipal User user) {
@@ -66,31 +65,24 @@ public class FeedCommentController {
     }
 
     /**
-     * 코멘트 수정
+     * 피드 댓글 수정 API
      *
-     * @param feedId     피드 ID
-     * @param commentId  코멘트 ID
-     * @param requestDto 코멘트 수정 요청 데이터
-     * @param user       현재 로그인한 사용자
-     * @return 수정된 코멘트
+     * @param feedId    수정할 댓글이 속한 피드의 ID
+     * @param commentId 수정할 댓글의 ID
+     * @param request   수정할 댓글 내용이 포함된 요청 객체
+     * @param user      수정 요청을 보내는 사용자 정보
+     * @return 수정 성공 시 HTTP 204 (No Content) 응답 반환
      */
     @PutMapping("/{commentId}")
-    public ResponseEntity<FeedComment> updateComment(
+    public ResponseEntity<Void> updateComment(
             @PathVariable("feedId") Long feedId,
             @PathVariable("commentId") Long commentId,
-            @RequestBody CommentUpdateRequest requestDto,
+            @RequestBody FeedCommentPostRequest request,
             @AuthenticationPrincipal User user) {
 
-        FeedComment comment = feedCommentService.updateComment(
-                commentId,
-                user.getId(),
-                requestDto.getContent()
-        );
-
-        log.info("피드 코멘트 수정 - feedId: {}, commentId: {}, userId: {}",
-                feedId, commentId, user.getId());
-
-        return ResponseEntity.ok(comment);
+        feedCommentService.updateComment(commentId, user.getId(), request);
+        log.info("✅ [FeedComment] 피드 댓글 수정 성공 - feedId: {}, commentId: {}, userNickName: {}", feedId, commentId, user.getNickname());
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -113,37 +105,5 @@ public class FeedCommentController {
                 feedId, commentId, user.getId());
 
         return ResponseEntity.ok("코멘트가 삭제되었습니다.");
-    }
-
-    /**
-     * 코멘트 생성 요청 DTO
-     */
-    public static class CommentCreateRequest {
-        private String content;
-
-        // Getters and Setters
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
-    }
-
-    /**
-     * 코멘트 수정 요청 DTO
-     */
-    public static class CommentUpdateRequest {
-        private String content;
-
-        // Getters and Setters
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
     }
 } 
