@@ -16,6 +16,7 @@ public record FeedDetailResponse(
         String location,
         Long viewCount,
         String createdAt,
+        Boolean badgeRequest,
         List<FeedCommentResponse> comments
 ) {
     public static FeedDetailResponse from(Feed feed, List<FeedCommentResponse> comments) {
@@ -28,6 +29,7 @@ public record FeedDetailResponse(
                 .location(feed.getLocation().name())
                 .viewCount(feed.getViewCount())
                 .createdAt(feed.getCreatedAt().toString())
+                .badgeRequest(feed.getBadgeRequest())
                 .comments(comments)
                 .build();
     }
