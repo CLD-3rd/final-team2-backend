@@ -111,20 +111,23 @@ public class FeedCommentService {
     }
 
     /**
-     * 코멘트를 삭제하는 메서드
+     * 피드 댓글 수정
+     *
+     * @param commentId 삭제할 댓글의 ID
+     * @param userId    댓글을 삭제하려는 사용자의 ID
      */
     @Transactional
     public void deleteComment(Long commentId, Long userId) {
-        // 코멘트 조회
+        // 댓글 조회: commentId에 해당하는 댓글을 데이터베이스에서 조회
         FeedComment comment = feedCommentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.COMMENT_NOT_FOUND));
 
-        // 작성자 권한 검증
-        if (!comment.isAuthor(userId)) {
-            throw new IllegalArgumentException("댓글 작성자만 삭제할 수 있습니다.");
+        // 작성자 권한 검증: 요청한 사용자가 해당 댓글의 작성자인지 확인
+        if (!comment.getAuthor().getId().equals(userId)) {
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_COMMENT_DELETE);
         }
 
-        // 코멘트 삭제
+        // 댓글 삭제
         feedCommentRepository.delete(comment);
     }
 }

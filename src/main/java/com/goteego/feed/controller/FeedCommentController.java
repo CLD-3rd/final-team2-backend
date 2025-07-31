@@ -41,7 +41,7 @@ public class FeedCommentController {
             @AuthenticationPrincipal User user) {
 
         List<FeedCommentResponse> comments = feedCommentService.getComments(feedId, user);
-        log.info("✅ [Feed] 피드 댓글 목록 조회 성공 - userNickName {}", user.getNickname());
+        log.info("✅ [Feed] 피드 댓글 목록 조회 성공 - userNickName: {}", user.getNickname());
         return ResponseEntity.ok(comments);
     }
 
@@ -51,7 +51,7 @@ public class FeedCommentController {
      * @param feedId  댓글이 달릴 피드 ID
      * @param request 댓글 생성 요청 데이터 (내용 필수)
      * @param user    현재 인증된 사용자
-     * @return 201 Created
+     * @return 생성 성공 시 HTTP 201 (Created) 응답 반환
      */
     @PostMapping
     public ResponseEntity<Void> createComment(
@@ -67,10 +67,10 @@ public class FeedCommentController {
     /**
      * 피드 댓글 수정 API
      *
-     * @param feedId    수정할 댓글이 속한 피드의 ID
-     * @param commentId 수정할 댓글의 ID
+     * @param feedId    수정할 댓글이 속한 피드 ID
+     * @param commentId 수정할 댓글 ID
      * @param request   수정할 댓글 내용이 포함된 요청 객체
-     * @param user      수정 요청을 보내는 사용자 정보
+     * @param user      현재 로그인한 사용자
      * @return 수정 성공 시 HTTP 204 (No Content) 응답 반환
      */
     @PutMapping("/{commentId}")
@@ -86,24 +86,21 @@ public class FeedCommentController {
     }
 
     /**
-     * 코멘트 삭제
+     * 피드 댓글 삭제 API
      *
-     * @param feedId    피드 ID
-     * @param commentId 코멘트 ID
+     * @param feedId    삭제할 댓글이 속한 피드 ID
+     * @param commentId 삭제할 댓글 ID
      * @param user      현재 로그인한 사용자
-     * @return 삭제 결과 메시지
+     * @return 삭제 성공 시 HTTP 204 (No Content) 응답 반환
      */
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<String> deleteComment(
+    public ResponseEntity<Void> deleteComment(
             @PathVariable("feedId") Long feedId,
             @PathVariable("commentId") Long commentId,
             @AuthenticationPrincipal User user) {
 
         feedCommentService.deleteComment(commentId, user.getId());
-
-        log.info("피드 코멘트 삭제 - feedId: {}, commentId: {}, userId: {}",
-                feedId, commentId, user.getId());
-
-        return ResponseEntity.ok("코멘트가 삭제되었습니다.");
+        log.info("✅ [FeedComment] 피드 댓글 삭제 성공 - feedId: {}, commentId: {}, userNickName: {}", feedId, commentId, user.getNickname());
+        return ResponseEntity.noContent().build();
     }
 } 
