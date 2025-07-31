@@ -33,25 +33,30 @@ public class FeedCommentService {
     private final UserService userService;
 
     /**
-     * 특정 피드의 코멘트 목록을 조회하는 메서드
-     * 주어진 피드 ID에 대한 코멘트 목록을 조회하고, 해당 코멘트들을 `FeedCommentResponse`로 변환하여 반환합니다.
-     * 또한 피드가 존재하지 않는 경우 `FEED_NOT_FOUND` 오류를 발생시킵니다.
+     * 피드 댓글 목록 조회
      *
      * @param feedId 조회할 피드의 ID
-     * @return 해당 피드에 달린 코멘트들의 리스트를 포함하는 `FeedCommentResponse` 리스트
+     * @param user   현재 로그인한 사용자 정보 (댓글이 해당 유저의 댓글인지 확인)
+     * @return 해당 피드에 달린 댓글 목록을 포함한 리스트
      */
-    public List<FeedCommentResponse> getCommentsByFeedId(Long feedId, Long currentUserId) {
-        // 피드 존재 여부 확인
-        if (!feedRepository.existsById(feedId)) {
+    public List<FeedCommentResponse> getComments(Long feedId, User user) {
+        // 로그인 여부 확인: 로그인한 사용자 ID를 추출
+        Long currentUserId = (user != null) ? user.getId() : null;
+
+        // 피드 존재 여부 확인: 피드가 존재하지 않으면 404 오류 발생
+        if (!feedRepository.existsById(feedId))
             throw new NotFoundException(ErrorCode.FEED_NOT_FOUND);
+        log.info("currentUserId: {}", currentUserId);
+
+        // 코멘트 목록 조회: 댓글 작성자와 함께 댓글을 생성 시간 순으로 조회 (N+1 문제 해결을 위한 Fetch Join 사용)
+        List<FeedComment> comments = feedCommentRepository.findByFeedIdWithAuthorOrderByCreatedAtAsc(feedId);
+        for (FeedComment c : comments) {
+            log.info("commentUserId: {}", c.getAuthor().getId());
         }
 
-        // 코멘트 목록 조회 (Fetch Join으로 N+1 문제 해결)
-        List<FeedComment> comments = feedCommentRepository.findByFeedIdWithAuthorOrderByCreatedAtAsc(feedId);
-        
-        // FeedComment 엔티티를 FeedCommentResponseDto로 변환
+        // FeedComment 엔티티를 FeedCommentResponse로 변환하여 반환
         return comments.stream()
-                .map(comment -> FeedCommentResponse.from(comment, currentUserId))
+                .map(comment -> FeedCommentResponse.from(comment, currentUserId))  // 로그인한 사용자와 비교하여 isMyComment 설정
                 .collect(Collectors.toList());
     }
 

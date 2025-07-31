@@ -2,6 +2,7 @@ package com.goteego.feed.controller;
 
 import com.goteego.feed.domain.FeedComment;
 import com.goteego.feed.dto.request.FeedCommentPostRequest;
+import com.goteego.feed.dto.response.FeedCommentResponse;
 import com.goteego.feed.service.FeedCommentService;
 import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 피드 코멘트 컨트롤러
@@ -25,6 +28,23 @@ import org.springframework.web.bind.annotation.*;
 public class FeedCommentController {
 
     private final FeedCommentService feedCommentService;
+
+    /**
+     * 피드 댓글 목록 조회 API
+     *
+     * @param feedId 조회할 피드의 ID
+     * @param user   현재 로그인한 사용자 정보 (댓글이 작성된 유저인지 확인용)
+     * @return 댓글 목록을 포함한 ResponseEntity
+     */
+    @GetMapping
+    public ResponseEntity<List<FeedCommentResponse>> getFeeds(
+            @PathVariable("feedId") Long feedId,
+            @AuthenticationPrincipal User user) {
+
+        List<FeedCommentResponse> comments = feedCommentService.getComments(feedId, user);
+        log.info("✅ [Feed] 피드 댓글 목록 조회 성공 - userNickName {}", user.getNickname());
+        return ResponseEntity.ok(comments);
+    }
 
     /**
      * 피드 댓글 생성 API

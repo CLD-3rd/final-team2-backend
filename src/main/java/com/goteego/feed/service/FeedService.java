@@ -96,15 +96,12 @@ public class FeedService {
      */
     @Transactional
     public FeedDetailResponse getFeedDetail(Long feedId, User user) {
-        // 로그인 여부 확인
-        Long currentUserId = (user != null) ? user.getId() : null;
-
         // 피드 조회
         Feed feed = feedRepository.findById(feedId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
 
         // 코멘트 목록 조회
-        List<FeedCommentResponse> comments = feedCommentService.getCommentsByFeedId(feedId, currentUserId);
+        List<FeedCommentResponse> comments = feedCommentService.getComments(feedId, user);
 
         // 조회수 증가
         feed.incrementViewCount();
