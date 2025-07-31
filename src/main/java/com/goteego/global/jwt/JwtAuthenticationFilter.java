@@ -55,11 +55,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             for (String pattern : WHITELIST) {
                 if (pathMatcher.match(pattern, uri)) {
                     log.debug("✅ JWT 필터 스킵 (화이트리스트): {}", uri);
+
+                    // 화이트리스트 요청이라도 accessToken이 있다면 인증을 설정해야 함
+                    String accessToken = CookieUtil.getTokenFromCookie(request, "accessToken");
+                    if (accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
+                        setAuthenticationFromAccessToken(accessToken, request);
+                        return false;  // 화이트리스트여도 인증을 했으므로 필터를 건너뛰지 않음
+                    }
                     return true;
                 }
             }
         }
-
         return false;
     }
 

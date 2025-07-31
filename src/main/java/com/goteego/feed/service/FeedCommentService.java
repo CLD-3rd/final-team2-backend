@@ -46,13 +46,9 @@ public class FeedCommentService {
         // 피드 존재 여부 확인: 피드가 존재하지 않으면 404 오류 발생
         if (!feedRepository.existsById(feedId))
             throw new NotFoundException(ErrorCode.FEED_NOT_FOUND);
-        log.info("currentUserId: {}", currentUserId);
 
         // 코멘트 목록 조회: 댓글 작성자와 함께 댓글을 생성 시간 순으로 조회 (N+1 문제 해결을 위한 Fetch Join 사용)
         List<FeedComment> comments = feedCommentRepository.findByFeedIdWithAuthorOrderByCreatedAtAsc(feedId);
-        for (FeedComment c : comments) {
-            log.info("commentUserId: {}", c.getAuthor().getId());
-        }
 
         // FeedComment 엔티티를 FeedCommentResponse로 변환하여 반환
         return comments.stream()
