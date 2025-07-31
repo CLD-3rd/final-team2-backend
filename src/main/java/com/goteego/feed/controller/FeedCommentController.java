@@ -1,11 +1,12 @@
 package com.goteego.feed.controller;
 
-import com.goteego.feed.domain.FeedComment;
-import com.goteego.feed.dto.response.FeedCommentResponseDto;
+import com.goteego.feed.dto.request.FeedCommentPostRequest;
+import com.goteego.feed.dto.response.FeedCommentResponse;
 import com.goteego.feed.service.FeedCommentService;
 import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -15,128 +16,91 @@ import java.util.List;
 /**
  * 피드 코멘트 컨트롤러
  * 피드 코멘트 관련 REST API 엔드포인트를 제공하는 컨트롤러
- * 
+ *
  * @author GotEEgo Team
  * @version 1.0
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/feed/{feedId}/comments")
+@RequestMapping("/api/feeds/{feedId}/comments")
 @RequiredArgsConstructor
 public class FeedCommentController {
-    
+
     private final FeedCommentService feedCommentService;
-    
+
     /**
-     * 특정 피드의 코멘트 목록 조회
-     * 
-     * @param feedId 피드 ID
-     * @return 코멘트 목록
+     * 피드 댓글 목록 조회 API
+     *
+     * @param feedId 조회할 피드의 ID
+     * @param user   현재 로그인한 사용자 정보 (댓글이 작성된 유저인지 확인용)
+     * @return 댓글 목록을 포함한 ResponseEntity
      */
     @GetMapping
-    public ResponseEntity<List<FeedCommentResponseDto>> getComments(@PathVariable("feedId") Long feedId) {
-        List<FeedCommentResponseDto> comments = feedCommentService.getCommentsByFeedId(feedId);
-        
-        log.info("피드 코멘트 목록 조회 - feedId: {}, commentCount: {}", feedId, comments.size());
-        
+    public ResponseEntity<List<FeedCommentResponse>> getFeeds(
+            @PathVariable("feedId") Long feedId,
+            @AuthenticationPrincipal User user) {
+
+        List<FeedCommentResponse> comments = feedCommentService.getComments(feedId, user);
+        log.info("✅ [Feed] 피드 댓글 목록 조회 성공 - userNickName: {}", user.getNickname());
         return ResponseEntity.ok(comments);
     }
-    
+
     /**
-     * 새로운 코멘트 생성
-     * 
-     * @param feedId 피드 ID
-     * @param requestDto 코멘트 생성 요청 데이터
-     * @param user 현재 로그인한 사용자
-     * @return 생성된 코멘트
+     * 피드 댓글 생성 API
+     *
+     * @param feedId  댓글이 달릴 피드 ID
+     * @param request 댓글 생성 요청 데이터 (내용 필수)
+     * @param user    현재 인증된 사용자
+     * @return 생성 성공 시 HTTP 201 (Created) 응답 반환
      */
     @PostMapping
-    public ResponseEntity<FeedComment> createComment(
+    public ResponseEntity<Void> createComment(
             @PathVariable("feedId") Long feedId,
-            @RequestBody CommentCreateRequest requestDto,
+            @RequestBody FeedCommentPostRequest request,
             @AuthenticationPrincipal User user) {
-        
-        FeedComment comment = feedCommentService.createComment(
-            feedId,
-            user.getId(),
-            requestDto.getContent()
-        );
-        
-        log.info("피드 코멘트 생성 - feedId: {}, commentId: {}, userId: {}", 
-                feedId, comment.getId(), user.getId());
-        
-        return ResponseEntity.ok(comment);
+
+        Long newCommentId = feedCommentService.createComment(feedId, user.getId(), request);
+        log.info("✅ [FeedComment] 피드 댓글 생성 성공 - feedId: {}, commentId: {}, userNickName: {}", feedId, newCommentId, user.getNickname());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
-    
+
     /**
-     * 코멘트 수정
-     * 
-     * @param feedId 피드 ID
-     * @param commentId 코멘트 ID
-     * @param requestDto 코멘트 수정 요청 데이터
-     * @param user 현재 로그인한 사용자
-     * @return 수정된 코멘트
+     * 피드 댓글 수정 API
+     *
+     * @param feedId    수정할 댓글이 속한 피드 ID
+     * @param commentId 수정할 댓글 ID
+     * @param request   수정할 댓글 내용이 포함된 요청 객체
+     * @param user      현재 로그인한 사용자
+     * @return 수정 성공 시 HTTP 204 (No Content) 응답 반환
      */
     @PutMapping("/{commentId}")
-    public ResponseEntity<FeedComment> updateComment(
+    public ResponseEntity<Void> updateComment(
             @PathVariable("feedId") Long feedId,
             @PathVariable("commentId") Long commentId,
-            @RequestBody CommentUpdateRequest requestDto,
+            @RequestBody FeedCommentPostRequest request,
             @AuthenticationPrincipal User user) {
-        
-        FeedComment comment = feedCommentService.updateComment(
-            commentId,
-            user.getId(),
-            requestDto.getContent()
-        );
-        
-        log.info("피드 코멘트 수정 - feedId: {}, commentId: {}, userId: {}", 
-                feedId, commentId, user.getId());
-        
-        return ResponseEntity.ok(comment);
+
+        feedCommentService.updateComment(commentId, user.getId(), request);
+        log.info("✅ [FeedComment] 피드 댓글 수정 성공 - feedId: {}, commentId: {}, userNickName: {}", feedId, commentId, user.getNickname());
+        return ResponseEntity.noContent().build();
     }
-    
+
     /**
-     * 코멘트 삭제
-     * 
-     * @param feedId 피드 ID
-     * @param commentId 코멘트 ID
-     * @param user 현재 로그인한 사용자
-     * @return 삭제 결과 메시지
+     * 피드 댓글 삭제 API
+     *
+     * @param feedId    삭제할 댓글이 속한 피드 ID
+     * @param commentId 삭제할 댓글 ID
+     * @param user      현재 로그인한 사용자
+     * @return 삭제 성공 시 HTTP 204 (No Content) 응답 반환
      */
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<String> deleteComment(
+    public ResponseEntity<Void> deleteComment(
             @PathVariable("feedId") Long feedId,
             @PathVariable("commentId") Long commentId,
             @AuthenticationPrincipal User user) {
-        
+
         feedCommentService.deleteComment(commentId, user.getId());
-        
-        log.info("피드 코멘트 삭제 - feedId: {}, commentId: {}, userId: {}", 
-                feedId, commentId, user.getId());
-        
-        return ResponseEntity.ok("코멘트가 삭제되었습니다.");
-    }
-    
-    /**
-     * 코멘트 생성 요청 DTO
-     */
-    public static class CommentCreateRequest {
-        private String content;
-        
-        // Getters and Setters
-        public String getContent() { return content; }
-        public void setContent(String content) { this.content = content; }
-    }
-    
-    /**
-     * 코멘트 수정 요청 DTO
-     */
-    public static class CommentUpdateRequest {
-        private String content;
-        
-        // Getters and Setters
-        public String getContent() { return content; }
-        public void setContent(String content) { this.content = content; }
+        log.info("✅ [FeedComment] 피드 댓글 삭제 성공 - feedId: {}, commentId: {}, userNickName: {}", feedId, commentId, user.getNickname());
+        return ResponseEntity.noContent().build();
     }
 } 

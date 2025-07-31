@@ -1,10 +1,10 @@
 package com.goteego.travel.controller;
 
+import com.goteego.global.dto.SearchCondition;
 import com.goteego.travel.domain.enumerate.PostType;
 import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
 import com.goteego.travel.dto.travel.TravelPostRequest;
 import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
-import com.goteego.travel.dto.travel.TravelPostSearchCondition;
 import com.goteego.travel.service.TravelPostService;
 import com.goteego.user.domain.User;
 import jakarta.validation.Valid;
@@ -43,7 +43,7 @@ public class TravelPostController {
             @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "12") int size,
-            @Valid TravelPostSearchCondition condition,
+            @Valid SearchCondition condition,
             @AuthenticationPrincipal User user) {
         PostType currentPostType = PostType.valueOf(postType.toUpperCase());
         TravelPostResponseWrapper travelPosts = travelPostService.getTravelPosts(currentPostType, page, size, condition, user);
