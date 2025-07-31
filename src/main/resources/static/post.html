@@ -44,13 +44,21 @@
                 <label>페이지 크기:</label>
                 <input type="number" id="test-pageSize" value="5" min="1" max="20">
             </div>
+            <!-- 정렬 버튼 추가 -->
+            <div class="form-group">
+                <label>정렬 기준:</label>
+                <div class="sort-buttons">
+                    <button onclick="getTravelPosts('recent')" class="sort-button active" id="sort-recent">최신순</button>
+                    <button onclick="getTravelPosts('view')" class="sort-button" id="sort-view">조회순</button>
+                </div>
+            </div>
         </div>
-        <button onclick="testGetTravelPosts()" class="test">게시글 목록 테스트</button>
-        <button onclick="testGetCurrentUser()" class="test">내 정보 테스트</button>
-        <button onclick="testGetMySchedules()" class="test">내 일정 테스트</button>
-        <button onclick="testCreateTravelPost()" class="test">게시글 작성 테스트</button>
-        <button onclick="testJoinTravelPost()" class="test">참여 신청 테스트</button>
-        <pre id="test-result"></pre>
+<!--        <button onclick="testGetTravelPosts()" class="test">게시글 목록 테스트</button>-->
+<!--        <button onclick="testGetCurrentUser()" class="test">내 정보 테스트</button>-->
+<!--        <button onclick="testGetMySchedules()" class="test">내 일정 테스트</button>-->
+<!--        <button onclick="testCreateTravelPost()" class="test">게시글 작성 테스트</button>-->
+<!--        <button onclick="testJoinTravelPost()" class="test">참여 신청 테스트</button>-->
+<!--        <pre id="test-result"></pre>-->
     </div>
 
     <!-- 여행 게시판 API 섹션 -->
@@ -161,6 +169,7 @@
     // 전역 변수 (테스트용)
     let currentPostType = 'BEFORE';
     let currentPageSize = 10;
+    let currentSort = 'recent';
 
     function getAuthHeaders() {
         const accessToken = getCookie('accessToken');
@@ -321,20 +330,65 @@
     }
 
     // ===== 여행 게시판 API =====
-    async function getTravelPosts() {
+    // async function getTravelPosts() {
+    //     const postType = document.getElementById('postType-select').value;
+    //     const pageSize = document.getElementById('pageSize-input').value;
+    //
+    //     console.log('getTravelPosts 호출됨 - postType:', postType, 'pageSize:', pageSize);
+    //
+    //     try {
+    //         const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
+    //         console.log('게시글 목록 API 응답:', res.data);
+    //         displayTravelPosts(res.data, postType);
+    //     } catch(e) {
+    //         console.error('게시글 목록 조회 실패:', e);
+    //         let errorMessage = '알 수 없는 오류가 발생했습니다.';
+    //
+    //         if (e.response) {
+    //             if (e.response.status === 401) {
+    //                 errorMessage = '로그인이 필요합니다. Google 계정으로 로그인해주세요.';
+    //             } else if (e.response.status === 403) {
+    //                 errorMessage = '접근 권한이 없습니다.';
+    //             } else if (e.response.data && e.response.data.message) {
+    //                 errorMessage = e.response.data.message;
+    //             } else {
+    //                 errorMessage = `서버 오류 (${e.response.status}): ${e.message}`;
+    //             }
+    //         } else if (e.request) {
+    //             errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
+    //         } else {
+    //             errorMessage = e.message;
+    //         }
+    //
+    //         document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${errorMessage}</div>`;
+    //     }
+    // }
+
+    async function getTravelPosts(sortType) {
+        // 정렬 타입이 전달되면 업데이트
+        if (sortType) {
+            currentSort = sortType;
+
+            // 정렬 버튼 활성화 상태 업데이트
+            document.querySelectorAll('.sort-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`sort-${sortType}`).classList.add('active');
+        }
+
         const postType = document.getElementById('postType-select').value;
         const pageSize = document.getElementById('pageSize-input').value;
-        
-        console.log('getTravelPosts 호출됨 - postType:', postType, 'pageSize:', pageSize);
-        
+
         try {
-            const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
+            const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}&sort=${currentSort}`, {
+                headers: getAuthHeaders()
+            });
             console.log('게시글 목록 API 응답:', res.data);
             displayTravelPosts(res.data, postType);
-        } catch(e) { 
+        } catch(e) {
             console.error('게시글 목록 조회 실패:', e);
             let errorMessage = '알 수 없는 오류가 발생했습니다.';
-            
+
             if (e.response) {
                 if (e.response.status === 401) {
                     errorMessage = '로그인이 필요합니다. Google 계정으로 로그인해주세요.';
@@ -350,7 +404,7 @@
             } else {
                 errorMessage = e.message;
             }
-            
+
             document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${errorMessage}</div>`;
         }
     }

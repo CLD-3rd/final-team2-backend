@@ -68,7 +68,8 @@ public class ScheduleService {
                     return BeforeTravelPostResponseDto.from(
                             tp,
                             tp.getUser().getNickname(),
-                            approvedParticipantCount
+                            approvedParticipantCount,
+                            tp.getViewCount()
                     );
                 })
                 .collect(Collectors.toList());

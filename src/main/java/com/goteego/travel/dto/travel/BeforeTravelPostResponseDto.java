@@ -32,13 +32,13 @@ public class BeforeTravelPostResponseDto {
     /**
      * TravelPost 엔티티를 DTO로 변환
      */
-    public static BeforeTravelPostResponseDto from(TravelPost travelPost, String nickname, Integer approvedParticipantCount) {
+    public static BeforeTravelPostResponseDto from(TravelPost travelPost, String nickname, Integer approvedParticipantCount, Long viewCount) {
         return BeforeTravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
                 .content(travelPost.getContent())
                 .location(travelPost.getLocation().name())
-                .viewCount(travelPost.getViewCount())
+                .viewCount(viewCount)
                 .startTime(travelPost.getStartTime().toString())
                 .endTime(travelPost.getEndTime().toString())
                 .author(createAuthorDto(travelPost.getUser(), nickname))
