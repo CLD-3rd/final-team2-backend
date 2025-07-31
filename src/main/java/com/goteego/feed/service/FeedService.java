@@ -177,20 +177,23 @@ public class FeedService {
     }
 
     /**
-     * 피드 삭제
+     * 피드를 삭제하는 서비스 메서드
+     *
+     * @param feedId 삭제할 피드의 ID
+     * @param userId 삭제 요청을 보낸 사용자의 ID (권한 검증용)
      */
     @Transactional
     public void deleteFeed(Long feedId, Long userId) {
-        // 피드 조회
+        // 피드 조회: feedId에 해당하는 피드를 데이터베이스에서 조회
         Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
 
-        // 작성자 권한 검증
-        if (!feed.isAuthor(userId)) {
-            throw new IllegalArgumentException("피드 작성자만 삭제할 수 있습니다.");
+        // 작성자 권한 검증: 요청한 사용자가 해당 피드의 작성자인지 확인
+        if (!feed.getAuthor().getId().equals(userId)) {
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_FEED_UPDATE);
         }
 
-        // 피드 삭제
+        // 피드 삭제: 작성자 권한이 검증된 후, 피드를 삭제
         feedRepository.delete(feed);
     }
 

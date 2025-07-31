@@ -96,7 +96,11 @@ public class FeedController {
     }
 
     /**
-     * 피드 삭제
+     * 피드 삭제 API
+     *
+     * @param feedId 삭제할 피드의 ID
+     * @param user   삭제 요청을 보낸 사용자 정보 (권한 검증용)
+     * @return 삭제 성공 응답 (HTTP 상태 코드 204 No Content)
      */
     @DeleteMapping("/{feedId}")
     public ResponseEntity<String> deleteFeed(
@@ -104,9 +108,7 @@ public class FeedController {
             @AuthenticationPrincipal User user) {
 
         feedService.deleteFeed(feedId, user.getId());
-
-        log.info("피드 삭제 - feedId: {}, userId: {}", feedId, user.getId());
-
-        return ResponseEntity.ok("피드가 삭제되었습니다.");
+        log.info("✅ [Feed] 피드 삭제 성공 - feedId: {}, userNickName: {}", feedId, user.getNickname());
+        return ResponseEntity.noContent().build();
     }
 } 
