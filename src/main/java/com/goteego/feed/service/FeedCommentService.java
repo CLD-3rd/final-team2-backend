@@ -40,18 +40,18 @@ public class FeedCommentService {
      * @param feedId 조회할 피드의 ID
      * @return 해당 피드에 달린 코멘트들의 리스트를 포함하는 `FeedCommentResponse` 리스트
      */
-    public List<FeedCommentResponse> getCommentsByFeedId(Long feedId) {
+    public List<FeedCommentResponse> getCommentsByFeedId(Long feedId, Long currentUserId) {
         // 피드 존재 여부 확인
         if (!feedRepository.existsById(feedId)) {
             throw new NotFoundException(ErrorCode.FEED_NOT_FOUND);
         }
-        
+
         // 코멘트 목록 조회 (Fetch Join으로 N+1 문제 해결)
         List<FeedComment> comments = feedCommentRepository.findByFeedIdWithAuthorOrderByCreatedAtAsc(feedId);
-
+        
         // FeedComment 엔티티를 FeedCommentResponseDto로 변환
         return comments.stream()
-                .map(FeedCommentResponse::from)
+                .map(comment -> FeedCommentResponse.from(comment, currentUserId))
                 .collect(Collectors.toList());
     }
 

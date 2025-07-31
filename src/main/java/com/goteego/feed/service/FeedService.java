@@ -95,13 +95,16 @@ public class FeedService {
      * @return 피드의 상세 정보와 관련된 댓글 목록을 포함한 `FeedDetailResponse` 객체
      */
     @Transactional
-    public FeedDetailResponse getFeedDetail(Long feedId) {
+    public FeedDetailResponse getFeedDetail(Long feedId, User user) {
+        // 로그인 여부 확인
+        Long currentUserId = (user != null) ? user.getId() : null;
+
         // 피드 조회
         Feed feed = feedRepository.findById(feedId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
 
         // 코멘트 목록 조회
-        List<FeedCommentResponse> comments = feedCommentService.getCommentsByFeedId(feedId);
+        List<FeedCommentResponse> comments = feedCommentService.getCommentsByFeedId(feedId, currentUserId);
 
         // 조회수 증가
         feed.incrementViewCount();

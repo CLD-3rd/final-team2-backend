@@ -50,9 +50,11 @@ public class FeedController {
      * @return 피드 상세 정보를 담은 `FeedDetailResponse` 객체
      */
     @GetMapping("/{feedId}")
-    public ResponseEntity<FeedDetailResponse> getFeedDetail(@PathVariable("feedId") Long feedId) {
+    public ResponseEntity<FeedDetailResponse> getFeedDetail(
+            @PathVariable("feedId") Long feedId,
+            @AuthenticationPrincipal User user) {
 
-        FeedDetailResponse feedDetail = feedService.getFeedDetail(feedId);
+        FeedDetailResponse feedDetail = feedService.getFeedDetail(feedId, user);
         log.info("✅ [Feed] 피드 상세 조회 성공 - feedId: {}, title: {}", feedId, feedDetail.title());
         return ResponseEntity.ok(feedDetail);
     }
