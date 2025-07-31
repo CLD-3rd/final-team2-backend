@@ -4,8 +4,7 @@ import com.goteego.badge.domain.LandmarkBadgeRequest;
 import com.goteego.badge.domain.enumerate.BadgeStatus;
 import com.goteego.badge.repository.LandmarkBadgeRequestReposiroty;
 import com.goteego.feed.domain.Feed;
-import com.goteego.feed.dto.request.FeedCreateRequest;
-import com.goteego.feed.dto.request.FeedUpdateRequest;
+import com.goteego.feed.dto.request.FeedPostRequest;
 import com.goteego.feed.dto.response.FeedCommentResponse;
 import com.goteego.feed.dto.response.FeedDetailResponse;
 import com.goteego.feed.dto.response.FeedListResponse;
@@ -14,10 +13,7 @@ import com.goteego.feed.repository.FeedRepository;
 import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.dto.PageInfo;
 import com.goteego.global.dto.SearchCondition;
-import com.goteego.global.error.exception.BusinessException;
-import com.goteego.global.error.exception.ErrorCode;
-import com.goteego.global.error.exception.InvalidFileException;
-import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.error.exception.*;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -122,7 +118,7 @@ public class FeedService {
      * @return 생성된 피드의 ID
      */
     @Transactional
-    public Long createFeed(Long userId, FeedCreateRequest request) {
+    public Long createFeed(Long userId, FeedPostRequest request) {
         // 사용자 조회 - 현재 피드를 생성하려는 사용자 정보 조회
         User currentUser = userService.getUserById(userId);
 
@@ -148,28 +144,36 @@ public class FeedService {
 
     /**
      * 피드 수정
+     *
+     * @param feedId  수정할 피드의 ID
+     * @param userId  수정 요청을 보낸 사용자의 ID (권한 검증용)
+     * @param request 피드 수정에 필요한 데이터 (제목, 내용, 이미지, 위치, 배지 요청 여부)
      */
     @Transactional
-    public Feed updateFeed(Long feedId, Long userId, FeedUpdateRequest requestDto) {
-        // 피드 조회
+    public void updateFeed(Long feedId, Long userId, FeedPostRequest request) {
+        // 피드 조회: feedId에 해당하는 피드를 데이터베이스에서 조회
         Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
 
-        // 작성자 권한 검증
-        if (!feed.isAuthor(userId)) {
-            throw new IllegalArgumentException("피드 작성자만 수정할 수 있습니다.");
+        // 작성자 권한 검증: 요청한 사용자가 해당 피드의 작성자인지 확인
+        if (!feed.getAuthor().getId().equals(userId)) {
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_FEED_UPDATE);
         }
 
-        // 피드 정보 수정
-        feed.update(
-                requestDto.getTitle(),
-                requestDto.getContent(),
-                requestDto.getImageUrl(),
-                requestDto.getLocation(),
-                requestDto.getBadgeRequest()
-        );
+        // 이미지 URL 업데이트: 이미지는 있을 경우에만 새로 업로드하고, 없으면 기존 이미지 URL을 그대로 유지
+        String imageUrl = feed.getImageUrl(); // 기존 이미지 URL을 그대로 유지
+        if (request.getImage() != null && !request.getImage().isEmpty()) {
+            imageUrl = uploadImage(request.getImage());
+        }
 
-        return feed;
+        // 피드 정보 수정: 수정된 데이터를 기존 피드 엔티티에 반영
+        feed.update(
+                request.getTitle(),
+                request.getContent(),
+                imageUrl,
+                Location.fromString(request.getLocation()),
+                request.getBadgeRequest()
+        );
     }
 
     /**

@@ -79,11 +79,21 @@ public class Feed extends BaseEntity {
      * 피드 정보 수정 메서드
      */
     public void update(String title, String content, String imageUrl, Location location, Boolean badgeRequest) {
-        this.title = title;
-        this.content = content;
-        this.imageUrl = imageUrl;
-        this.location = location;
-        this.badgeRequest = badgeRequest != null ? badgeRequest : this.badgeRequest;
+        if (title != null) {
+            this.title = title;
+        }
+        if (content != null) {
+            this.content = content;
+        }
+        if (imageUrl != null) {
+            this.imageUrl = imageUrl;
+        }
+        if (location != null) {
+            this.location = location;
+        }
+        if (badgeRequest != null) {
+            this.badgeRequest = badgeRequest;
+        }
     }
 
     /**

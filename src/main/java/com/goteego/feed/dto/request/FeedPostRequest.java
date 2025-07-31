@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-public class FeedCreateRequest {
+public class FeedPostRequest {
     @NotBlank(message = "제목은 필수입니다.")
     private String title;
     @NotBlank(message = "위치는 필수입니다.")

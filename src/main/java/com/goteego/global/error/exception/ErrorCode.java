@@ -66,8 +66,11 @@ public enum ErrorCode {
     INVALID_BADGE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 뱃지 타입입니다."),
     NOT_FOUND_BADGE(HttpStatus.NOT_FOUND, "해당 뱃지를 찾을 수 없습니다."),
     NOT_FOUND_BADGE_REQUEST(HttpStatus.NOT_FOUND, "해당 피드의 뱃지 요청이 존재하지 않습니다."),
+
     //피드 관련
     FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 피드입니다."),
+    UNAUTHORIZED_FEED_UPDATE(HttpStatus.FORBIDDEN, "피드 수정 권한이 없습니다."),
+    UNAUTHORIZED_FEED_DELETE(HttpStatus.FORBIDDEN, "피드 삭제 권한이 없습니다."),
 
     // 리뷰 관련
     SELF_REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신에게는 리뷰를 작성할 수 없습니다."),
@@ -81,7 +84,7 @@ public enum ErrorCode {
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
     UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 유형입니다. jpg 또는 png 파일만 허용됩니다."),
     ;
-    
+
     private final HttpStatus status;
     private final String message;
 

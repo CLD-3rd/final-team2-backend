@@ -1,8 +1,6 @@
 package com.goteego.feed.controller;
 
-import com.goteego.feed.domain.Feed;
-import com.goteego.feed.dto.request.FeedCreateRequest;
-import com.goteego.feed.dto.request.FeedUpdateRequest;
+import com.goteego.feed.dto.request.FeedPostRequest;
 import com.goteego.feed.dto.response.FeedCreateResponseDto;
 import com.goteego.feed.dto.response.FeedDetailResponse;
 import com.goteego.feed.dto.response.FeedListResponse;
@@ -70,31 +68,31 @@ public class FeedController {
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FeedCreateResponseDto> createFeed(
-            @Valid @ModelAttribute FeedCreateRequest request,
+            @Valid @ModelAttribute FeedPostRequest request,
             @AuthenticationPrincipal User user) {
 
         Long createdFeedId = feedService.createFeed(user.getId(), request);
-        log.info("✅ [Feed] 피드 생성 성공 - travelPostId: {}, userNickName: {}", createdFeedId, user.getNickname());
+        log.info("✅ [Feed] 피드 생성 성공 - feedId: {}, userNickName: {}", createdFeedId, user.getNickname());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     /**
-     * 피드 수정
+     * 피드 수정 API
+     *
+     * @param feedId  수정할 피드의 ID
+     * @param request 피드 수정에 필요한 데이터 (제목, 내용, 위치, 배지 요청 여부, 이미지 등)
+     * @param user    현재 인증된 사용자 정보 (피드 수정 권한을 확인하기 위해 사용)
+     * @return 수정된 피드에 대한 응답 (204 No Content 반환)
      */
     @PutMapping("/{feedId}")
     public ResponseEntity<FeedResponseDto> updateFeed(
             @PathVariable("feedId") Long feedId,
-            @RequestBody FeedUpdateRequest requestDto,
+            @Valid @ModelAttribute FeedPostRequest request,
             @AuthenticationPrincipal User user) {
 
-        Feed feed = feedService.updateFeed(feedId, user.getId(), requestDto);
-
-        FeedResponseDto responseDto = FeedResponseDto.from(feed);
-
-        log.info("피드 수정 - feedId: {}, title: {}, userId: {}",
-                feedId, feed.getTitle(), user.getId());
-
-        return ResponseEntity.ok(responseDto);
+        feedService.updateFeed(feedId, user.getId(), request);
+        log.info("✅ [Feed] 피드 수정 성공 - feedId: {}, userNickName: {}", feedId, user.getNickname());
+        return ResponseEntity.noContent().build();
     }
 
     /**
