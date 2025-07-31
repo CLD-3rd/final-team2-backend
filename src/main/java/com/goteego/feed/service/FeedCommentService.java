@@ -2,13 +2,14 @@ package com.goteego.feed.service;
 
 import com.goteego.feed.domain.Feed;
 import com.goteego.feed.domain.FeedComment;
+import com.goteego.feed.dto.request.FeedCommentPostRequest;
 import com.goteego.feed.dto.response.FeedCommentResponse;
 import com.goteego.feed.repository.FeedCommentRepository;
 import com.goteego.feed.repository.FeedRepository;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
-import com.goteego.user.repository.UserRepository;
+import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class FeedCommentService {
 
     private final FeedCommentRepository feedCommentRepository;
     private final FeedRepository feedRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     /**
      * 특정 피드의 코멘트 목록을 조회하는 메서드
@@ -44,7 +45,7 @@ public class FeedCommentService {
         if (!feedRepository.existsById(feedId)) {
             throw new NotFoundException(ErrorCode.FEED_NOT_FOUND);
         }
-
+        
         // 코멘트 목록 조회 (Fetch Join으로 N+1 문제 해결)
         List<FeedComment> comments = feedCommentRepository.findByFeedIdWithAuthorOrderByCreatedAtAsc(feedId);
 
@@ -55,27 +56,32 @@ public class FeedCommentService {
     }
 
     /**
-     * 새로운 코멘트를 생성하는 메서드
+     * 피드 댓글 생성
+     *
+     * @param feedId  댓글이 달릴 피드 ID
+     * @param userId  댓글 작성자 ID
+     * @param request 댓글 생성 요청 데이터
+     * @return 생성된 댓글 ID
      */
     @Transactional
-    public FeedComment createComment(Long feedId, Long userId, String content) {
-        // 피드 조회
+    public Long createComment(Long feedId, Long userId, FeedCommentPostRequest request) {
+        // 피드 존재 여부 검증 및 조회
         Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
 
-        // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        // 사용자 검증 및 조회
+        User user = userService.getUserById(userId);
 
-        // 코멘트 엔티티 생성
+        // 댓글 엔티티 생성
         FeedComment comment = FeedComment.builder()
                 .feed(feed)
                 .author(user)
-                .content(content)
+                .content(request.content())
                 .build();
 
-        // 데이터베이스에 저장
-        return feedCommentRepository.save(comment);
+        // DB 저장 및 ID 반환
+        Long commentId = feedCommentRepository.save(comment).getId();
+        return commentId;
     }
 
     /**
@@ -115,11 +121,4 @@ public class FeedCommentService {
         // 코멘트 삭제
         feedCommentRepository.delete(comment);
     }
-
-    /**
-     * 특정 피드의 코멘트 개수를 조회하는 메서드
-     */
-    public long getCommentCountByFeedId(Long feedId) {
-        return feedCommentRepository.countByFeedId(feedId);
-    }
-} 
+}

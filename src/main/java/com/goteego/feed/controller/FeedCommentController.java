@@ -1,16 +1,15 @@
 package com.goteego.feed.controller;
 
 import com.goteego.feed.domain.FeedComment;
-import com.goteego.feed.dto.response.FeedCommentResponse;
+import com.goteego.feed.dto.request.FeedCommentPostRequest;
 import com.goteego.feed.service.FeedCommentService;
 import com.goteego.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 피드 코멘트 컨트롤러
@@ -21,51 +20,29 @@ import java.util.List;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/feed/{feedId}/comments")
+@RequestMapping("/api/feeds/{feedId}/comments")
 @RequiredArgsConstructor
 public class FeedCommentController {
 
     private final FeedCommentService feedCommentService;
 
     /**
-     * 특정 피드의 코멘트 목록 조회
+     * 피드 댓글 생성 API
      *
-     * @param feedId 피드 ID
-     * @return 코멘트 목록
-     */
-    @GetMapping
-    public ResponseEntity<List<FeedCommentResponse>> getComments(@PathVariable("feedId") Long feedId) {
-        List<FeedCommentResponse> comments = feedCommentService.getCommentsByFeedId(feedId);
-
-        log.info("피드 코멘트 목록 조회 - feedId: {}, commentCount: {}", feedId, comments.size());
-
-        return ResponseEntity.ok(comments);
-    }
-
-    /**
-     * 새로운 코멘트 생성
-     *
-     * @param feedId     피드 ID
-     * @param requestDto 코멘트 생성 요청 데이터
-     * @param user       현재 로그인한 사용자
-     * @return 생성된 코멘트
+     * @param feedId  댓글이 달릴 피드 ID
+     * @param request 댓글 생성 요청 데이터 (내용 필수)
+     * @param user    현재 인증된 사용자
+     * @return 201 Created
      */
     @PostMapping
     public ResponseEntity<FeedComment> createComment(
             @PathVariable("feedId") Long feedId,
-            @RequestBody CommentCreateRequest requestDto,
+            @RequestBody FeedCommentPostRequest request,
             @AuthenticationPrincipal User user) {
 
-        FeedComment comment = feedCommentService.createComment(
-                feedId,
-                user.getId(),
-                requestDto.getContent()
-        );
-
-        log.info("피드 코멘트 생성 - feedId: {}, commentId: {}, userId: {}",
-                feedId, comment.getId(), user.getId());
-
-        return ResponseEntity.ok(comment);
+        Long newCommentId = feedCommentService.createComment(feedId, user.getId(), request);
+        log.info("✅ [FeedComment] 피드 댓글 생성 성공 - feedId: {}, commentId: {}, userNickName: {}", feedId, newCommentId, user.getNickname());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     /**

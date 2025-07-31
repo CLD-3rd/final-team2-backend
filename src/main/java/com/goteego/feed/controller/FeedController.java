@@ -1,10 +1,8 @@
 package com.goteego.feed.controller;
 
 import com.goteego.feed.dto.request.FeedPostRequest;
-import com.goteego.feed.dto.response.FeedCreateResponseDto;
 import com.goteego.feed.dto.response.FeedDetailResponse;
 import com.goteego.feed.dto.response.FeedListResponse;
-import com.goteego.feed.dto.response.FeedResponseDto;
 import com.goteego.feed.service.FeedService;
 import com.goteego.global.dto.SearchCondition;
 import com.goteego.user.domain.User;
@@ -67,7 +65,7 @@ public class FeedController {
      * @return 피드 생성 성공 시 HTTP 201 상태 코드 반환
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FeedCreateResponseDto> createFeed(
+    public ResponseEntity<Void> createFeed(
             @Valid @ModelAttribute FeedPostRequest request,
             @AuthenticationPrincipal User user) {
 
@@ -85,7 +83,7 @@ public class FeedController {
      * @return 수정된 피드에 대한 응답 (204 No Content 반환)
      */
     @PutMapping("/{feedId}")
-    public ResponseEntity<FeedResponseDto> updateFeed(
+    public ResponseEntity<Void> updateFeed(
             @PathVariable("feedId") Long feedId,
             @Valid @ModelAttribute FeedPostRequest request,
             @AuthenticationPrincipal User user) {
@@ -103,7 +101,7 @@ public class FeedController {
      * @return 삭제 성공 응답 (HTTP 상태 코드 204 No Content)
      */
     @DeleteMapping("/{feedId}")
-    public ResponseEntity<String> deleteFeed(
+    public ResponseEntity<Void> deleteFeed(
             @PathVariable("feedId") Long feedId,
             @AuthenticationPrincipal User user) {
 

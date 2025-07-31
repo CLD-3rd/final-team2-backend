@@ -197,6 +197,17 @@ public class FeedService {
         feedRepository.delete(feed);
     }
 
+    protected Feed getFeedById(Long feedId) {
+        return feedRepository.findById(feedId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
+    }
+
+    protected void validateFeedExists(Long feedId) {
+        if (!feedRepository.existsById(feedId)) {
+            throw new NotFoundException(ErrorCode.FEED_NOT_FOUND);
+        }
+    }
+
     /**
      * 뱃지요청 저장 매서드
      *
