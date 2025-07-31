@@ -36,6 +36,13 @@ public enum Location {
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 지역명입니다: " + displayName));
     }
 
+    public static Location fromString(String name) {
+        return Arrays.stream(Location.values())
+                .filter(location -> location.name().equalsIgnoreCase(name))  // 대소문자 구분 없이 비교
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 지역명입니다: " + name));
+    }
+
     public String getDisplayName() {
         return displayName;
     }

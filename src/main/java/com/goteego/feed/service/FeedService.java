@@ -4,27 +4,29 @@ import com.goteego.badge.domain.LandmarkBadgeRequest;
 import com.goteego.badge.domain.enumerate.BadgeStatus;
 import com.goteego.badge.repository.LandmarkBadgeRequestReposiroty;
 import com.goteego.feed.domain.Feed;
-import com.goteego.global.domain.enumerate.Location;
-import com.goteego.feed.domain.enumerate.FeedSortType;
-import com.goteego.feed.dto.request.FeedCreateRequest;
-import com.goteego.feed.dto.request.FeedUpdateRequest;
-import com.goteego.feed.dto.response.FeedCommentResponseDto;
-import com.goteego.feed.dto.response.FeedDetailResponseDto;
-import com.goteego.feed.dto.response.FeedListResponseDto;
-import com.goteego.feed.dto.response.FeedResponseDto;
+import com.goteego.feed.dto.request.FeedPostRequest;
+import com.goteego.feed.dto.response.FeedCommentResponse;
+import com.goteego.feed.dto.response.FeedDetailResponse;
+import com.goteego.feed.dto.response.FeedListResponse;
+import com.goteego.feed.dto.response.FeedResponse;
 import com.goteego.feed.repository.FeedRepository;
+import com.goteego.global.domain.enumerate.Location;
+import com.goteego.global.dto.PageInfo;
+import com.goteego.global.dto.SearchCondition;
+import com.goteego.global.error.exception.*;
 import com.goteego.user.domain.User;
-import com.goteego.user.repository.UserRepository;
+import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 피드 서비스 클래스
@@ -35,209 +37,232 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class FeedService {
-    
+
     private final FeedRepository feedRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final FeedCommentService feedCommentService;
     private final LandmarkBadgeRequestReposiroty landmarkBadgeRequestReposiroty;
-    
+    private final int MAX_FILE_SIZE = 5 * 1024 * 1024;
+
     /**
-     * 피드 목록을 조회하는 메서드
+     * 피드 목록 조회
+     *
+     * @param page      페이지 번호 (0부터 시작)
+     * @param size      한 페이지에 표시할 피드 개수
+     * @param condition 검색 및 정렬 조건을 담고 있는 SearchCondition 객체
+     * @return FeedListResponse 피드 목록과 페이지 정보가 포함된 응답 객체
      */
-    public FeedListResponseDto getFeeds(String title, String author, String region, String sort, int page, int size) {
-        // 페이징 정보 생성
-        Pageable pageable = PageRequest.of(page, size);
-        
-        // 정렬 타입 변환
-        FeedSortType sortType = FeedSortType.fromValue(sort);
-        
-        // 조건에 따른 피드 조회
-        Page<Feed> feedPage = getFeedsByCondition(title, author, region, sortType, pageable);
-        
-        // Feed 엔티티를 FeedResponseDto로 변환 (이미 Fetch Join으로 N+1 문제 해결됨)
-        List<FeedResponseDto> feedDtos = feedPage.getContent().stream()
-                .map(FeedResponseDto::from)
-                .collect(Collectors.toList());
-        
-        // 페이지 정보 생성
-        FeedListResponseDto.PageInfoDto pageInfo = FeedListResponseDto.PageInfoDto.builder()
-                .currentPage(page)
-                .pageSize(size)
-                .totalPages(feedPage.getTotalPages())
-                .totalElements(feedPage.getTotalElements())
-                .build();
-        
-        // 최종 응답 DTO 생성
-        return FeedListResponseDto.builder()
-                .feeds(feedDtos)
+    @Transactional(readOnly = true)
+    public FeedListResponse getFeeds(int page, int size, SearchCondition condition) {
+        // ✅ 정렬 조건 설정
+        Pageable pageable = PageRequest.of(page, size, getSortOption(condition.sort()));
+
+        // ✅ location 검증 및 변환
+        Location locationEnum = null;
+        if (condition.location() != null && !condition.location().isBlank()) {
+            try {
+                locationEnum = Location.fromDisplayName(condition.location());
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException(ErrorCode.UNSUPPORTED_LOCATION);
+            }
+        }
+
+        // ✅ 조건에 맞는 피드 조회
+        Page<Feed> feedPage = feedRepository.getFeedsWithCondition(
+                condition.title(),
+                condition.author(),
+                locationEnum,
+                pageable);
+        PageInfo pageInfo = PageInfo.from(feedPage);
+
+        // ✅ 조회된 피드를 FeedResponse DTO로 변환
+        List<FeedResponse> feedResponseList = feedPage.getContent().stream()
+                .map(FeedResponse::from).toList();
+
+        // ✅ 최종 응답 DTO 생성 및 반환
+        return FeedListResponse.builder()
+                .feeds(feedResponseList)
                 .pageInfo(pageInfo)
                 .build();
     }
-    
+
     /**
-     * 검색 조건과 정렬 기준에 따른 피드 조회 메서드
-     */
-    private Page<Feed> getFeedsByCondition(String title, String author, String region, FeedSortType sortType, Pageable pageable) {
-        switch (sortType) {
-            case VIEW:
-                return getFeedsByViewCount(title, author, region, pageable);
-            case LIKE:
-                return getFeedsByLikeCount(title, author, region, pageable);
-            case RECENT:
-            default:
-                return getFeedsByRecent(title, author, region, pageable);
-        }
-    }
-    
-    /**
-     * 최근순으로 피드를 조회하는 메서드
-     */
-    private Page<Feed> getFeedsByRecent(String title, String author, String region, Pageable pageable) {
-        if (title != null && !title.trim().isEmpty()) {
-            return feedRepository.findByTitleContainingOrderByCreatedAtDesc(title.trim(), pageable);
-        } else if (author != null && !author.trim().isEmpty()) {
-            return feedRepository.findByAuthorNicknameContainingOrderByCreatedAtDesc(author.trim(), pageable);
-        } else if (region != null && !region.trim().isEmpty()) {
-            Location location = Location.valueOf(region.toUpperCase());
-            return feedRepository.findByLocationOrderByCreatedAtDesc(location, pageable);
-        } else {
-            return feedRepository.findAllByOrderByCreatedAtDesc(pageable);
-        }
-    }
-    
-    /**
-     * 조회순으로 피드를 조회하는 메서드
-     */
-    private Page<Feed> getFeedsByViewCount(String title, String author, String region, Pageable pageable) {
-        if (title != null && !title.trim().isEmpty()) {
-            return feedRepository.findByTitleContainingOrderByViewCountDesc(title.trim(), pageable);
-        } else if (author != null && !author.trim().isEmpty()) {
-            return feedRepository.findByAuthorNicknameContainingOrderByViewCountDesc(author.trim(), pageable);
-        } else if (region != null && !region.trim().isEmpty()) {
-            Location location = Location.valueOf(region.toUpperCase());
-            return feedRepository.findByLocationOrderByViewCountDesc(location, pageable);
-        } else {
-            return feedRepository.findAllByOrderByViewCountDesc(pageable);
-        }
-    }
-    
-    /**
-     * 좋아요순으로 피드를 조회하는 메서드
-     */
-    private Page<Feed> getFeedsByLikeCount(String title, String author, String region, Pageable pageable) {
-        if (title != null && !title.trim().isEmpty()) {
-            return feedRepository.findByTitleContainingOrderByLikeCountDesc(title.trim(), pageable);
-        } else if (author != null && !author.trim().isEmpty()) {
-            return feedRepository.findByAuthorNicknameContainingOrderByLikeCountDesc(author.trim(), pageable);
-        } else if (region != null && !region.trim().isEmpty()) {
-            Location location = Location.valueOf(region.toUpperCase());
-            return feedRepository.findByLocationOrderByLikeCountDesc(location, pageable);
-        } else {
-            return feedRepository.findAllByOrderByLikeCountDesc(pageable);
-        }
-    }
-    
-    /**
-     * 새로운 피드를 생성하는 메서드
+     * 피드 상세 정보 조회
+     * 주어진 피드 ID에 해당하는 피드를 조회하고, 관련된 댓글 목록을 가져와 피드의 상세 정보를 반환합니다.
+     * 또한 피드 조회 시 조회수를 증가시킵니다.
+     *
+     * @param feedId 조회할 피드의 ID
+     * @return 피드의 상세 정보와 관련된 댓글 목록을 포함한 `FeedDetailResponse` 객체
      */
     @Transactional
-    public Feed createFeed(Long userId, FeedCreateRequest requestDto) {
-        // 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        
-        // 피드 엔티티 생성
-        Feed feed = Feed.builder()
-                .author(user)
-                .title(requestDto.getTitle())
-                .content(requestDto.getContent())
-                .imageUrl(requestDto.getImageUrl())
-                .location(requestDto.getLocation())
-                .badgeRequest(requestDto.getBadgeRequest())
-                .build();
-        
-        // 데이터베이스에 저장
-        Feed savedFeed = feedRepository.save(feed);
-        // 뱃지 요청
-        this.requestBadgeByFeed(savedFeed);
-        return savedFeed;
+    public FeedDetailResponse getFeedDetail(Long feedId, User user) {
+        // 피드 조회
+        Feed feed = feedRepository.findById(feedId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
+
+        // 코멘트 목록 조회
+        List<FeedCommentResponse> comments = feedCommentService.getComments(feedId, user);
+
+        // 조회수 증가
+        feed.incrementViewCount();
+
+        // FeedDetailResponse로 변환하여 반환
+        return FeedDetailResponse.from(feed, comments);
     }
-    
+
+    /**
+     * 피드 생성
+     *
+     * @param userId  현재 피드를 생성하는 사용자의 ID
+     * @param request 피드 생성에 필요한 데이터 (제목, 내용, 이미지, 위치 등)
+     * @return 생성된 피드의 ID
+     */
+    @Transactional
+    public Long createFeed(Long userId, FeedPostRequest request) {
+        // 사용자 조회 - 현재 피드를 생성하려는 사용자 정보 조회
+        User currentUser = userService.getUserById(userId);
+
+        // 이미지 업로드 처리 - 이미지가 있으면 업로드 후 URL 반환
+        String imageUrl = uploadImage(request.getImage());
+
+        // 피드 엔티티 생성 - 피드의 제목, 내용, 이미지 URL, 위치, 배지 요청 여부 등 설정
+        Feed newFeed = Feed.builder()
+                .author(currentUser)
+                .title(request.getTitle())
+                .content(request.getContent())
+                .imageUrl(imageUrl)
+                .location(Location.fromString(request.getLocation()))
+                .badgeRequest(request.getBadgeRequest())
+                .build();
+
+        // 피드 저장 - 생성된 피드를 데이터베이스에 저장하고 저장된 피드 반환
+        Feed savedFeed = feedRepository.save(newFeed);
+
+        // 생성된 피드의 ID 반환
+        return savedFeed.getId();
+    }
+
+    /**
+     * 피드 수정
+     *
+     * @param feedId  수정할 피드의 ID
+     * @param userId  수정 요청을 보낸 사용자의 ID (권한 검증용)
+     * @param request 피드 수정에 필요한 데이터 (제목, 내용, 이미지, 위치, 배지 요청 여부)
+     */
+    @Transactional
+    public void updateFeed(Long feedId, Long userId, FeedPostRequest request) {
+        // 피드 조회: feedId에 해당하는 피드를 데이터베이스에서 조회
+        Feed feed = feedRepository.findById(feedId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
+
+        // 작성자 권한 검증: 요청한 사용자가 해당 피드의 작성자인지 확인
+        if (!feed.getAuthor().getId().equals(userId)) {
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_FEED_UPDATE);
+        }
+
+        // 이미지 URL 업데이트: 이미지는 있을 경우에만 새로 업로드하고, 없으면 기존 이미지 URL을 그대로 유지
+        String imageUrl = feed.getImageUrl(); // 기존 이미지 URL을 그대로 유지
+        if (request.getImage() != null && !request.getImage().isEmpty()) {
+            imageUrl = uploadImage(request.getImage());
+        }
+
+        // 피드 정보 수정: 수정된 데이터를 기존 피드 엔티티에 반영
+        feed.update(
+                request.getTitle(),
+                request.getContent(),
+                imageUrl,
+                Location.fromString(request.getLocation()),
+                request.getBadgeRequest()
+        );
+    }
+
+    /**
+     * 피드를 삭제하는 서비스 메서드
+     *
+     * @param feedId 삭제할 피드의 ID
+     * @param userId 삭제 요청을 보낸 사용자의 ID (권한 검증용)
+     */
+    @Transactional
+    public void deleteFeed(Long feedId, Long userId) {
+        // 피드 조회: feedId에 해당하는 피드를 데이터베이스에서 조회
+        Feed feed = feedRepository.findById(feedId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
+
+        // 작성자 권한 검증: 요청한 사용자가 해당 피드의 작성자인지 확인
+        if (!feed.getAuthor().getId().equals(userId)) {
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_FEED_UPDATE);
+        }
+
+        // 피드 삭제: 작성자 권한이 검증된 후, 피드를 삭제
+        feedRepository.delete(feed);
+    }
+
+    protected Feed getFeedById(Long feedId) {
+        return feedRepository.findById(feedId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
+    }
+
+    protected void validateFeedExists(Long feedId) {
+        if (!feedRepository.existsById(feedId)) {
+            throw new NotFoundException(ErrorCode.FEED_NOT_FOUND);
+        }
+    }
+
     /**
      * 뱃지요청 저장 매서드
+     *
      * @param feed
      */
     @Transactional
     public void requestBadgeByFeed(Feed feed) {
         //뱃지요청
-            if (Boolean.TRUE.equals(feed.getBadgeRequest())) {
-                LandmarkBadgeRequest request = LandmarkBadgeRequest.builder()
-                        .feed(feed)
-                        .status(BadgeStatus.PENDING)
-                        .build();
-                landmarkBadgeRequestReposiroty.save(request);
-            }
+        if (Boolean.TRUE.equals(feed.getBadgeRequest())) {
+            LandmarkBadgeRequest request = LandmarkBadgeRequest.builder()
+                    .feed(feed)
+                    .status(BadgeStatus.PENDING)
+                    .build();
+            landmarkBadgeRequestReposiroty.save(request);
         }
+    }
+
+    // =====================================================내부 로직======================================================= //
+
     /**
-     * 피드 정보를 수정하는 메서드
+     * 게시글 정렬 옵션 처리
+     *
+     * @param sort 정렬 기준 (recent / view), 기본값: view
+     * @return Sort 객체
      */
-    @Transactional
-    public Feed updateFeed(Long feedId, Long userId, FeedUpdateRequest requestDto) {
-        // 피드 조회
-        Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
-        
-        // 작성자 권한 검증
-        if (!feed.isAuthor(userId)) {
-            throw new IllegalArgumentException("피드 작성자만 수정할 수 있습니다.");
+    private Sort getSortOption(String sort) {
+        return switch (sort) {
+            case "recent" -> Sort.by(Sort.Direction.DESC, "createdAt");
+            default -> Sort.by(Sort.Direction.DESC, "viewCount");
+        };
+    }
+
+    /**
+     * 이미지 업로드 로직 분리
+     */
+    private String uploadImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            return null; // 기본 이미지 URL 또는 null을 반환
         }
-        
-        // 피드 정보 수정
-        feed.update(
-            requestDto.getTitle(),
-            requestDto.getContent(),
-            requestDto.getImageUrl(),
-            requestDto.getLocation(),
-            requestDto.getBadgeRequest()
-        );
-        
-        return feed;
-    }
-    
-    /**
-     * 피드를 삭제하는 메서드
-     */
-    @Transactional
-    public void deleteFeed(Long feedId, Long userId) {
-        // 피드 조회
-        Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
-        
-        // 작성자 권한 검증
-        if (!feed.isAuthor(userId)) {
-            throw new IllegalArgumentException("피드 작성자만 삭제할 수 있습니다.");
+
+        // 파일 크기 체크 (5MB 제한)
+        if (image.getSize() > MAX_FILE_SIZE) {
+            throw new InvalidFileException(ErrorCode.FILE_SIZE_EXCEEDED);
         }
-        
-        // 피드 삭제
-        feedRepository.delete(feed);
+
+        // 파일 형식 체크 (jpg, png만 허용)
+        String fileName = image.getOriginalFilename();
+        if (!(fileName.endsWith(".jpg") || fileName.endsWith(".png"))) {
+            throw new InvalidFileException(ErrorCode.INVALID_FILE_FORMAT);
+        }
+
+        // 실제 업로드 로직 (S3 서비스 호출 등)
+        // 예: S3Service.upload(image);
+
+        // 업로드 후 S3 또는 스토리지에서 반환된 URL
+        return "/test/image"; // 예시 URL (실제로는 S3 URL이 반환될 것입니다)
     }
-    
-    /**
-     * 피드 상세 정보를 조회하는 메서드
-     */
-    @Transactional
-    public FeedDetailResponseDto getFeedDetail(Long feedId) {
-        // 피드 조회
-        Feed feed = feedRepository.findById(feedId)
-                .orElseThrow(() -> new IllegalArgumentException("피드를 찾을 수 없습니다."));
-        
-        // 조회수 증가
-        feed.incrementViewCount();
-        
-        // 코멘트 목록 조회
-        List<FeedCommentResponseDto> comments = feedCommentService.getCommentsByFeedId(feedId);
-        
-        // FeedDetailResponseDto로 변환하여 반환
-        return FeedDetailResponseDto.from(feed, comments);
-    }
-} 
+}

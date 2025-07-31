@@ -2,9 +2,9 @@ package com.goteego.feed.repository;
 
 import com.goteego.feed.domain.Feed;
 import com.goteego.global.domain.enumerate.Location;
-import com.goteego.feed.domain.enumerate.FeedSortType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,76 +16,28 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface FeedRepository extends JpaRepository<Feed, Long> {
-    
+
     /**
-     * 모든 피드를 생성일 기준 내림차순으로 페이징하여 조회 (Fetch Join으로 N+1 문제 해결)
+     * 피드 목록을 검색하는 쿼리 메소드입니다.
+     * 주어진 제목, 작성자, 위치에 맞는 피드들을 조회하고, 페이징 처리하여 반환합니다.
+     *
+     * @param title    검색할 제목 (부분 일치 검색)
+     * @param author   검색할 작성자 이름 (부분 일치 검색)
+     * @param location 검색할 위치 (정확히 일치)
+     * @param pageable 페이징 정보를 포함한 객체 (페이지 번호, 페이지 크기 등)
+     * @return Page<Feed> 조건에 맞는 피드 목록과 페이징 정보가 포함된 페이지 객체
      */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author ORDER BY f.createdAt DESC")
-    Page<Feed> findAllByOrderByCreatedAtDesc(Pageable pageable);
-    
-    /**
-     * 특정 작성자의 닉네임으로 피드를 검색하여 생성일 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.author.nickname LIKE %:author% OR f.author.nickname = :author ORDER BY f.createdAt DESC")
-    Page<Feed> findByAuthorNicknameContainingOrderByCreatedAtDesc(@Param("author") String author, Pageable pageable);
-    
-    /**
-     * 특정 위치로 피드를 검색하여 생성일 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.location = :location ORDER BY f.createdAt DESC")
-    Page<Feed> findByLocationOrderByCreatedAtDesc(@Param("location") Location location, Pageable pageable);
-    
-    /**
-     * 제목으로 피드를 검색하여 생성일 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.title LIKE %:title% ORDER BY f.createdAt DESC")
-    Page<Feed> findByTitleContainingOrderByCreatedAtDesc(@Param("title") String title, Pageable pageable);
-    
-    /**
-     * 모든 피드를 조회수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author ORDER BY f.viewCount DESC")
-    Page<Feed> findAllByOrderByViewCountDesc(Pageable pageable);
-    
-    /**
-     * 특정 작성자의 닉네임으로 피드를 검색하여 조회수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.author.nickname LIKE %:author% OR f.author.nickname = :author ORDER BY f.viewCount DESC")
-    Page<Feed> findByAuthorNicknameContainingOrderByViewCountDesc(@Param("author") String author, Pageable pageable);
-    
-    /**
-     * 특정 위치로 피드를 검색하여 조회수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.location = :location ORDER BY f.viewCount DESC")
-    Page<Feed> findByLocationOrderByViewCountDesc(@Param("location") Location location, Pageable pageable);
-    
-    /**
-     * 제목으로 피드를 검색하여 조회수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.title LIKE %:title% ORDER BY f.viewCount DESC")
-    Page<Feed> findByTitleContainingOrderByViewCountDesc(@Param("title") String title, Pageable pageable);
-    
-    /**
-     * 모든 피드를 좋아요수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author ORDER BY f.likeCount DESC")
-    Page<Feed> findAllByOrderByLikeCountDesc(Pageable pageable);
-    
-    /**
-     * 특정 작성자의 닉네임으로 피드를 검색하여 좋아요수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.author.nickname LIKE %:author% OR f.author.nickname = :author ORDER BY f.likeCount DESC")
-    Page<Feed> findByAuthorNicknameContainingOrderByLikeCountDesc(@Param("author") String author, Pageable pageable);
-    
-    /**
-     * 특정 위치로 피드를 검색하여 좋아요수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.location = :location ORDER BY f.likeCount DESC")
-    Page<Feed> findByLocationOrderByLikeCountDesc(@Param("location") Location location, Pageable pageable);
-    
-    /**
-     * 제목으로 피드를 검색하여 좋아요수 기준 내림차순으로 페이징하여 조회
-     */
-    @Query("SELECT f FROM Feed f JOIN FETCH f.author WHERE f.title LIKE %:title% ORDER BY f.likeCount DESC")
-    Page<Feed> findByTitleContainingOrderByLikeCountDesc(@Param("title") String title, Pageable pageable);
+    @EntityGraph(attributePaths = {"author"})
+    @Query("""
+                SELECT f FROM Feed f
+                WHERE (:title IS NULL OR f.title LIKE CONCAT('%', :title, '%'))
+                AND (:author IS NULL OR f.author.nickname LIKE CONCAT('%', :author, '%'))
+                AND (:location IS NULL OR f.location = :location)
+            """)
+    Page<Feed> getFeedsWithCondition(
+            @Param("title") String title,
+            @Param("author") String author,
+            @Param("location") Location location,
+            Pageable pageable
+    );
 } 

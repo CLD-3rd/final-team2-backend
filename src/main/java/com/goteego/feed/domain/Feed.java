@@ -1,17 +1,14 @@
 package com.goteego.feed.domain;
 
-import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.domain.BaseEntity;
+import com.goteego.global.domain.enumerate.Location;
 import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,57 +21,47 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "feeds")
 public class Feed extends BaseEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "feed_id")
     private Long id;
-    
+
     /**
      * 피드 작성자 (객체 참조 방식)
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
-    
+
     @Column(nullable = false, length = 200)
     private String title;
-    
+
     @Column(columnDefinition = "TEXT")
     private String content;
-    
+
     @Column(name = "image_url", length = 500)
     private String imageUrl;
-    
+
     /**
      * 여행한 장소 또는 위치 정보 (공통 Location enum 사용)
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "location", length = 50)
     private Location location;
-    
+
     @Column(name = "view_count")
     private Long viewCount = 0L;
-    
-    @Column(name = "like_count")
-    private Long likeCount = 0L;
-    
+
     @Column(name = "badge_request")
     private Boolean badgeRequest = false;
-    
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-    
-    @Column(name = "modified_at")
-    private LocalDateTime modifiedAt;
-    
+
     /**
      * 피드에 달린 댓글 목록 (1:N 관계)
      */
     @OneToMany(mappedBy = "feed", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FeedComment> comments = new ArrayList<>();
-    
+
     /**
      * 피드 생성 빌더 메서드
      */
@@ -86,52 +73,43 @@ public class Feed extends BaseEntity {
         this.imageUrl = imageUrl;
         this.location = location;
         this.badgeRequest = badgeRequest != null ? badgeRequest : false;
-        this.createdAt = LocalDateTime.now();
-        this.modifiedAt = null;
     }
-    
+
     /**
      * 피드 정보 수정 메서드
      */
     public void update(String title, String content, String imageUrl, Location location, Boolean badgeRequest) {
-        this.title = title;
-        this.content = content;
-        this.imageUrl = imageUrl;
-        this.location = location;
-        this.badgeRequest = badgeRequest != null ? badgeRequest : this.badgeRequest;
-        this.modifiedAt = LocalDateTime.now();
+        if (title != null) {
+            this.title = title;
+        }
+        if (content != null) {
+            this.content = content;
+        }
+        if (imageUrl != null) {
+            this.imageUrl = imageUrl;
+        }
+        if (location != null) {
+            this.location = location;
+        }
+        if (badgeRequest != null) {
+            this.badgeRequest = badgeRequest;
+        }
     }
-    
+
     /**
      * 조회수 증가 메서드
      */
     public void incrementViewCount() {
         this.viewCount++;
     }
-    
-    /**
-     * 좋아요 수 증가 메서드
-     */
-    public void incrementLikeCount() {
-        this.likeCount++;
-    }
-    
-    /**
-     * 좋아요 수 감소 메서드
-     */
-    public void decrementLikeCount() {
-        if (this.likeCount > 0) {
-            this.likeCount--;
-        }
-    }
-    
+
     /**
      * 피드 작성자 확인 메서드
      */
     public boolean isAuthor(Long userId) {
         return this.author.getId().equals(userId);
     }
-    
+
     /**
      * 댓글 추가 메서드
      */
@@ -139,7 +117,7 @@ public class Feed extends BaseEntity {
         this.comments.add(comment);
         comment.setFeed(this);
     }
-    
+
     /**
      * 댓글 제거 메서드
      */

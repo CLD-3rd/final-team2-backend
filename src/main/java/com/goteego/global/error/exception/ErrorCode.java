@@ -41,6 +41,7 @@ public enum ErrorCode {
     UNAUTHORIZED_POST_DELETE(HttpStatus.FORBIDDEN, "게시글 삭제 권한이 없습니다."),
     INVALID_POST_DATA(HttpStatus.BAD_REQUEST, "잘못된 게시글 데이터입니다."),
     UNSUPPORTED_POST_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 게시글 타입입니다."),
+    CANNOT_DELETE_TRAVEL_POST_WITH_APPROVED_PARTICIPANTS(HttpStatus.BAD_REQUEST, "승인된 참여자가 있어 게시글을 삭제할 수 없습니다."),
 
     // 참여 요청 관련
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "참여 요청이 존재하지 않습니다."),
@@ -61,20 +62,33 @@ public enum ErrorCode {
     UNAUTHORIZED_PROFILE_ACCESS(HttpStatus.FORBIDDEN, "해당 선호도에 접근할 권한이 없습니다."),
     INVALID_SEARCH_PARAMETERS(HttpStatus.BAD_REQUEST, "유효하지 않은 검색 파라미터입니다."),
 
-    //뱃지 관련
+    // 뱃지 관련
     NOT_FOUND_BADGE_CODE(HttpStatus.NOT_FOUND, "존재하지 않는 뱃지 코드입니다."),
     INVALID_BADGE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 뱃지 타입입니다."),
     NOT_FOUND_BADGE(HttpStatus.NOT_FOUND, "해당 뱃지를 찾을 수 없습니다."),
     NOT_FOUND_BADGE_REQUEST(HttpStatus.NOT_FOUND, "해당 피드의 뱃지 요청이 존재하지 않습니다."),
-    //피드 관련
-    FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 피드입니다."),
 
+    // 피드 관련
+    FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다."),
+    UNAUTHORIZED_FEED_UPDATE(HttpStatus.FORBIDDEN, "해당 피드에 대한 수정 권한이 없습니다."),
+    UNAUTHORIZED_FEED_DELETE(HttpStatus.FORBIDDEN, "해당 피드에 대한 삭제 권한이 없습니다."),
+
+    // 댓글 관련
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글이 존재하지 않습니다."),
+    UNAUTHORIZED_COMMENT_UPDATE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 수정 권한이 없습니다."),
+    UNAUTHORIZED_COMMENT_DELETE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 삭제 권한이 없습니다."),
     // 리뷰 관련
     SELF_REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신에게는 리뷰를 작성할 수 없습니다."),
     INVALID_REVIEW_TARGET(HttpStatus.BAD_REQUEST, "같은 여행에 참여하지 않은 대상자입니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_DUPLICATE(HttpStatus.CONFLICT, "중복된 리뷰입니다."),
-    TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다.");
+    TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다."),
+
+    // 파일 관련
+    INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 형식입니다."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
+    UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 유형입니다. jpg 또는 png 파일만 허용됩니다."),
+    ;
 
     private final HttpStatus status;
     private final String message;
