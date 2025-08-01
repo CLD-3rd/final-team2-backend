@@ -3,7 +3,6 @@ package com.goteego.global.security.jwt;
 import com.goteego.global.error.exception.AccessDeniedException;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
-import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.global.util.CookieUtil;
 import com.goteego.user.domain.User;
 import com.goteego.user.repository.UserRepository;
@@ -15,6 +14,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -55,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (method.equalsIgnoreCase("GET")) {
             for (String pattern : WHITELIST) {
                 if (pathMatcher.match(pattern, uri)) {
-                    log.debug("✅ JWT 필터 스킵 (화이트리스트): {}", uri);
+                    log.debug("✅ [JwtFilter] JWT 필터 스킵 (화이트리스트): {}", uri);
 
                     // 화이트리스트 요청이라도 accessToken이 있다면 인증을 설정해야 함
                     String accessToken = CookieUtil.getTokenFromCookie(request, "accessToken");
@@ -80,56 +81,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String accessToken = CookieUtil.getTokenFromCookie(request, "accessToken");
         String refreshToken = CookieUtil.getTokenFromCookie(request, "refreshToken");
 
-        log.info("🔍 [JwtAuthenticationFilter] 요청 URI: {}", uri);
+        log.info("🔍 [JwtFilter] 요청 URI: {}", uri);
 
         try {
             if (accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
                 // Access Token 유효
-                log.info("✅ Access Token 유효: 인증 처리 시작");
+                log.info("✅ [JwtFilter] Access Token 유효 → 인증");
                 setAuthenticationFromAccessToken(accessToken, request);
 
             } else if (refreshToken != null) {
                 // Access Token 만료 or 없음 → Refresh Token 검사
-                log.warn("⚠️ Access Token 만료 또는 없음, Refresh Token으로 인증 시도");
+                log.warn("⚠️ [JwtFilter] Access Token 만료 → Refresh Token 검증");
 
-                String email = jwtTokenProvider.getEmailFromToken(refreshToken);
-                User user = userRepository.findByOauthInfo_OauthEmail(email)
-                        .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+                Long userId = jwtTokenProvider.getUserId(refreshToken);
 
                 // Refresh Token 만료 여부 확인
-                if (jwtTokenProvider.isTokenExpired(refreshToken)) {
-                    log.warn("❌ Refresh Token 만료됨: {}", email);
+                if (jwtTokenProvider.isExpired(refreshToken)) {
+                    log.warn("❌ [JwtFilter] Refresh Token 만료: userId={}", userId);
                     throw new AccessDeniedException(ErrorCode.EXPIRED_TOKEN);
                 }
 
-                String storedRefreshToken = refreshTokenService.getRefreshToken(user.getId())
+                String storedRefreshToken = refreshTokenService.getRefreshToken(userId)
                         .orElseThrow(() -> new AccessDeniedException(ErrorCode.RT_NOT_FOUND));
 
                 // Refresh Token 불일치
                 if (!refreshToken.equals(storedRefreshToken)) {
-                    log.warn("❌ Refresh Token 불일치: {}", email);
+                    log.warn("❌ [JwtFilter] Refresh Token 불일치: userId={}", userId);
                     throw new AccessDeniedException(ErrorCode.RT_NOT_FOUND);
                 }
 
                 // 새로운 Access Token 발급
-                String newAccessToken = jwtTokenProvider.createAccessToken(user);
-
-                Cookie newAccessTokenCookie = CookieUtil.createCookieForLocal("accessToken", newAccessToken, jwtTokenProvider.getAccessTokenMaxAgeInSeconds());
-
+                String newAccessToken = jwtTokenProvider.createAccessTokenFromRefresh(refreshToken);
+                Cookie newAccessTokenCookie = CookieUtil.createCookieForLocal(
+                        "accessToken", newAccessToken,
+                        jwtTokenProvider.getAccessTokenMaxAgeInSeconds());
                 response.addCookie(newAccessTokenCookie);
 
                 setAuthenticationFromAccessToken(newAccessToken, request);
-                log.info("🔄 Access Token 재발급 완료 for user: {}", email);
-                // 수정한 부분
+                log.info("🔄 [JwtFilter] Access Token 재발급 완료 for userId={}", userId);
+
             } else {
-                log.info("🔒 토큰 없음—익명 사용자로 진행");
+                log.info("🔒 [JwtFilter] 토큰 없음 → 익명 사용자");
                 SecurityContextHolder.clearContext();
                 filterChain.doFilter(request, response);
                 return;
             }
 
         } catch (BusinessException e) {
-            log.warn("🚫 [JWT Filter] - {}: {}", e.getErrorCode(), e.getMessage());
+            log.warn("🚫 [JwtFilter] JWT 인증 실패: {}", e.getMessage());
             setErrorResponse(response, e.getErrorCode(), request.getRequestURI());
             return; // ❗ 더 이상 필터 체인을 진행하지 않음
         }
@@ -138,15 +137,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void setAuthenticationFromAccessToken(String token, HttpServletRequest request) {
-        String email = jwtTokenProvider.getEmailFromToken(token);
-        User user = userRepository.findByOauthInfo_OauthEmail(email)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+        Long userId = jwtTokenProvider.getUserId(token);
+        String role = jwtTokenProvider.getRole(token);
 
+        // ✅ DB에서 User 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
+
+        // ✅ Principal로 User 객체를 넣음
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(user, null, user.getRole().getAuthorities());
+                new UsernamePasswordAuthenticationToken(user, null, authorities);
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        log.info("🔐 사용자 인증 성공: {}", email);
+
+        log.info("🔐 [JwtFilter] 인증 성공: userId={}, role={}", userId, role);
     }
 
     private void setErrorResponse(HttpServletResponse response, ErrorCode errorCode, String path) throws IOException {

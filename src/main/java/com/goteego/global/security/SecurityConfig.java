@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -61,6 +62,9 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // ✅ 세션 사용하지 않음
+                )
                 .authorizeHttpRequests(auth -> auth
                         // ✅ 여행 게시글: GET 요청은 허용, 나머지는 인증 필요
                         .requestMatchers(HttpMethod.GET, "/api/travel-posts", "/api/travel-posts/**").permitAll()
