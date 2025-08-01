@@ -2,6 +2,8 @@ package com.goteego.chat.dto.chatroom;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.domain.enumerate.ChatType;
+import com.goteego.global.error.exception.ErrorCode;
+import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.user.domain.User;
 import lombok.Data;
 
@@ -38,7 +40,7 @@ public class DirectChatRoomDto {
         return room.getParticipants().stream()
                 .filter(p -> !p.getUser().getId().equals(currentUserId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("채팅방에 상대방이 없습니다."))
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND))
                 .getUser();
     }
 }

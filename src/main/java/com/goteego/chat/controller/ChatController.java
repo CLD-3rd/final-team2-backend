@@ -24,19 +24,20 @@ public class ChatController {
     // 1:1 채팅
     @Transactional
     @MessageMapping("/chat.direct.send/{roomId}")
-    public void sendDirectMessage(@Payload DirectMessageRequest directMessageRequest, @DestinationVariable String roomId, Principal principal) {
-        log.info("principal name = {}", principal.getName());
-        Long senderId = Long.parseLong(principal.getName()); // principal.getName()이 현재 userId로 설정되어 있음 (StompHandler 참고)
+    public void sendDirectMessage(@Payload DirectMessageRequest directMessageRequest, @DestinationVariable(value = "roomId") String roomId, Principal principal) {
+        Long senderId = getUserId(principal);
         chatService.sendDirectMessage(roomId, directMessageRequest, senderId);
     }
 
     // 그룹 채팅
     @Transactional
     @MessageMapping("/chat.group.send/{roomId}")
-    public void sendDirectMessage(@Payload GroupMessageRequest groupMessageRequest, @DestinationVariable String roomId, Principal principal) {
-        log.info("principal name = {}", principal.getName());
-        Long senderId = Long.parseLong(principal.getName());
+    public void sendDirectMessage(@Payload GroupMessageRequest groupMessageRequest, @DestinationVariable(value = "roomId") String roomId, Principal principal) {
+        Long senderId = getUserId(principal);
         chatService.sendGroupMessage(roomId, groupMessageRequest, senderId);
     }
 
+    private Long getUserId(Principal principal) {
+        return Long.parseLong(principal.getName());
+    }
 }

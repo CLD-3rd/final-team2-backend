@@ -11,9 +11,4 @@ import lombok.NoArgsConstructor;
 public class GroupMessageRequest {
     private String content;
     private MessageType type;
-
-    public GroupMessageRequest(String content) {
-        this.content = content;
-        this.type = MessageType.TALK; // 기본값 설정
-    }
 }

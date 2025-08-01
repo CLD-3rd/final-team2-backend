@@ -31,12 +31,4 @@ public class ChatParticipantsDto {
                 .build();
     }
 
-    // 간소화 버전 생성
-    public static ChatParticipantsDto simpleFrom(User user) {
-        return ChatParticipantsDto.builder()
-                .userId(user.getId())
-                .nickname(user.getNickname())
-                .profileImageUrl(user.getProfileImgUrl())
-                .build();
-    }
 }

@@ -34,7 +34,7 @@ public class ChatRoomController {
 
     // 1:1 채팅방 생성 (만약 이미 존재하면 무시)
     @PostMapping("/direct/{otherUserId}")
-    public ResponseEntity<?> createDirectChatRoom(@PathVariable Long otherUserId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> createDirectChatRoom(@PathVariable("otherUserId") Long otherUserId, @AuthenticationPrincipal User user) {
         Long currentUserId = user.getId();
         try {
             DirectChatRoomDto chatRoomDto = chatRoomService.createOrGetDirectChatRoom(currentUserId, otherUserId);
@@ -71,15 +71,9 @@ public class ChatRoomController {
     /**********************************
      ************** 공통 **************
      *********************************/
-    // 특정 채팅방의 메시지 내역 조회 (roomId: 채팅방의 UUID)
-//    @GetMapping("/rooms/{roomId}/messages")
-//    public ResponseEntity<List<DirectMessageResponse>> getChatMessages(@PathVariable String roomId) {
-//        List<DirectMessageResponse> messages = chatService.findChatMessages(roomId);
-//        return ResponseEntity.ok(messages);
-//    }
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<Slice<DirectMessageResponse>> loadMessages(
-            @PathVariable String roomId,
+            @PathVariable("roomId") String roomId,
             @PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(chatService.findChatMessages(roomId, pageable));
     }
