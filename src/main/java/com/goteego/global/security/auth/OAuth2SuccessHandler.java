@@ -1,6 +1,6 @@
-package com.goteego.global.auth;
+package com.goteego.global.security.auth;
 
-import com.goteego.global.jwt.JwtTokenProvider;
+import com.goteego.global.security.jwt.JwtTokenProvider;
 import com.goteego.global.util.CookieUtil;
 import com.goteego.user.domain.CustomOAuth2User;
 import com.goteego.user.domain.User;

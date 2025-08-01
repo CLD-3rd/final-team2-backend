@@ -1,4 +1,4 @@
-package com.goteego.global.config.redis;
+package com.goteego.global.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

@@ -1,6 +1,6 @@
 package com.goteego.user.controller;
 
-import com.goteego.global.jwt.RefreshTokenService;
+import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.global.util.CookieUtil;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;

@@ -1,6 +1,6 @@
-package com.goteego.global.config.web;
+package com.goteego.global.web;
 
-import com.goteego.global.jwt.StompHandler;
+import com.goteego.global.security.jwt.StompHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;

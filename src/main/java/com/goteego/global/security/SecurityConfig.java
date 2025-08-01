@@ -1,7 +1,7 @@
-package com.goteego.global.config.security;
+package com.goteego.global.security;
 
-import com.goteego.global.auth.OAuth2SuccessHandler;
-import com.goteego.global.jwt.JwtAuthenticationFilter;
+import com.goteego.global.security.auth.OAuth2SuccessHandler;
+import com.goteego.global.security.jwt.JwtAuthenticationFilter;
 import com.goteego.user.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -3,7 +3,7 @@ package com.goteego.user.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
-import com.goteego.global.jwt.RefreshTokenService;
+import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
 import com.goteego.user.repository.UserRepository;

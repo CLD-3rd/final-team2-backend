@@ -1,4 +1,4 @@
-package com.goteego.global.jwt;
+package com.goteego.global.security.jwt;
 
 import com.goteego.user.domain.User;
 import io.jsonwebtoken.*;

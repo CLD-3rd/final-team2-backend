@@ -1,4 +1,4 @@
-package com.goteego.global.jwt;
+package com.goteego.global.security.jwt;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;

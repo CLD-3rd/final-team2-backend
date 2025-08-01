@@ -1,4 +1,4 @@
-package com.goteego.global.jwt;
+package com.goteego.global.security.jwt;
 
 import com.goteego.global.error.exception.AccessDeniedException;
 import com.goteego.global.error.exception.BusinessException;

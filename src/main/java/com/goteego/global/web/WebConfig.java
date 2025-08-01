@@ -1,4 +1,4 @@
-package com.goteego.global.config.web;
+package com.goteego.global.web;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
