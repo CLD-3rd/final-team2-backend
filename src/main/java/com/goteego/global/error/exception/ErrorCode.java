@@ -94,6 +94,7 @@ public enum ErrorCode {
     S3_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 파일 삭제 중 오류가 발생했습니다."),
     S3_FOLDER_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 폴더 삭제 중 오류가 발생했습니다."),
     S3_IO_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 스트림 처리 중 오류가 발생했습니다."),
+    S3_INVALID_URL(HttpStatus.BAD_REQUEST, "잘못된 S3 URL입니다."),
     S3_UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3 작업 중 알 수 없는 오류가 발생했습니다."),
     ;
 

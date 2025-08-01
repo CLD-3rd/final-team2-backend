@@ -13,7 +13,12 @@ import com.goteego.feed.repository.FeedRepository;
 import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.dto.PageInfo;
 import com.goteego.global.dto.SearchCondition;
-import com.goteego.global.error.exception.*;
+import com.goteego.global.error.exception.BusinessException;
+import com.goteego.global.error.exception.ErrorCode;
+import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.error.exception.UnauthorizedAccessException;
+import com.goteego.global.s3.S3Directory;
+import com.goteego.global.s3.S3Service;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +29,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -42,7 +46,7 @@ public class FeedService {
     private final UserService userService;
     private final FeedCommentService feedCommentService;
     private final LandmarkBadgeRequestReposiroty landmarkBadgeRequestReposiroty;
-    private final int MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private final S3Service s3Service;
 
     /**
      * 피드 목록 조회
@@ -122,15 +126,15 @@ public class FeedService {
         // 사용자 조회 - 현재 피드를 생성하려는 사용자 정보 조회
         User currentUser = userService.getUserById(userId);
 
-        // 이미지 업로드 처리 - 이미지가 있으면 업로드 후 URL 반환
-        String imageUrl = uploadImage(request.getImage());
+        // 이미지 S3에 업로드 처리 - 이미지가 있으면 업로드 후 URL 반환
+        String uploadedImageUrl = s3Service.uploadFile(request.getImage(), S3Directory.FEEDS, userId);
 
         // 피드 엔티티 생성 - 피드의 제목, 내용, 이미지 URL, 위치, 배지 요청 여부 등 설정
         Feed newFeed = Feed.builder()
                 .author(currentUser)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .imageUrl(imageUrl)
+                .imageUrl(uploadedImageUrl)
                 .location(Location.fromString(request.getLocation()))
                 .badgeRequest(request.getBadgeRequest())
                 .build();
@@ -161,9 +165,15 @@ public class FeedService {
         }
 
         // 이미지 URL 업데이트: 이미지는 있을 경우에만 새로 업로드하고, 없으면 기존 이미지 URL을 그대로 유지
-        String imageUrl = feed.getImageUrl(); // 기존 이미지 URL을 그대로 유지
+        String imageUrl = feed.getImageUrl(); // 기본값: 기존 이미지 유지
         if (request.getImage() != null && !request.getImage().isEmpty()) {
-            imageUrl = uploadImage(request.getImage());
+            // 기존 이미지 삭제
+            if (imageUrl != null) {
+                String oldKey = S3Service.extractKeyFromUrl(imageUrl, S3Directory.FEEDS);
+                s3Service.deleteFile(oldKey);
+            }
+            // 새 이미지 업로드
+            imageUrl = s3Service.uploadFile(request.getImage(), S3Directory.FEEDS, userId);
         }
 
         // 피드 정보 수정: 수정된 데이터를 기존 피드 엔티티에 반영
@@ -177,7 +187,7 @@ public class FeedService {
     }
 
     /**
-     * 피드를 삭제하는 서비스 메서드
+     * 피드 삭제
      *
      * @param feedId 삭제할 피드의 ID
      * @param userId 삭제 요청을 보낸 사용자의 ID (권한 검증용)
@@ -193,19 +203,12 @@ public class FeedService {
             throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED_FEED_UPDATE);
         }
 
+        // 이미지 삭제 (S3)
+        String imageKey = S3Service.extractKeyFromUrl(feed.getImageUrl(), S3Directory.FEEDS);
+        s3Service.deleteFile(imageKey);
+
         // 피드 삭제: 작성자 권한이 검증된 후, 피드를 삭제
         feedRepository.delete(feed);
-    }
-
-    protected Feed getFeedById(Long feedId) {
-        return feedRepository.findById(feedId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.FEED_NOT_FOUND));
-    }
-
-    protected void validateFeedExists(Long feedId) {
-        if (!feedRepository.existsById(feedId)) {
-            throw new NotFoundException(ErrorCode.FEED_NOT_FOUND);
-        }
     }
 
     /**
@@ -238,31 +241,5 @@ public class FeedService {
             case "recent" -> Sort.by(Sort.Direction.DESC, "createdAt");
             default -> Sort.by(Sort.Direction.DESC, "viewCount");
         };
-    }
-
-    /**
-     * 이미지 업로드 로직 분리
-     */
-    private String uploadImage(MultipartFile image) {
-        if (image == null || image.isEmpty()) {
-            return null; // 기본 이미지 URL 또는 null을 반환
-        }
-
-        // 파일 크기 체크 (5MB 제한)
-        if (image.getSize() > MAX_FILE_SIZE) {
-            throw new InvalidFileException(ErrorCode.FILE_SIZE_EXCEEDED);
-        }
-
-        // 파일 형식 체크 (jpg, png만 허용)
-        String fileName = image.getOriginalFilename();
-        if (!(fileName.endsWith(".jpg") || fileName.endsWith(".png"))) {
-            throw new InvalidFileException(ErrorCode.INVALID_FILE_FORMAT);
-        }
-
-        // 실제 업로드 로직 (S3 서비스 호출 등)
-        // 예: S3Service.upload(image);
-
-        // 업로드 후 S3 또는 스토리지에서 반환된 URL
-        return "/test/image"; // 예시 URL (실제로는 S3 URL이 반환될 것입니다)
     }
 }
