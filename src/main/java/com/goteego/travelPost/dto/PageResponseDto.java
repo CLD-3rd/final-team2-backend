@@ -1,4 +1,4 @@
-package com.goteego.travel.dto;
+package com.goteego.travelPost.dto;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,7 +20,7 @@ public class PageResponseDto<T> {
     private PageableDto pageable;
     private Long totalElements;
     private Integer totalPages;
-    
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

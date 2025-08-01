@@ -1,9 +1,9 @@
-package com.goteego.travel.repository;
+package com.goteego.travelPost.repository;
 
 import com.goteego.global.domain.enumerate.Location;
-import com.goteego.travel.domain.ParticipationApplication;
-import com.goteego.travel.domain.TravelPost;
-import com.goteego.travel.domain.enumerate.PostType;
+import com.goteego.travelPost.domain.ParticipationApplication;
+import com.goteego.travelPost.domain.TravelPost;
+import com.goteego.travelPost.domain.enumerate.PostType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;

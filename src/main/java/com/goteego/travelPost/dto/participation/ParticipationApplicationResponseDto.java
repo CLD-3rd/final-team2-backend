@@ -1,6 +1,6 @@
-package com.goteego.travel.dto.participation;
+package com.goteego.travelPost.dto.participation;
 
-import com.goteego.travel.domain.ParticipationApplication;
+import com.goteego.travelPost.domain.ParticipationApplication;
 import com.goteego.user.domain.User;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class ParticipationApplicationResponseDto {
-    
+
     private Long applicationId;
     private Long travelPostId;
     private Long participantId;
@@ -26,7 +26,7 @@ public class ParticipationApplicationResponseDto {
     private String profileImgUrl;
     private String status;
     private LocalDateTime createdAt;
-    
+
     /**
      * ParticipationApplication 엔티티를 DTO로 변환
      */

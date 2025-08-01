@@ -1,6 +1,6 @@
-package com.goteego.travel.dto.travel;
+package com.goteego.travelPost.dto.travel;
 
-import com.goteego.travel.domain.TravelPost;
+import com.goteego.travelPost.domain.TravelPost;
 
 public record TravelPostContext(
         TravelPost tp,

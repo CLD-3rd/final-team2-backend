@@ -1,11 +1,11 @@
-package com.goteego.travel.controller;
+package com.goteego.travelPost.controller;
 
 import com.goteego.global.dto.SearchCondition;
-import com.goteego.travel.domain.enumerate.PostType;
-import com.goteego.travel.dto.travel.TravelPostDetailResponseDto;
-import com.goteego.travel.dto.travel.TravelPostRequest;
-import com.goteego.travel.dto.travel.TravelPostResponseWrapper;
-import com.goteego.travel.service.TravelPostService;
+import com.goteego.travelPost.domain.enumerate.PostType;
+import com.goteego.travelPost.dto.travel.TravelPostDetailResponseDto;
+import com.goteego.travelPost.dto.travel.TravelPostRequest;
+import com.goteego.travelPost.dto.travel.TravelPostResponseWrapper;
+import com.goteego.travelPost.service.TravelPostService;
 import com.goteego.user.domain.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -83,7 +83,7 @@ public class TravelPostController {
             @RequestParam(value = "postType", defaultValue = "BEFORE") String postType,
             @Valid @ModelAttribute TravelPostRequest requestDto,
             @AuthenticationPrincipal User user) {
-
+        
         PostType currentPostType = PostType.valueOf(postType.toUpperCase());
         Long createdTravelPostId = travelPostService.createTravelPost(currentPostType, user.getId(), requestDto);
         log.info("✅ [TravelPost] 여행 게시글 생성 성공 - {}, travelPostId: {}, userNickName: {}", currentPostType, createdTravelPostId, user.getNickname());

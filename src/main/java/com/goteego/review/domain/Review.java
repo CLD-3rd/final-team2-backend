@@ -1,7 +1,7 @@
 package com.goteego.review.domain;
 
 import com.goteego.global.domain.BaseEntity;
-import com.goteego.travel.domain.TravelPost;
+import com.goteego.travelPost.domain.TravelPost;
 import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

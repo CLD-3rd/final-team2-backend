@@ -1,7 +1,7 @@
-package com.goteego.travel.repository;
+package com.goteego.travelPost.repository;
 
-import com.goteego.travel.domain.ParticipationApplication;
-import com.goteego.travel.domain.enumerate.ParticipationStatus;
+import com.goteego.travelPost.domain.ParticipationApplication;
+import com.goteego.travelPost.domain.enumerate.ParticipationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

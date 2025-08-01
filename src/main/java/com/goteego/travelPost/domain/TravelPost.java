@@ -1,12 +1,12 @@
-package com.goteego.travel.domain;
+package com.goteego.travelPost.domain;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.global.domain.BaseEntity;
 import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
-import com.goteego.travel.domain.enumerate.PostType;
-import com.goteego.travel.dto.travel.TravelPostRequest;
+import com.goteego.travelPost.domain.enumerate.PostType;
+import com.goteego.travelPost.dto.travel.TravelPostRequest;
 import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;

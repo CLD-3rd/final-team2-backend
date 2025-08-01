@@ -1,4 +1,4 @@
-package com.goteego.travel.domain.enumerate;
+package com.goteego.travelPost.domain.enumerate;
 
 public enum ParticipationStatus {
     PENDING,        // 작성자가 아직 승인/거절하지 않은 상태

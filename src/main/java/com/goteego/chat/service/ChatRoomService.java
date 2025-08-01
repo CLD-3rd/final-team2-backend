@@ -10,7 +10,7 @@ import com.goteego.chat.repository.ChatRoomRepository;
 import com.goteego.chat.repository.UserChatRoomRepository;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
-import com.goteego.travel.repository.ParticipationApplicationRepository;
+import com.goteego.travelPost.repository.ParticipationApplicationRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,15 +1,17 @@
-package com.goteego.travel.dto.travel;
+package com.goteego.travelPost.dto.travel;
 
 import com.goteego.global.domain.enumerate.Location;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
 @Data
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 public class TravelPostRequest {

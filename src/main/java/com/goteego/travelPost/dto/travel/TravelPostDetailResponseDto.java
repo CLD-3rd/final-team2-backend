@@ -1,14 +1,11 @@
-package com.goteego.travel.dto.travel;
+package com.goteego.travelPost.dto.travel;
 
 import com.goteego.global.domain.enumerate.Location;
-import com.goteego.travel.domain.TravelPost;
+import com.goteego.travelPost.domain.TravelPost;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -25,16 +22,6 @@ public class TravelPostDetailResponseDto {
     private Integer maxParticipants;
     private String imageUrl;
     private String createdAt;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class AuthorDto {
-        private Long userId;
-        private String nickname;
-        private String profileImgUrl;
-    }
 
     public static TravelPostDetailResponseDto from(TravelPost travelPost) {
         return TravelPostDetailResponseDto.builder()
@@ -57,5 +44,15 @@ public class TravelPostDetailResponseDto {
                 .nickname(user.getNickname())
                 .profileImgUrl(user.getProfileImgUrl())
                 .build();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class AuthorDto {
+        private Long userId;
+        private String nickname;
+        private String profileImgUrl;
     }
 } 

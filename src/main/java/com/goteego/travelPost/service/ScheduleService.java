@@ -1,16 +1,16 @@
-package com.goteego.travel.service;
+package com.goteego.travelPost.service;
 
 import com.goteego.chat.service.ChatRoomService;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
-import com.goteego.travel.domain.ParticipationApplication;
-import com.goteego.travel.domain.TravelPost;
-import com.goteego.travel.domain.enumerate.ParticipationStatus;
-import com.goteego.travel.domain.enumerate.PostType;
-import com.goteego.travel.dto.participation.ParticipationApplicationResponseDto;
-import com.goteego.travel.dto.travel.BeforeTravelPostResponseDto;
-import com.goteego.travel.repository.ParticipationApplicationRepository;
-import com.goteego.travel.repository.TravelPostRepository;
+import com.goteego.travelPost.domain.ParticipationApplication;
+import com.goteego.travelPost.domain.TravelPost;
+import com.goteego.travelPost.domain.enumerate.ParticipationStatus;
+import com.goteego.travelPost.domain.enumerate.PostType;
+import com.goteego.travelPost.dto.participation.ParticipationApplicationResponseDto;
+import com.goteego.travelPost.dto.travel.BeforeTravelPostResponseDto;
+import com.goteego.travelPost.repository.ParticipationApplicationRepository;
+import com.goteego.travelPost.repository.TravelPostRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;

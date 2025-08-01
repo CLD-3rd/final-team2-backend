@@ -1,4 +1,4 @@
-package com.goteego.travel.service;
+package com.goteego.travelPost.service;
 
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.service.ChatRoomService;
@@ -9,14 +9,16 @@ import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.global.error.exception.UnauthorizedAccessException;
+import com.goteego.global.s3.S3Directory;
+import com.goteego.global.s3.S3Service;
 import com.goteego.recommendation.service.RecommendationService;
-import com.goteego.travel.domain.ParticipationApplication;
-import com.goteego.travel.domain.TravelPost;
-import com.goteego.travel.domain.enumerate.ParticipationStatus;
-import com.goteego.travel.domain.enumerate.PostType;
-import com.goteego.travel.dto.travel.*;
-import com.goteego.travel.repository.ParticipationApplicationRepository;
-import com.goteego.travel.repository.TravelPostRepository;
+import com.goteego.travelPost.domain.ParticipationApplication;
+import com.goteego.travelPost.domain.TravelPost;
+import com.goteego.travelPost.domain.enumerate.ParticipationStatus;
+import com.goteego.travelPost.domain.enumerate.PostType;
+import com.goteego.travelPost.dto.travel.*;
+import com.goteego.travelPost.repository.ParticipationApplicationRepository;
+import com.goteego.travelPost.repository.TravelPostRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -28,13 +30,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * 여행 게시글 서비스
@@ -52,6 +51,7 @@ public class TravelPostService {
     private final RecommendationService recommendationService;
     private final UserService userService;
     private final ChatRoomService chatRoomService;
+    private final S3Service s3Service;
     private final RedisTemplate<String, Object> redisTemplate;
 
     /**
@@ -153,12 +153,13 @@ public class TravelPostService {
     public Long createTravelPost(PostType postType, Long userId, TravelPostRequest request) {
 
         User currentUser = getValidatedUser(userId);
-
         TravelPost createdTravelPost;
-
+        
         if (postType == PostType.BEFORE) {
             ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(currentUser, currentUser.getNickname());
-            String imageUrl = uploadImage(request.getImage());
+
+            // 이미지 S3에 업로드 처리 - 이미지가 있으면 업로드 후 URL 반환
+            String uploadedImageUrl = s3Service.uploadFile(request.getImage(), S3Directory.TRAVEL_POSTS, userId);
 
             createdTravelPost = TravelPost.builder()
                     .user(currentUser)
@@ -169,7 +170,7 @@ public class TravelPostService {
                     .content(request.getContent())
                     .startTime(request.getStartTime())
                     .endTime(request.getEndTime())
-                    .imageUrl(imageUrl)
+                    .imageUrl(uploadedImageUrl)
                     .recruitLimit(request.getRecruitLimit())
                     .isAddRecruit(request.getIsAddRecruit())
                     .build();
@@ -196,9 +197,17 @@ public class TravelPostService {
 
         TravelPost travelPost = findTravelPostWithAuthorization(travelPostId, userId);
 
-        String imageUrl = null;
-        if (travelPost.getPostType() == PostType.BEFORE) {
-            imageUrl = uploadImage(request.getImage());
+        // 이미지 URL 업데이트: 이미지는 있을 경우에만 새로 업로드하고, 없으면 기존 이미지 URL을 그대로 유지
+        String imageUrl = travelPost.getImageUrl(); // 기본값: 기존 이미지 유지
+        if (travelPost.getPostType() == PostType.BEFORE
+                && request.getImage() != null && !request.getImage().isEmpty()) {
+            // 기존 이미지 삭제
+            if (imageUrl != null) {
+                String oldKey = S3Service.extractKeyFromUrl(imageUrl, S3Directory.TRAVEL_POSTS);
+                s3Service.deleteFile(oldKey);
+            }
+            // 새 이미지 업로드
+            imageUrl = s3Service.uploadFile(request.getImage(), S3Directory.TRAVEL_POSTS, userId);
         }
         // 게시글 수정 (도메인 객체의 비즈니스 로직 활용)
         travelPost.update(travelPost.getPostType(), request, imageUrl);
@@ -234,7 +243,11 @@ public class TravelPostService {
             throw new BusinessException(ErrorCode.CANNOT_DELETE_TRAVEL_POST_WITH_APPROVED_PARTICIPANTS);
         }
 
-        // 4. 게시글 삭제
+        // 4. 이미지 삭제 (S3)
+        String imageKey = S3Service.extractKeyFromUrl(travelPost.getImageUrl(), S3Directory.TRAVEL_POSTS);
+        s3Service.deleteFile(imageKey);
+
+        // 5. 게시글 삭제
         travelPostRepository.delete(travelPost);
     }
 
@@ -394,7 +407,7 @@ public class TravelPostService {
                     // Redis 조회수 확인
                     Long redisViewCounts = getViewCountFromRedis(tp.getId());
                     TravelPostContext travelPostContext = new TravelPostContext(tp, currentUserId, tp.getUser().getNickname(),
-                                                                    redisViewCounts != null ? redisViewCounts : tp.getViewCount());
+                            redisViewCounts != null ? redisViewCounts : tp.getViewCount());
                     return converter.apply(travelPostContext);
                 })
                 .toList();
@@ -418,17 +431,5 @@ public class TravelPostService {
      */
     private Map<Long, Double> calculateSimilaritiesForUsers(Long currentUserId, List<Long> targetUserIds) {
         return recommendationService.calculateSimilaritiesForUsers(currentUserId, targetUserIds);
-    }
-
-    /**
-     * 이미지 업로드 로직 분리
-     */
-    private String uploadImage(MultipartFile image) {
-        if (image == null || image.isEmpty()) {
-            return null; // 기본 이미지 URL 또는 null
-        }
-        // 실제 S3 업로드 로직 호출 (ImageService)
-//        S3Service.upload(image);
-        return "/test/image";
     }
 }

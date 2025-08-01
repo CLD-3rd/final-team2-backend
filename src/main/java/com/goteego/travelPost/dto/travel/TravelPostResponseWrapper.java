@@ -1,7 +1,7 @@
-package com.goteego.travel.dto.travel;
+package com.goteego.travelPost.dto.travel;
 
 import com.goteego.global.dto.PageInfo;
-import com.goteego.travel.domain.enumerate.PostType;
+import com.goteego.travelPost.domain.enumerate.PostType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
