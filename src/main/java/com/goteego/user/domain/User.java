@@ -7,10 +7,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,8 +34,6 @@ public class User extends BaseEntity {
 
     private boolean isSuspended = false;
 
-    private String refreshToken;
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<UserChatRoom> userChatRooms = new ArrayList<>();
 
@@ -58,11 +53,7 @@ public class User extends BaseEntity {
                 .oauthInfo(oauthInfo)
                 .build();
     }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
+    
     public void setIsSuspend(boolean isSuspended) {
         this.isSuspended = isSuspended;
         // BaseEntity의 lastModifiedAt이 자동으로 업데이트됨

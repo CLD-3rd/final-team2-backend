@@ -42,6 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     );
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
+    private final RefreshTokenService refreshTokenService; // ✅ 추가
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -101,8 +102,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     throw new AccessDeniedException(ErrorCode.EXPIRED_TOKEN);
                 }
 
+                String storedRefreshToken = refreshTokenService.getRefreshToken(user.getId())
+                        .orElseThrow(() -> new AccessDeniedException(ErrorCode.RT_NOT_FOUND));
+
                 // Refresh Token 불일치
-                if (!refreshToken.equals(userRepository.findRefreshTokenByUserId(user.getId()))) {
+                if (!refreshToken.equals(storedRefreshToken)) {
                     log.warn("❌ Refresh Token 불일치: {}", email);
                     throw new AccessDeniedException(ErrorCode.RT_NOT_FOUND);
                 }

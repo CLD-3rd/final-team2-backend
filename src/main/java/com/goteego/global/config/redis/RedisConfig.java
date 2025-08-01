@@ -12,7 +12,6 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
@@ -23,14 +22,12 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @EnableCaching // 캐시 활성화
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String host;
-
-    @Value("${spring.data.redis.port}")
-    private int port;
-
     @Value("${spring.data.redis.password}")
     String password;
+    @Value("${spring.data.redis.host}")
+    private String host;
+    @Value("${spring.data.redis.port}")
+    private int port;
 
     // Redis 커넥션 객체 생성
     @Bean
@@ -94,15 +91,6 @@ public class RedisConfig {
     @Bean
     public ChannelTopic notificationTopic() {
         return new ChannelTopic("notification");
-    }
-
-
-    // Key와 Value가 모두 String일 때 사용하는 간편 템플릿
-    @Bean
-    public StringRedisTemplate stringRedisTemplate() {
-        StringRedisTemplate template = new StringRedisTemplate();
-        template.setConnectionFactory(redisConnectionFactory());
-        return template;
     }
 
     @Bean

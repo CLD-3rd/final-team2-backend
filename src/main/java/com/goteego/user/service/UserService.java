@@ -3,6 +3,7 @@ package com.goteego.user.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.jwt.RefreshTokenService;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
 import com.goteego.user.repository.UserRepository;
@@ -23,21 +24,25 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UserService {
 
+    private static final String USER_CACHE_KEY = "user:";
+    private static final long CACHE_TTL = 3600; // 3600초
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final RefreshTokenService refreshTokenService;
 
-    private static final String USER_CACHE_KEY = "user:";
-    private static final long CACHE_TTL = 3600; // 3600초
-
+    /**
+     * 사용자에게 새로운 Refresh Token을 발급하고 Redis에 저장합니다.<br>
+     * 기존 Refresh Token은 덮어씌워지며, TTL(유효기간)은 JwtTokenProvider에서 설정한 값이 적용됩니다
+     *
+     * @param userId
+     * @param newToken
+     */
     @Transactional
     public void updateRefreshToken(Long userId, String newToken) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
-        user.setRefreshToken(newToken); // setter 필요
+        refreshTokenService.saveRefreshToken(userId, newToken);
     }
 
-    
     /**
      * 사용자 정보 조회
      */
@@ -72,11 +77,10 @@ public class UserService {
 
     }
 
-
     public List<UserDto> findAllExcludingMe(Long excludeId) {
         return userRepository.findAll().stream()
                 .filter(user -> !user.getId().equals(excludeId)) // 자신 제외
-                .map(user -> new UserDto(user.getId(),user.getNickname(), user.getOauthInfo().getOauthEmail()))
+                .map(user -> new UserDto(user.getId(), user.getNickname(), user.getOauthInfo().getOauthEmail()))
                 .collect(Collectors.toList());
     }
 
@@ -91,5 +95,4 @@ public class UserService {
 
         return savedUser;
     }
-
 }

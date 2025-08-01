@@ -1,5 +1,6 @@
 package com.goteego.user.controller;
 
+import com.goteego.global.jwt.RefreshTokenService;
 import com.goteego.global.util.CookieUtil;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
@@ -25,6 +26,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * ✅ 로그인 사용자 정보 조회
@@ -63,7 +65,7 @@ public class UserController {
     public ResponseEntity<Void> logout(@AuthenticationPrincipal User user, HttpServletRequest request, HttpServletResponse response) {
         // ✅ RefreshToken DB에서 삭제
         if (user != null) {
-            userService.updateRefreshToken(user.getId(), null);
+            refreshTokenService.deleteRefreshToken(user.getId());
         }
         // ✅ 쿠키 만료
         response.addCookie(CookieUtil.deleteCookie("accessToken"));
