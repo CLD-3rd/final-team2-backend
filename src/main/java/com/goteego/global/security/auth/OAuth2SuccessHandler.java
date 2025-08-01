@@ -1,12 +1,12 @@
-package com.goteego.global.auth;
+package com.goteego.global.security.auth;
 
-import com.goteego.global.jwt.JwtTokenProvider;
+import com.goteego.global.security.jwt.JwtTokenProvider;
+import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.global.util.CookieUtil;
 import com.goteego.user.domain.CustomOAuth2User;
 import com.goteego.user.domain.User;
 import com.goteego.user.service.UserService;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +25,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService; // ✅ 추가
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -36,36 +37,30 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             Authentication authentication
     ) throws IOException, ServletException {
 
-        log.info("[OAuth2SuccessHandler] 소셜 로그인 성공");
+        log.info("✅ [OAuth2Success] 소셜 로그인 성공");
 
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         User user = oAuth2User.getUser();
 
-        log.info("✅ [OAuth2SuccessHandler] 사용자 인증 성공: {}", user.getOauthInfo().getOauthEmail());
+        log.info("✅ [OAuth2Success] 사용자 인증 성공: {}", user.getOauthInfo().getOauthEmail());
 
         // ✅ JWT 발급
         String accessToken = jwtTokenProvider.createAccessToken(user);
         String refreshToken = jwtTokenProvider.createRefreshToken(user);
 
-        // ✅ RefreshToken 저장
-        userService.updateRefreshToken(user.getId(), refreshToken);
-        log.info("✅ [OAuth2SuccessHandler] RefreshToken 저장 성공");
+        // ✅ Redis에 RefreshToken 저장
+        refreshTokenService.saveRefreshToken(user.getId(), refreshToken);
+        log.info("✅ [OAuth2Success] RefreshToken 저장 성공: userId = {}", user.getId());
 
         // ✅ 쿠키 생성 및 응답에 추가
-        Cookie accessTokenCookie = CookieUtil.createCookieForLocal("accessToken", accessToken, jwtTokenProvider.getAccessTokenMaxAgeInSeconds());
-        Cookie refreshTokenCookie = CookieUtil.createCookieForLocal("refreshToken", refreshToken, jwtTokenProvider.getRefreshTokenMaxAgeInSeconds());
-
-        response.addCookie(accessTokenCookie);
-        response.addCookie(refreshTokenCookie);
-
-        log.info("✅ [OAuth2SuccessHandler] Token 쿠키로 전송 완료");
-
+        response.addCookie(CookieUtil.createCookieForLocal("accessToken", accessToken, jwtTokenProvider.getAccessTokenMaxAgeInSeconds()));
+        response.addCookie(CookieUtil.createCookieForLocal("refreshToken", refreshToken, jwtTokenProvider.getRefreshTokenMaxAgeInSeconds()));
+        log.info("✅ [OAuth2Success] Token 쿠키로 전송 완료");
         // ✅ 리디렉션
 //        response.sendRedirect("/dashboard.html");
 //        response.sendRedirect("/post.html");
 
+        // ✅ 프론트엔드로 리다이렉트
         response.sendRedirect(frontendUrl);
-//        log.info("Redirecting to frontend: {}", frontendUrl);
-
     }
 }
