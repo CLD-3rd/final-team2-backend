@@ -64,6 +64,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 📦 S3 업로드/삭제 실패 예외 처리
+     */
+    @ExceptionHandler(S3Exception.class)
+    public ResponseEntity<Object> handleS3Exception(S3Exception exception, HttpServletRequest request) {
+        log.error("📦 [S3Exception] {}", exception.getMessage());
+        return buildErrorResponse(exception, request);
+    }
+
+    /**
      * 🧨 예상치 못한 서버 예외 처리
      * - 디버깅을 위해 전체 스택 로그 기록
      * - 클라이언트에는 내부 서버 오류(500)로 응답

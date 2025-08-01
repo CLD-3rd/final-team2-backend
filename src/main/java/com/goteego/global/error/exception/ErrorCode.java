@@ -84,10 +84,17 @@ public enum ErrorCode {
     REVIEW_DUPLICATE(HttpStatus.CONFLICT, "중복된 리뷰입니다."),
     TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다."),
 
-    // 파일 관련
+    // ✅ 파일 업로드 유효성 검증 관련 (업로드 전)
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 형식입니다."),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
     UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 유형입니다. jpg 또는 png 파일만 허용됩니다."),
+
+    // ✅ AWS S3 관련 (업로드/삭제/폴더 삭제 등)
+    S3_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 파일 업로드 중 오류가 발생했습니다."),
+    S3_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 파일 삭제 중 오류가 발생했습니다."),
+    S3_FOLDER_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 폴더 삭제 중 오류가 발생했습니다."),
+    S3_IO_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 스트림 처리 중 오류가 발생했습니다."),
+    S3_UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3 작업 중 알 수 없는 오류가 발생했습니다."),
     ;
 
     private final HttpStatus status;
