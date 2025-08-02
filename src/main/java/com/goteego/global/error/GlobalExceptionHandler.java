@@ -5,6 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -80,6 +83,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleS3Exception(S3Exception exception, HttpServletRequest request) {
         log.error("📦 [S3Exception] {}", exception.getMessage());
         return buildErrorResponse(exception, request);
+    }
+
+    /**
+     * 🛠️ 요청 값 검증 실패 (Validation Exception)
+     * - @Valid, @Validated 검증 실패 시 발생
+     * - 필드별 상세 에러 정보 반환
+     */
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
+    public ResponseEntity<Object> handleValidationException(Exception exception, HttpServletRequest request) {
+        log.warn("🛠️ [ValidationException] 요청 값 검증 실패: {}", exception.getMessage());
+        String path = request.getRequestURI();
+
+        BindingResult bindingResult = (exception instanceof MethodArgumentNotValidException ex)
+                ? ex.getBindingResult()
+                : ((BindException) exception).getBindingResult();
+
+        ErrorResponse response = ErrorResponse.fromValidationErrors(bindingResult, path);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     /**
