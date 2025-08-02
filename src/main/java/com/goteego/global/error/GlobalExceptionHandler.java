@@ -45,6 +45,16 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(exception, request);
     }
 
+
+    /**
+     * 📍❌ 잘못된 지역(Location) 요청 예외 처리
+     */
+    @ExceptionHandler(InvalidLocationException.class)
+    public ResponseEntity<Object> handleInvalidLocationException(InvalidLocationException exception, HttpServletRequest request) {
+        log.warn("\uD83D\uDCCD❌ [InvalidLocationException] {}", exception.getMessage());
+        return buildErrorResponse(exception, request);
+    }
+
     /**
      * 📂❌ 잘못된 파일 업로드 예외 처리
      */

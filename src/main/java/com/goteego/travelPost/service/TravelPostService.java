@@ -79,22 +79,12 @@ public class TravelPostService {
         // ✅ 정렬 조건
         Pageable pageable = PageRequest.of(page, size, getSortOption(postType, condition.sort()));
 
-        // ✅ location 검증 및 변환
-        Location locationEnum = null;
-        if (condition.location() != null && !condition.location().isBlank()) {
-            try {
-                locationEnum = Location.fromDisplayName(condition.location());
-            } catch (IllegalArgumentException e) {
-                throw new BusinessException(ErrorCode.UNSUPPORTED_LOCATION);
-            }
-        }
-
         // ✅ Repository 호출 (검색 조건 적용)
         Page<TravelPost> travelPostPage = travelPostRepository.getTravelPostsWithCondition(
                 postType,
                 condition.title(),
                 condition.author(),
-                locationEnum,
+                Location.fromKoreanName(condition.location()),
                 pageable
         );
         PageInfo pageInfo = PageInfo.from(travelPostPage);
@@ -154,7 +144,7 @@ public class TravelPostService {
 
         User currentUser = getValidatedUser(userId);
         TravelPost createdTravelPost;
-        
+
         if (postType == PostType.BEFORE) {
             ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(currentUser, currentUser.getNickname());
 

@@ -1,14 +1,19 @@
 package com.goteego.global.domain.enumerate;
 
 import com.goteego.badge.domain.enumerate.BadgeCode;
+import com.goteego.global.error.exception.ErrorCode;
+import com.goteego.global.error.exception.InvalidLocationException;
+import lombok.Getter;
 
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 위치 정보 Enum
  * 여행지 위치를 나타내는 공통 열거형
  * Travel Post와 Feed에서 공통으로 사용
  */
+@Getter
 public enum Location {
     JEJU("제주", BadgeCode.LANDMARK_HALLA),
     SEOUL("서울", BadgeCode.LANDMARK_GWANGHWAMUN),
@@ -21,33 +26,51 @@ public enum Location {
     GANGNEUNG("강릉", BadgeCode.LANDMARK_ANMOKCAFE),
     SOKCHO("속초", BadgeCode.LANDMARK_SEORAKSAN);
 
-    private final String displayName;
+    private static final String INVALID_LOCATION_MESSAGE = "유효하지 않은 지역명입니다: ";
+    private static final Map<String, Location> ENGLISH_NAME_MAP = new HashMap<>();
+    private static final Map<String, Location> KOREAN_NAME_MAP = new HashMap<>();
+
+
+    static {
+        for (Location location : values()) {
+            ENGLISH_NAME_MAP.put(location.name().toLowerCase(), location);
+            KOREAN_NAME_MAP.put(location.koreanName, location);
+        }
+    }
+
+    private final String koreanName;
     private final BadgeCode badgeCode;
 
-    Location(String displayName, BadgeCode badgeCode) {
-        this.displayName = displayName;
+    Location(String koreanName, BadgeCode badgeCode) {
+        this.koreanName = koreanName;
         this.badgeCode = badgeCode;
     }
 
-    public static Location fromDisplayName(String displayName) {
-        return Arrays.stream(Location.values())
-                .filter(location -> location.getDisplayName().equals(displayName))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 지역명입니다: " + displayName));
+    /**
+     * ✅ 한글 이름으로 Location 찾기
+     *
+     * @param koreanName 한글 이름 (예: "제주")
+     */
+    public static Location fromKoreanName(String koreanName) {
+        System.out.println("koreanName: " + koreanName);
+        if (koreanName == null || koreanName.isBlank()) return null;
+        Location location = KOREAN_NAME_MAP.get(koreanName);
+        if (location == null) {
+            throw new InvalidLocationException(ErrorCode.INVALID_LOCATION);
+        }
+        return location;
     }
 
-    public static Location fromString(String name) {
-        return Arrays.stream(Location.values())
-                .filter(location -> location.name().equalsIgnoreCase(name))  // 대소문자 구분 없이 비교
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 지역명입니다: " + name));
+    /**
+     * ✅ 영어(Enum name)로 Location 찾기
+     *
+     * @param englishName Enum name (예: "JEJU")
+     */
+    public static Location fromEnglishName(String englishName) {
+        Location location = ENGLISH_NAME_MAP.get(englishName.toLowerCase());
+        if (location == null) {
+            throw new InvalidLocationException(ErrorCode.INVALID_LOCATION);
+        }
+        return location;
     }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public BadgeCode toBadgeCode() {
-        return badgeCode;
-    }
-} 
+}

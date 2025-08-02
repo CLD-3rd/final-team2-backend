@@ -127,7 +127,7 @@ public class BadgeService {
 
         Location location = feed.getLocation();
 
-        BadgeCode badgeCode = location.toBadgeCode(); // 안전한 변환
+        BadgeCode badgeCode = location.getBadgeCode(); // 안전한 변환
 
 
         if (badgeCode == null && useDefaultIfInvalid) {

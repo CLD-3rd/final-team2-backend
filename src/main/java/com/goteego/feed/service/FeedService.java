@@ -13,7 +13,6 @@ import com.goteego.feed.repository.FeedRepository;
 import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.dto.PageInfo;
 import com.goteego.global.dto.SearchCondition;
-import com.goteego.global.error.exception.BusinessException;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.global.error.exception.UnauthorizedAccessException;
@@ -61,21 +60,11 @@ public class FeedService {
         // ✅ 정렬 조건 설정
         Pageable pageable = PageRequest.of(page, size, getSortOption(condition.sort()));
 
-        // ✅ location 검증 및 변환
-        Location locationEnum = null;
-        if (condition.location() != null && !condition.location().isBlank()) {
-            try {
-                locationEnum = Location.fromDisplayName(condition.location());
-            } catch (IllegalArgumentException e) {
-                throw new BusinessException(ErrorCode.UNSUPPORTED_LOCATION);
-            }
-        }
-
         // ✅ 조건에 맞는 피드 조회
         Page<Feed> feedPage = feedRepository.getFeedsWithCondition(
                 condition.title(),
                 condition.author(),
-                locationEnum,
+                Location.fromKoreanName(condition.location()),
                 pageable);
         PageInfo pageInfo = PageInfo.from(feedPage);
 
@@ -135,7 +124,7 @@ public class FeedService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .imageUrl(uploadedImageUrl)
-                .location(Location.fromString(request.getLocation()))
+                .location(Location.fromEnglishName(request.getLocation()))
                 .badgeRequest(request.getBadgeRequest())
                 .build();
 
@@ -181,7 +170,7 @@ public class FeedService {
                 request.getTitle(),
                 request.getContent(),
                 imageUrl,
-                Location.fromString(request.getLocation()),
+                Location.fromEnglishName(request.getLocation()),
                 request.getBadgeRequest()
         );
     }
