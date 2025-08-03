@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,7 +45,7 @@ public class ChatRoomService {
         validateUsers(currentUserId, otherUserId);
 
         return chatRoomRepository.findDirectChatRoomByUsers(currentUserId, otherUserId)
-                .map(room -> toDirectChatRoomDto(room, currentUserId))
+                .map(room -> DirectChatRoomDto.fromEntity(room, currentUserId, 0))
                 .orElseGet(() -> createNewDirectChatRoom(currentUserId, otherUserId));
     }
 
@@ -54,22 +55,6 @@ public class ChatRoomService {
         }
     }
 
-    // Entity → DTO 변환
-    private DirectChatRoomDto toDirectChatRoomDto(ChatRoom room, Long currentUserId) {
-        User otherUser = room.getParticipants().stream()
-                .filter(p -> !p.getUser().getId().equals(currentUserId))
-                .findFirst()
-                .map(UserChatRoom::getUser)
-                .orElseThrow(() -> new IllegalStateException("채팅방에 상대방이 없습니다."));
-
-        return new DirectChatRoomDto(
-                room.getRoomId(),
-                room.getType(),
-                otherUser.getId(),
-                otherUser.getNickname(),
-                otherUser.getOauthInfo().getOauthEmail()
-        );
-    }
 
     private DirectChatRoomDto createNewDirectChatRoom(Long currentUserId, Long otherUserId) {
         User currentUser = userRepository.findById(currentUserId).orElseThrow();
@@ -82,7 +67,8 @@ public class ChatRoomService {
         ChatRoom savedRoom = chatRoomRepository.save(directRoom);
         log.info("새로운 채팅방 생성 - roomId: {}, 생성자: {}", savedRoom.getRoomId(), currentUser.getNickname());
 
-        return toDirectChatRoomDto(savedRoom, currentUserId);
+        return DirectChatRoomDto.fromEntity(savedRoom, currentUserId, 0);
+
     }
 
     // 자신이 속한 1:1 채팅방 조회
@@ -91,7 +77,8 @@ public class ChatRoomService {
                 .stream()
                 .map(UserChatRoom::getChatRoom)
                 .filter(room -> room.getType() == ChatType.DIRECT)
-                .map(room -> toDirectChatRoomDto(room, currentUserId))
+                .sorted(Comparator.comparing(ChatRoom::getLastMessageTimestamp, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(room -> DirectChatRoomDto.fromEntity(room, currentUserId, 0))
                 .collect(Collectors.toList());
     }
 
@@ -113,18 +100,6 @@ public class ChatRoomService {
         return savedRoom;
     }
 
-    // Entity → DTO 변환
-    private GroupChatRoomDto toGroupDto(ChatRoom room, Long currentUserId) {
-        return GroupChatRoomDto.builder()
-                .roomId(room.getRoomId())
-                .type(room.getType())
-                .participants(room.getParticipants().stream()
-                        .map(ChatParticipantsDto::from)
-                        .collect(Collectors.toList()))
-                .groupName(room.getName())
-                .unreadCount(0)
-                .build();
-    }
 
     // 그룹 채팅방에 사용자 추가 (참여 요청 승인 시 호출)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -150,8 +125,10 @@ public class ChatRoomService {
                 .stream()
                 .map(UserChatRoom::getChatRoom)
                 .filter(room -> room.getType() == ChatType.GROUP)
-                .map(room -> toGroupDto(room, currentUserId))
+                .sorted(Comparator.comparing(ChatRoom::getLastMessageTimestamp, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(room -> GroupChatRoomDto.fromEntity(room, 0))
                 .collect(Collectors.toList());
     }
+
 
 }

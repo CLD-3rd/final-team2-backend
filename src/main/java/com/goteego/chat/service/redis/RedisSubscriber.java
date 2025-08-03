@@ -1,6 +1,5 @@
 package com.goteego.chat.service.redis;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goteego.chat.dto.message.DirectMessageResponse;
 import com.goteego.chat.dto.message.GroupMessageResponse;
@@ -9,6 +8,7 @@ import com.goteego.chat.dto.message.transfer.DirectMessageTransferDto;
 import com.goteego.chat.dto.message.transfer.NotificationTransferDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -20,51 +20,50 @@ public class RedisSubscriber {
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // ChannelTopic을 주입받아 토픽 이름을 비교하는 데 사용합니다.
+    private final ChannelTopic chatTopic;
+    private final ChannelTopic notificationTopic;
+
     private static final String DIRECT_MESSAGE_PATH = "/queue/messages";
     private static final String GROUP_MESSAGE_PATH = "/sub/chat/room/";
     private static final String NOTIFICATION_PATH = "/queue/notifications";
 
     /**
      * Redis에서 메시지가 발행(publish)되면 대기하고 있던 Redis Subscriber가 해당 메시지를 받아 처리
-     * ㄴ 직접적으로 호출하는 부분이 없어서 표기상으로 사용되지 않는것처럼 보이지만, RedisConfig에 정의한 MessageListenerAdapter에 의해 호출됨
+     * @param publishMessage 직렬화된 메시지 객체
+     * @param channel 메시지가 발행된 채널(토픽) 이름
      */
-    public void sendMessage(String publishMessage) {
+    public void sendMessage(String publishMessage, String channel) {
         try {
-            Object messageDto = parseMessage(publishMessage);
-            dispatchMessage(messageDto);
+            log.info("✅ Redis에서 메시지 수신, 채널: {}", channel);
+
+            // [수정] 채널 이름으로 메시지 타입을 명확하게 구분
+            if (channel.equals(chatTopic.getTopic())) {
+                // 채팅 토픽에서 온 메시지 처리
+                // GroupMessage와 DirectMessage가 같은 토픽을 사용하므로 내부에서 한 번 더 파싱 시도
+                try {
+                    // 1:1 메시지 먼저 시도
+                    DirectMessageTransferDto directMessageDto = objectMapper.readValue(publishMessage, DirectMessageTransferDto.class);
+                    handleDirectMessage(directMessageDto);
+                } catch (Exception e) {
+                    // 그룹 메시지로 다시 시도
+                    GroupMessageResponse groupMessage = objectMapper.readValue(publishMessage, GroupMessageResponse.class);
+                    handleGroupMessage(groupMessage);
+                }
+
+            } else if (channel.equals(notificationTopic.getTopic())) {
+                // 알림 토픽에서 온 메시지 처리
+                NotificationTransferDto notificationDto = objectMapper.readValue(publishMessage, NotificationTransferDto.class);
+                handleNotification(notificationDto);
+            }
+
         } catch (Exception e) {
-            log.error("RedisSubscriber - Failed to process message: {}", publishMessage, e);
+            log.error("메시지 처리 중 에러 발생: {}", publishMessage, e);
         }
     }
 
-    private Object parseMessage(String jsonMessage) throws JsonProcessingException {
-        try {
-            return objectMapper.readValue(jsonMessage, NotificationTransferDto.class);
-        } catch (Exception ignored) {}
 
-        try {
-            return objectMapper.readValue(jsonMessage, DirectMessageTransferDto.class);
-        } catch (Exception ignored) {}
-
-        try {
-            return objectMapper.readValue(jsonMessage, GroupMessageResponse.class);
-        } catch (Exception ignored) {}
-
-        throw new IllegalArgumentException("지원되지 않은 메시지 포맷입니다. 현재 값은 {} 입니다." + jsonMessage);
-    }
-
-    private void dispatchMessage(Object messageDto) {
-        if (messageDto instanceof GroupMessageResponse groupMessage) {
-            handleGroupMessage(groupMessage);
-        } else if (messageDto instanceof DirectMessageTransferDto directMessageDto) {
-            handleDirectMessage(directMessageDto);
-        } else if (messageDto instanceof NotificationTransferDto notificationDto) {
-            handleNotification(notificationDto);
-        } else {
-            log.warn("존재하지 않는 메시지 타입입니다. 현재 값은 {} 입니다.", messageDto.getClass().getSimpleName());
-        }
-    }
-
+    // handle... 메서드들은 그대로 유지합니다.
     private void handleGroupMessage(GroupMessageResponse message) {
         messagingTemplate.convertAndSend(GROUP_MESSAGE_PATH + message.getRoomId(), message);
         log.info("RedisSubscriber - Group message sent to /sub/chat/room/{}", message.getRoomId());
@@ -81,12 +80,13 @@ public class RedisSubscriber {
     }
 
     private void handleNotification(NotificationTransferDto dto) {
-        NotificationResponse notification = dto.getNotificationResponse();
+        NotificationResponse notification = dto.getMessageResponse();
         sendToUser(dto.getRecipientId(), NOTIFICATION_PATH, notification);
         log.info("RedisSubscriber - Notification sent to user {}", dto.getRecipientId());
     }
 
     private void sendToUser(Long userId, String destination, Object payload) {
+        log.info("Attempting to send to user: {}, destination: {}", userId, destination);
         messagingTemplate.convertAndSendToUser(String.valueOf(userId), destination, payload);
     }
 }

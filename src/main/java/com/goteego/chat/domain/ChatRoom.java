@@ -35,6 +35,9 @@ public class ChatRoom {
 
     private LocalDateTime createdAt;
 
+    private String lastMessage;
+
+    private LocalDateTime lastMessageTimestamp;
 
     /**
      * 정적 팩토리 메서드
@@ -67,6 +70,12 @@ public class ChatRoom {
             participants.add(userChatRoom);
             user.getUserChatRooms().add(userChatRoom);
         }
+    }
+
+    // 마지막 메시지 업데이트를 위한 편의 메서드
+    public void updateLastMessage(String content, LocalDateTime timestamp) {
+        this.lastMessage = content;
+        this.lastMessageTimestamp = timestamp;
     }
 
 }
