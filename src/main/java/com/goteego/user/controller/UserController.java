@@ -32,7 +32,8 @@ public class UserController {
     private final RefreshTokenService refreshTokenService;
 
     /**
-     * ✅ 로그인 사용자 정보 조회
+     * ✅ 사용자 조회
+     * 현재 로그인한 사용자의 간단한 정보를 조회합니다.
      *
      * @param user
      * @return
@@ -45,8 +46,16 @@ public class UserController {
         return ResponseEntity.ok(UserResponse.from(user));
     }
 
+    /**
+     * ✅ 사용자 프로필 조회
+     * 현재 로그인한 사용자의 프로필 정보를 조회합니다.
+     *
+     * @param user 인증된 사용자 객체
+     * @return 사용자 프로필 응답 (UserProfileResponse)
+     */
     @GetMapping("/profile")
     public ResponseEntity<UserProfileResponse> getUserProfile(@AuthenticationPrincipal User user) {
+
         UserProfileResponse response = userService.getUserProfile(user.getId());
         log.info("✅ [User] 사용자 프로필 조회 성공 - userNickName: {}", user.getNickname());
         return ResponseEntity.ok(response);

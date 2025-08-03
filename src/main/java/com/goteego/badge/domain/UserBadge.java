@@ -6,7 +6,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 
-@Table(name = "user_badges")
+@Table(name = "user_badges", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"user_id", "badge_id"})
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -15,17 +17,20 @@ import lombok.*;
 public class UserBadge extends BaseEntity {
     // user_badge_id (PK)
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "badge_id", nullable = false)
+    Badge badge;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_badge_id")
     private Long id;
+    @Column(name = "is_display", nullable = false)
+    private boolean isDisplay; // 프로필에서 노출 여부
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "badge_id", nullable = false)
-    Badge badge;
-
+    public void setDisplay(boolean display) {
+        this.isDisplay = display;
+    }
 }

@@ -1,6 +1,8 @@
 package com.goteego.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.goteego.badge.domain.UserBadge;
+import com.goteego.badge.dto.BadgeResponse;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.global.s3.S3Directory;
@@ -44,11 +46,11 @@ public class UserService {
     private final S3Service s3Service;
 
     /**
-     * 사용자에게 새로운 Refresh Token을 발급하고 Redis에 저장합니다.<br>
-     * 기존 Refresh Token은 덮어씌워지며, TTL(유효기간)은 JwtTokenProvider에서 설정한 값이 적용됩니다
+     * 새로운 Refresh Token을 Redis에 저장합니다.
+     * 기존 토큰은 덮어쓰기되며, TTL은 설정값을 따릅니다.
      *
-     * @param userId
-     * @param newToken
+     * @param userId   사용자 ID
+     * @param newToken 새 Refresh Token
      */
     @Transactional
     public void updateRefreshToken(Long userId, String newToken) {
@@ -96,13 +98,43 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 사용자 프로필 정보를 조회하는 메서드
+     *
+     * <p>조회 내용:
+     * <ul>
+     *     <li>사용자 기본 정보 (닉네임, 프로필 이미지, 평점 등)</li>
+     *     <li>사용자가 설정한 여행 태그 목록</li>
+     *     <li>사용자가 보유한 전체 뱃지 목록</li>
+     *     <li>사용자 프로필에 노출 중인 뱃지 목록</li>
+     * </ul>
+     *
+     * @param userId 프로필을 조회할 사용자 ID
+     * @return UserProfileResponse (사용자 프로필 정보)
+     */
     @Transactional(readOnly = true)
     public UserProfileResponse getUserProfile(Long userId) {
         User user = getUserById(userId);
 
+        // ✅ 사용자가 선택한 여행 태그 목록
         List<TravelTagResponse> travelTags = Optional.ofNullable(profileAnswerService.getUserTravelTags(userId))
                 .orElse(Collections.emptyList());
-        return UserProfileResponse.from(user, travelTags);
+
+        // ✅ 사용자가 보유한 UserBadge 목록
+        List<UserBadge> userBadges = user.getBadges();
+
+        // ✅ 프로필에 노출 중인 뱃지 (isDisplay = true)
+        List<BadgeResponse> displayedBadges = userBadges.stream()
+                .filter(UserBadge::isDisplay) // isDisplay == true
+                .map(userBadge -> BadgeResponse.from(userBadge.getBadge()))
+                .toList();
+
+        // ✅ 사용자가 보유한 전체 뱃지
+        List<BadgeResponse> ownedBadges = userBadges.stream()
+                .map(userBadge -> BadgeResponse.from(userBadge.getBadge()))
+                .toList();
+
+        return UserProfileResponse.from(user, displayedBadges, ownedBadges, travelTags);
     }
 
     /**

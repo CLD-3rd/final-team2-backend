@@ -1,5 +1,6 @@
 package com.goteego.user.domain;
 
+import com.goteego.badge.domain.UserBadge;
 import com.goteego.chat.domain.UserChatRoom;
 import com.goteego.global.domain.BaseEntity;
 import jakarta.persistence.*;
@@ -41,6 +42,8 @@ public class User extends BaseEntity {
     @Column(name = "review_score_sum", nullable = false)
     private long reviewScoreSum = 0L;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserBadge> badges = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserChatRoom> userChatRooms = new ArrayList<>();

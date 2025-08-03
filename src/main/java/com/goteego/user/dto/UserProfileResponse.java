@@ -16,11 +16,16 @@ public record UserProfileResponse(
         List<BadgeResponse> ownedBadges,
         List<TravelTagResponse> travelTags
 ) {
-    public static UserProfileResponse from(User user, List<TravelTagResponse> travelTags) {
+    public static UserProfileResponse from(User user,
+                                           List<BadgeResponse> displayBadges,
+                                           List<BadgeResponse> ownedBadges,
+                                           List<TravelTagResponse> travelTags) {
         return UserProfileResponse.builder()
                 .user(UserResponse.from(user))
                 .reviewCount(user.getReviewCount())
                 .averageRating(user.getAverageRating())
+                .displayBadges(displayBadges)
+                .ownedBadges(ownedBadges)
                 .travelTags(travelTags)
                 .build();
     }
