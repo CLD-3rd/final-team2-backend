@@ -52,7 +52,6 @@ public enum Location {
      * @param koreanName 한글 이름 (예: "제주")
      */
     public static Location fromKoreanName(String koreanName) {
-        System.out.println("koreanName: " + koreanName);
         if (koreanName == null || koreanName.isBlank()) return null;
         Location location = KOREAN_NAME_MAP.get(koreanName);
         if (location == null) {

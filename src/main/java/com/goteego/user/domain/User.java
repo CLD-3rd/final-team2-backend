@@ -53,9 +53,17 @@ public class User extends BaseEntity {
                 .oauthInfo(oauthInfo)
                 .build();
     }
-    
+
     public void setIsSuspend(boolean isSuspended) {
         this.isSuspended = isSuspended;
         // BaseEntity의 lastModifiedAt이 자동으로 업데이트됨
+    }
+
+    public void updateProfileImage(String updatedProfileImgUrl) {
+        this.profileImgUrl = updatedProfileImgUrl;
+    }
+
+    public void updateNickname(String newNickname) {
+        this.nickname = newNickname;
     }
 }

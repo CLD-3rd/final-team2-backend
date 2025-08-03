@@ -3,15 +3,20 @@ package com.goteego.user.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.s3.S3Directory;
+import com.goteego.global.s3.S3Service;
 import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
+import com.goteego.user.dto.UserResponse;
+import com.goteego.user.dto.UserUpdateRequest;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,6 +35,7 @@ public class UserService {
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RefreshTokenService refreshTokenService;
+    private final S3Service s3Service;
 
     /**
      * 사용자에게 새로운 Refresh Token을 발급하고 Redis에 저장합니다.<br>
@@ -84,15 +90,55 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    // 현재 구조에서는 유저 수정이 없음. 만약 추가한다면 아래 코드 사용
-    public User updateUser(Long userId, User updatedUser) {
-        // DB 업데이트
-        User savedUser = userRepository.save(updatedUser);
+    /**
+     * ✅ 사용자 프로필 수정 서비스<br>
+     * - 닉네임과 프로필 이미지를 동시에 수정 가능<br>
+     * - 닉네임: 기존 값과 다를 경우에만 업데이트<br>
+     * - 프로필 이미지:<br>
+     * - 새 이미지가 존재하면 기존 이미지 삭제 후 업로드<br>
+     * - 새 이미지가 없으면 기존 이미지 유지<br>
+     * - 변경 후 캐시 무효화<br>
+     *
+     * @param userId  사용자 ID
+     * @param request 닉네임과 프로필 이미지가 포함된 요청 DTO
+     * @return UserResponse (수정된 사용자 정보)
+     */
+    @Transactional
+    public UserResponse updateUserProfile(Long userId, UserUpdateRequest request) {
+        User user = getUserById(userId);
 
-        // 캐시 무효화
-        String key = USER_CACHE_KEY + userId;
-        redisTemplate.delete(key);
+        // ✅ 닉네임 업데이트 (기존과 다를 경우)
+        if (!request.getNickname().equals(user.getNickname())) {
+            user.updateNickname(request.getNickname());
+        }
 
-        return savedUser;
+        // ✅ 프로필 이미지 업데이트
+        MultipartFile image = request.getProfileImage();
+        String updatedProfileImgUrl = user.getProfileImgUrl();
+
+        if (image != null && !image.isEmpty()) {
+            // 기존 이미지 삭제
+            if (updatedProfileImgUrl != null) {
+                String oldKey = S3Service.extractKeyFromUrl(updatedProfileImgUrl, S3Directory.PROFILES);
+                s3Service.deleteFile(oldKey);
+            }
+
+            // 새 이미지 업로드
+            updatedProfileImgUrl = s3Service.uploadFile(image, S3Directory.PROFILES, user.getId());
+            user.updateProfileImage(updatedProfileImgUrl);
+        }
+
+        // ✅ 캐시 무효화
+        evictUserCache(userId);
+        return UserResponse.from(user);
+    }
+
+    /**
+     * ✅ 사용자 캐시 무효화
+     *
+     * @param userId 사용자 ID
+     */
+    private void evictUserCache(Long userId) {
+        redisTemplate.delete(USER_CACHE_KEY + userId);
     }
 }
