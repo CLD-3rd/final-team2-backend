@@ -125,7 +125,7 @@ public class ChatService {
     // 알림 전송
     private void sendNotification(ChatMessage message, UserDto sender, Long recipientId, String roomId) {
         NotificationResponse notification = NotificationResponse.create(sender.getEmail(), message.getContent(),
-                sender.getId(), sender.getNickname(), roomId);
+                sender.getId(), sender.getNickname(), roomId, message.getType());
         NotificationTransferDto notificationTransferDto = new NotificationTransferDto(recipientId, notification);
         redisPublisher.publish(notificationTopic, notificationTransferDto);
     }

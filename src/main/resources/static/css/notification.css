@@ -1,34 +1,50 @@
-.notification {
+.notification-container {
     position: fixed;
-    bottom: 20px;
+    top: 20px;
     right: 20px;
-    padding: 15px;
-    background: #f5f5dc; /* 베이지 색 배경 */
-    color: #000000; /* 검정색 글씨 */
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
     z-index: 1000;
-    max-width: 300px;
-    animation: slideIn 0.5s forwards;
-    border: 1px solid #d2b48c; /* 베이지 계열 테두리 추가 */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.notification strong {
-    color: #000000; /* 제목도 검정색 유지 */
+.notification {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-left: 5px solid #007bff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    width: 320px;
+    position: relative;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.notification-close {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #aaa;
+    cursor: pointer;
+}
+
+.notification-title {
     font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
 }
 
-.notification p {
-    margin: 8px 0;
-    color: #000000; /* 내용 텍스트 검정색 */
+.notification-content {
+    margin-bottom: 10px;
+    color: #555;
 }
 
-.notification small {
-    color: #555; /* 시간 정보는 약간 연한 색상 */
+.notification-timestamp {
     font-size: 0.8em;
-}
-
-@keyframes slideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
+    color: #999;
+    text-align: right;
 }
