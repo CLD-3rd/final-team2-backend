@@ -1,49 +1,46 @@
 package com.goteego.global.error;
 
 import com.goteego.global.error.exception.ErrorCode;
-import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.BindingResult;
+
+import java.util.List;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ErrorResponse {
-    @NotNull
     private String message;
-
-    @NotNull
     private HttpStatus status;
-
+    private int statusCode;
     private String path;
+    private List<FieldErrorDetail> errors;
 
-    private ErrorResponse(final ErrorCode code, final String path) {
+    private ErrorResponse(ErrorCode code, String path, List<FieldErrorDetail> errors) {
         this.message = code.getMessage();
         this.status = code.getStatus();
+        this.statusCode = code.getStatus().value();
         this.path = path;
+        this.errors = errors;
     }
 
-    private ErrorResponse(final String message, final HttpStatus status, final String path) {
-        this.message = message;
-        this.status = status;
-        this.path = path;
+    public static ErrorResponse from(ErrorCode code, String path) {
+        return new ErrorResponse(code, path, null);
     }
 
-    public static ErrorResponse from(final ErrorCode code, final String path) {
-        return new ErrorResponse(code, path);
+    public static ErrorResponse fromValidationErrors(BindingResult bindingResult, String path) {
+        List<FieldErrorDetail> details = bindingResult.getFieldErrors().stream()
+                .map(error -> new FieldErrorDetail(
+                        error.getField(),
+                        error.getRejectedValue() != null ? error.getRejectedValue().toString() : null,
+                        error.getDefaultMessage()
+                ))
+                .toList();
+        return new ErrorResponse(ErrorCode.INVALID_INPUT_VALUE, path, details);
     }
 
-    public static ErrorResponse from(final String message, final HttpStatus status, final String path) {
-        return new ErrorResponse(message, status, path);
-    }
-
-    // 기존 메서드 유지 (경로 포함 안 할 때 사용)
-    public static ErrorResponse from(final ErrorCode code) {
-        return new ErrorResponse(code, null);
-    }
-
-    public static ErrorResponse from(final String message, final HttpStatus status) {
-        return new ErrorResponse(message, status, null);
+    public record FieldErrorDetail(String field, String rejectedValue, String reason) {
     }
 }

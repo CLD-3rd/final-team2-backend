@@ -1,7 +1,7 @@
 package com.goteego.review.domain;
 
 import com.goteego.global.domain.BaseEntity;
-import com.goteego.travel.domain.TravelPost;
+import com.goteego.travelPost.domain.TravelPost;
 import com.goteego.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -42,13 +42,4 @@ public class Review extends BaseEntity {
 
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
-
-
-    // 누적 합산 필드
-    @Column(name = "total_reviews")
-    private Integer totalReviews;  // 해당 사용자 받은 리뷰 수 (누적)
-
-    @Column(name = "total_rating_score")
-    private Integer totalRatingScore;  // 받은 별점 누적 합산
-
 }

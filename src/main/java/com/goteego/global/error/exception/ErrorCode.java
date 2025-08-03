@@ -8,10 +8,12 @@ public enum ErrorCode {
 
     //공통
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류, 관리자에게 문의하세요"),
-    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력 값입니다"),
-    BAD_CREDENTIALS(HttpStatus.UNAUTHORIZED, "잘못된 인증 정보입니다"),
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력 값이 올바르지 않습니다."),
+    BAD_CREDENTIALS(HttpStatus.UNAUTHORIZED, "인증 정보가 올바르지 않습니다."),
     BLANK_INPUT_VALUE(HttpStatus.BAD_REQUEST, "빈 값이 입력되었습니다"),
-    UNSUPPORTED_LOCATION(HttpStatus.BAD_REQUEST, "지원되지 않는 지역입니다"),
+
+    // 지역 관련 (Location)
+    INVALID_LOCATION(HttpStatus.BAD_REQUEST, "유효하지 않거나 지원되지 않는 지역입니다."),
 
     //Auth
     AUTH_NOT_FOUND(HttpStatus.UNAUTHORIZED, "시큐리티 인증 정보를 찾을 수 없습니다."),
@@ -49,7 +51,6 @@ public enum ErrorCode {
     RECRUITMENT_FULL(HttpStatus.CONFLICT, "모집 인원이 마감되었습니다."),
     SELF_APPLICATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신의 게시글에는 참가 신청할 수 없습니다."),
 
-
     // ProfileAnswer 관련
     PROFILE_ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자 선호도를 찾을 수 없습니다."),
     PROFILE_ANSWER_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용자 선호도가 존재합니다."),
@@ -67,6 +68,7 @@ public enum ErrorCode {
     INVALID_BADGE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 뱃지 타입입니다."),
     NOT_FOUND_BADGE(HttpStatus.NOT_FOUND, "해당 뱃지를 찾을 수 없습니다."),
     NOT_FOUND_BADGE_REQUEST(HttpStatus.NOT_FOUND, "해당 피드의 뱃지 요청이 존재하지 않습니다."),
+    USER_BADGE_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자가 보유한 뱃지가 없습니다."),
 
     // 피드 관련
     FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다."),
@@ -77,19 +79,28 @@ public enum ErrorCode {
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글이 존재하지 않습니다."),
     UNAUTHORIZED_COMMENT_UPDATE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 수정 권한이 없습니다."),
     UNAUTHORIZED_COMMENT_DELETE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 삭제 권한이 없습니다."),
+
     // 리뷰 관련
     SELF_REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신에게는 리뷰를 작성할 수 없습니다."),
     INVALID_REVIEW_TARGET(HttpStatus.BAD_REQUEST, "같은 여행에 참여하지 않은 대상자입니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_DUPLICATE(HttpStatus.CONFLICT, "중복된 리뷰입니다."),
     TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다."),
+    UNAUTHORIZED_REVIEW_DELETE(HttpStatus.FORBIDDEN, "해당 리뷰에 대한 삭제 권한이 없습니다."),
 
-    // 파일 관련
+    // ✅ 파일 업로드 유효성 검증 관련 (업로드 전)
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 형식입니다."),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일 크기는 5MB를 초과할 수 없습니다."),
     UNSUPPORTED_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 유형입니다. jpg 또는 png 파일만 허용됩니다."),
-    ;
 
+    // ✅ AWS S3 관련 (업로드/삭제/폴더 삭제 등)
+    S3_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 파일 업로드 중 오류가 발생했습니다."),
+    S3_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 파일 삭제 중 오류가 발생했습니다."),
+    S3_FOLDER_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 폴더 삭제 중 오류가 발생했습니다."),
+    S3_IO_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 스트림 처리 중 오류가 발생했습니다."),
+    S3_INVALID_URL(HttpStatus.BAD_REQUEST, "잘못된 S3 URL입니다."),
+    S3_UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3 작업 중 알 수 없는 오류가 발생했습니다."),
+    ;
     private final HttpStatus status;
     private final String message;
 

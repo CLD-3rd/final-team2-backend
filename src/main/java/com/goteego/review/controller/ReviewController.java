@@ -3,7 +3,6 @@ package com.goteego.review.controller;
 import com.goteego.review.dto.review.ApiResponse;
 import com.goteego.review.dto.review.ReviewRequestDto;
 import com.goteego.review.dto.review.ReviewTargetDto;
-import com.goteego.review.dto.review.UserReviewSummaryDto;
 import com.goteego.review.service.ReviewService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,17 +44,4 @@ public class ReviewController {
         ApiResponse<List<ReviewTargetDto>> response = ApiResponse.of("리뷰등록완료");
         return ResponseEntity.ok(response);
     }
-
-
-    /**
-     * 사용자 평균 별점 조회
-     */
-    @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<UserReviewSummaryDto>> getUserAverageRating(@PathVariable Long userId) {
-        UserReviewSummaryDto userReviewSummaryDto = reviewService.getUserReviewSummary(userId);
-        ApiResponse<UserReviewSummaryDto> response = ApiResponse.of("사용자 리뷰 조회", userReviewSummaryDto);
-        return ResponseEntity.ok(response);
-    }
-
-
 }

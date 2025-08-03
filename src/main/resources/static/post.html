@@ -9,12 +9,12 @@
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <script src="/js/shared-websocket.js"></script>
+    <script src="/js/common.js"></script>
 </head>
 <body>
 <div class="container">
     <h1>✈️ GotEEgo 여행 게시판</h1>
 
-    <!-- 로그인 상태 및 네비게이션 -->
     <div class="status">
         <div>
             <button onclick="logout()">로그아웃</button>
@@ -23,45 +23,9 @@
         </div>
         <div>
             <button onclick="location.href='chat.html'" style="margin-right: 10px;">채팅으로 이동</button>
-            <button onclick="location.href='test-profile-recommendation.html'" style="margin-right: 10px; background-color: #6f42c1; color: white;">프로필 테스트</button>
-            <button onclick="location.href='test-feed-api.html'" style="margin-right: 10px; background-color: #fd7e14; color: white;">피드 테스트</button>
-            <button onclick="location.href='index.html'" class="test">메인으로 이동</button>
         </div>
     </div>
 
-    <!-- API 테스트 섹션 -->
-    <div class="test-section">
-        <h3>🧪 API 테스트 도구</h3>
-        <div class="form-row">
-            <div class="form-group">
-                <label>PostType 선택:</label>
-                <select id="test-postType" onchange="updateTestButtons()">
-                    <option value="BEFORE">사전 여행 (BEFORE)</option>
-                    <option value="NOW">현지 여행 (NOW)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>페이지 크기:</label>
-                <input type="number" id="test-pageSize" value="5" min="1" max="20">
-            </div>
-            <!-- 정렬 버튼 추가 -->
-            <div class="form-group">
-                <label>정렬 기준:</label>
-                <div class="sort-buttons">
-                    <button onclick="getTravelPosts('recent')" class="sort-button active" id="sort-recent">최신순</button>
-                    <button onclick="getTravelPosts('view')" class="sort-button" id="sort-view">조회순</button>
-                </div>
-            </div>
-        </div>
-<!--        <button onclick="testGetTravelPosts()" class="test">게시글 목록 테스트</button>-->
-<!--        <button onclick="testGetCurrentUser()" class="test">내 정보 테스트</button>-->
-<!--        <button onclick="testGetMySchedules()" class="test">내 일정 테스트</button>-->
-<!--        <button onclick="testCreateTravelPost()" class="test">게시글 작성 테스트</button>-->
-<!--        <button onclick="testJoinTravelPost()" class="test">참여 신청 테스트</button>-->
-<!--        <pre id="test-result"></pre>-->
-    </div>
-
-    <!-- 여행 게시판 API 섹션 -->
     <fieldset>
         <legend>✈️ 여행 게시판</legend>
         <div class="form-row">
@@ -73,38 +37,23 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>페이지 크기:</label>
-                <input type="number" id="pageSize-input" value="10" min="1" max="20" onchange="getTravelPosts()">
+                <label>정렬 기준:</label>
+                <select id="sort-select" onchange="getTravelPosts()">
+                    <option value="recent">최신순</option>
+                    <option value="view">조회순</option>
+                </select>
             </div>
         </div>
         <button onclick="getTravelPosts()">게시글 목록 새로고침</button>
-        <input type="number" id="travelPostId" placeholder="게시글ID" style="width:100px;">
-        <button onclick="getTravelPostDetail()">상세</button>
-        <button onclick="joinTravelPost()">참여신청</button>
-        <button onclick="updateTravelPost()">수정</button>
-        <button onclick="deleteTravelPost()">삭제</button>
-        
+
         <div style="margin-top: 20px;">
-            <h4>📝 새 게시글 작성</h4>
+            <h4>📝 새 게시글 작성 (사전 여행)</h4>
             <form id="createTravelPostForm" onsubmit="createTravelPost(event)">
                 <div class="form-row">
                     <div class="form-group">
                         <label>제목:</label>
                         <input placeholder="제목" id="tp-title" required>
                     </div>
-                    <div class="form-group">
-                        <label>게시글 타입:</label>
-                        <select id="tp-type" required>
-                            <option value="BEFORE">사전 여행</option>
-                            <option value="NOW">현지 여행</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>내용:</label>
-                    <textarea placeholder="내용" id="tp-content" required style="width: 100%; height: 80px; resize: vertical;"></textarea>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>지역:</label>
                         <select id="tp-location" required>
@@ -120,6 +69,12 @@
                             <option value="SOKCHO">속초</option>
                         </select>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label>내용:</label>
+                    <textarea placeholder="내용" id="tp-content" required style="width: 100%; height: 80px; resize: vertical;"></textarea>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label>시작 날짜:</label>
                         <input type="date" id="tp-start" required>
@@ -132,20 +87,19 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>모집 인원:</label>
-                        <input type="number" id="tp-limit" placeholder="인원" required min="1" style="width:100px;">
+                        <input type="number" id="tp-limit" placeholder="인원" required min="1" value="4" style="width:100px;">
                     </div>
                     <div class="form-group">
-                        <label>이미지 URL:</label>
-                        <input placeholder="이미지URL" id="tp-img">
+                        <label>이미지 파일:</label>
+                        <input type="file" id="tp-img" accept="image/*">
                     </div>
                 </div>
                 <button type="submit">게시글 작성</button>
             </form>
         </div>
-        <pre id="travel-result"></pre>
+        <div id="travel-result"></div>
     </fieldset>
 
-    <!-- 내 일정 관리 섹션 -->
     <fieldset>
         <legend>📅 내 일정 관리</legend>
         <button onclick="loadScheduleData()">내 일정 새로고침</button>
@@ -160,499 +114,123 @@
                 <div id="participant-management"></div>
             </div>
         </div>
-
-        <pre id="schedule-result"></pre>
     </fieldset>
+
+    <div class="notification-container" id="notificationContainer"></div>
 </div>
 
 <script>
-    // 전역 변수 (테스트용)
-    let currentPostType = 'BEFORE';
-    let currentPageSize = 10;
-    let currentSort = 'recent';
 
-    function getAuthHeaders() {
-        const accessToken = getCookie('accessToken');
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
-        
-        return headers;
-    }
+    // 페이지 로드 시 초기화
+    window.onload = async function() {
+        try {
+            await apiClient.get('/api/users/me'); // 로그인 상태 확인
+            document.getElementById('login-status').textContent = '로그인됨';
 
-    // 쿠키에서 특정 값 가져오기
-    function getCookie(name) {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.startsWith(name + '=')) {
-                return cookie.substring(name.length + 1);
-            }
-        }
-        return null;
-    }
+            await window.wsManager.connect();
+            console.log("WebSocket이 성공적으로 연결되었습니다.");
 
-    // 인증 체크 및 상태 표시
-    window.onload = function() {
-        const cookies = document.cookie.split(';');
-        const accessToken = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
-        const isLoggedIn = accessToken ? true : false;
-        document.getElementById('login-status').textContent = isLoggedIn ? '로그인됨' : '로그인 필요';
-
-        // WebSocketManager 초기화 (알림 핸들러 등록)
-        if (typeof initWebSocketManager === 'function') {
-            initWebSocketManager(handleNotification);
-        }
-
-        // 페이지 로드 시 자동으로 일정 데이터 로드
-        if (isLoggedIn) {
-            loadScheduleData();
             getTravelPosts();
-        } else {
-            // 로그인 필요 안내
-            document.getElementById('travel-result').innerHTML = `
-                <div class="error-message">
-                    <h3>⚠️ 로그인이 필요합니다</h3>
-                    <p>게시글 작성과 조회를 위해서는 먼저 로그인해주세요.</p>
-                    <p>Google 계정으로 로그인 후 다시 시도해주세요.</p>
-                </div>
-            `;
+            loadScheduleData();
+
+        } catch (error) {
+            console.error('로그인되어 있지 않거나 세션이 만료되었습니다.', error);
+            document.getElementById('login-status').textContent = '로그인 필요';
+            document.getElementById('travel-result').innerHTML = `<div class="error-message"><h3>⚠️ 로그인이 필요합니다</h3></div>`;
         }
 
         // 날짜 기본값 설정
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        document.getElementById('tp-start').value = today.toISOString().split('T')[0];
-        document.getElementById('tp-end').value = tomorrow.toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('tp-start').value = today;
+        document.getElementById('tp-end').value = today;
     };
 
-    function handleNotification(notification) {
-        const container = document.getElementById('notificationContainer') ||
-            document.createElement('div');
+    // ===== 여행 게시판 API 함수들 =====
 
-        if (!document.getElementById('notificationContainer')) {
-            container.id = 'notificationContainer';
-            container.className = 'notification-container';
-            document.body.appendChild(container);
-        }
-
-        const notiElement = document.createElement('div');
-        notiElement.className = 'notification';
-        notiElement.innerHTML = `
-        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
-        <div class="notification-title">${notification.title}</div>
-        <div class="notification-content">${notification.content}</div>
-        <div class="notification-sender">From: ${notification.senderName}</div>
-    `;
-
-        container.appendChild(notiElement);
-
-        // 5초 후 자동으로 사라지게 설정
-        setTimeout(() => {
-            notiElement.style.opacity = '0';
-            setTimeout(() => notiElement.remove(), 300);
-        }, 5000);
-    }
-
-    // ===== API 테스트 함수들 =====
-    function updateTestButtons() {
-        const postType = document.getElementById('test-postType').value;
-        currentPostType = postType;
-    }
-
-    async function testGetTravelPosts() {
-        const postType = document.getElementById('test-postType').value;
-        const pageSize = document.getElementById('test-pageSize').value;
-        
-        try {
-            const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
-            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
-        } catch(e) {
-            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
-        }
-    }
-
-    async function testGetCurrentUser() {
-        try {
-            const res = await axios.get('/api/users/me', {headers: getAuthHeaders()});
-            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
-        } catch(e) {
-            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
-        }
-    }
-
-    async function testGetMySchedules() {
-        try {
-            const res = await axios.get('/api/schedule/mine?page=0&size=5', {headers: getAuthHeaders()});
-            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
-        } catch(e) {
-            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
-        }
-    }
-
-    async function testCreateTravelPost() {
-        const testData = {
-            title: "테스트 게시글",
-            content: "테스트용 게시글입니다.",
-            location: "SEOUL",
-            startTime: "2025-01-15",
-            endTime: "2025-01-20",
-            recruitLimit: 3,
-            postType: "BEFORE",
-            imageUrl: null,
-            isAddRecruit: true
-        };
-        
-        try {
-            const res = await axios.post('/api/travel-posts/requests', testData, {headers: getAuthHeaders()});
-            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
-        } catch(e) {
-            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
-        }
-    }
-
-    async function testJoinTravelPost() {
-        const postId = prompt("참여 신청할 게시글 ID를 입력하세요:");
-        if (!postId) return;
-        
-        try {
-            const res = await axios.post(`/api/travel-posts/requests/${postId}`, {}, {headers: getAuthHeaders()});
-            document.getElementById('test-result').textContent = `✅ 성공: ${JSON.stringify(res.data, null, 2)}`;
-        } catch(e) {
-            document.getElementById('test-result').textContent = `❌ 실패: ${e.response?.data || e.message}`;
-        }
-    }
-
-    // ===== 여행 게시판 API =====
-    // async function getTravelPosts() {
-    //     const postType = document.getElementById('postType-select').value;
-    //     const pageSize = document.getElementById('pageSize-input').value;
-    //
-    //     console.log('getTravelPosts 호출됨 - postType:', postType, 'pageSize:', pageSize);
-    //
-    //     try {
-    //         const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}`, {headers: getAuthHeaders()});
-    //         console.log('게시글 목록 API 응답:', res.data);
-    //         displayTravelPosts(res.data, postType);
-    //     } catch(e) {
-    //         console.error('게시글 목록 조회 실패:', e);
-    //         let errorMessage = '알 수 없는 오류가 발생했습니다.';
-    //
-    //         if (e.response) {
-    //             if (e.response.status === 401) {
-    //                 errorMessage = '로그인이 필요합니다. Google 계정으로 로그인해주세요.';
-    //             } else if (e.response.status === 403) {
-    //                 errorMessage = '접근 권한이 없습니다.';
-    //             } else if (e.response.data && e.response.data.message) {
-    //                 errorMessage = e.response.data.message;
-    //             } else {
-    //                 errorMessage = `서버 오류 (${e.response.status}): ${e.message}`;
-    //             }
-    //         } else if (e.request) {
-    //             errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
-    //         } else {
-    //             errorMessage = e.message;
-    //         }
-    //
-    //         document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${errorMessage}</div>`;
-    //     }
-    // }
-
-    async function getTravelPosts(sortType) {
-        // 정렬 타입이 전달되면 업데이트
-        if (sortType) {
-            currentSort = sortType;
-
-            // 정렬 버튼 활성화 상태 업데이트
-            document.querySelectorAll('.sort-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.getElementById(`sort-${sortType}`).classList.add('active');
-        }
-
+    async function getTravelPosts() {
         const postType = document.getElementById('postType-select').value;
-        const pageSize = document.getElementById('pageSize-input').value;
+        const sort = document.getElementById('sort-select').value;
+        const resultDiv = document.getElementById('travel-result');
+        resultDiv.innerHTML = '<div class="loader">게시글 목록을 불러오는 중...</div>';
 
         try {
-            const res = await axios.get(`/api/travel-posts?postType=${postType}&page=0&size=${pageSize}&sort=${currentSort}`, {
-                headers: getAuthHeaders()
+            const res = await apiClient.get(`/api/travel-posts`, {
+                params: { postType, page: 0, size: 10, sort }
             });
-            console.log('게시글 목록 API 응답:', res.data);
-            displayTravelPosts(res.data, postType);
+
+            // ✅ 수정된 부분: 응답 데이터의 키를 'beforePosts'와 'nowPosts'로 바로잡았습니다.
+            const responseData = res.data;
+            const posts = responseData.beforePosts || responseData.nowPosts || [];
+            displayTravelPosts(posts, postType); // postType을 함께 넘겨줍니다.
+
         } catch(e) {
             console.error('게시글 목록 조회 실패:', e);
-            let errorMessage = '알 수 없는 오류가 발생했습니다.';
-
-            if (e.response) {
-                if (e.response.status === 401) {
-                    errorMessage = '로그인이 필요합니다. Google 계정으로 로그인해주세요.';
-                } else if (e.response.status === 403) {
-                    errorMessage = '접근 권한이 없습니다.';
-                } else if (e.response.data && e.response.data.message) {
-                    errorMessage = e.response.data.message;
-                } else {
-                    errorMessage = `서버 오류 (${e.response.status}): ${e.message}`;
-                }
-            } else if (e.request) {
-                errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
-            } else {
-                errorMessage = e.message;
-            }
-
-            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${errorMessage}</div>`;
+            resultDiv.innerHTML = `<div class="error-message">❌ 게시글 목록 조회 실패: ${e.response?.data?.message || e.message}</div>`;
         }
     }
 
-    function displayTravelPosts(responseData, postType) {
+    function displayTravelPosts(posts, postType) {
         const container = document.getElementById('travel-result');
         container.innerHTML = '';
-
-        // 디버깅을 위한 응답 데이터 로그
-        console.log('displayTravelPosts 호출됨');
-        console.log('API 응답 데이터:', responseData);
-        console.log('PostType:', postType);
-        console.log('responseData 타입:', typeof responseData);
-        console.log('responseData가 객체인가:', typeof responseData === 'object');
-        console.log('responseData.data:', responseData?.data);
-
-        // 새로운 API 응답 구조에 맞게 처리
-        let posts = [];
-        
-        // 응답 데이터가 객체인지 배열인지 확인
-        if (Array.isArray(responseData)) {
-            // 직접 배열로 온 경우
-            posts = responseData;
-        } else if (responseData && typeof responseData === 'object') {
-            // 서버 응답 구조에 맞게 data 필드 확인
-            if (responseData.data && typeof responseData.data === 'object') {
-                // data가 객체인 경우 (TravelPostResponseWrapper 구조)
-                if (postType === 'BEFORE' && responseData.data.beforePosts) {
-                    posts = responseData.data.beforePosts;
-                    console.log('data.beforePosts에서 게시글 배열 추출:', posts);
-                } else if (postType === 'NOW' && responseData.data.nowPosts) {
-                    posts = responseData.data.nowPosts;
-                    console.log('data.nowPosts에서 게시글 배열 추출:', posts);
-                } else if (Array.isArray(responseData.data)) {
-                    // data가 직접 배열인 경우
-                    posts = responseData.data;
-                    console.log('data 필드에서 게시글 배열 추출:', posts);
-                } else {
-                    posts = [];
-                }
-            } else if (postType === 'BEFORE' && responseData.beforePosts) {
-                posts = responseData.beforePosts;
-            } else if (postType === 'NOW' && responseData.nowPosts) {
-                posts = responseData.nowPosts;
-            } else if (responseData.content) {
-                // PageResponseDto 구조
-                posts = responseData.content;
-            } else {
-                // 기타 객체 구조
-                posts = [];
-            }
-        } else {
-            // 기타 경우
-            posts = [];
-        }
-
-        console.log('처리된 posts:', posts);
-
         if (!posts || posts.length === 0) {
             container.innerHTML = '<div class="success-message">📝 등록된 게시글이 없습니다.</div>';
             return;
         }
 
-        // posts가 배열인지 확인
-        if (!Array.isArray(posts)) {
-            console.error('posts가 배열이 아닙니다:', posts);
-            container.innerHTML = '<div class="error-message">❌ 데이터 형식 오류: posts가 배열이 아닙니다.</div>';
-            return;
-        }
+        posts.forEach(post => {
+            const div = document.createElement('div');
+            div.className = 'schedule-item';
 
-        posts.forEach((post, index) => {
-            try {
-                const div = document.createElement('div');
-                div.className = 'schedule-item';
-                
-                const postTypeBadge = postType === 'BEFORE' ? 
-                    '<span class="status-badge status-before">사전여행</span>' : 
-                    '<span class="status-badge status-now">현지여행</span>';
-                
-                if (postType === 'BEFORE') {
-                    // BEFORE 타입 응답 구조
-                    const recruitmentBadge = post.participants >= post.maxParticipants ? 
-                        '<span class="status-badge status-completed">모집완료</span>' : 
-                        '<span class="status-badge status-recruiting">모집중</span>';
-                    
-                    div.innerHTML = `
-                        <h4>${post.title || '제목 없음'}</h4>
-                        <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
-                        <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
-                        <p><strong>타입:</strong> ${postTypeBadge}</p>
-                        <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
-                        <p><strong>참가자:</strong> ${post.participants || 0}/${post.maxParticipants || 'N/A'}명</p>
-                        <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
-                        <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
-                        <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
-                        <div class="action-buttons">
-                            <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
-                                참여 신청
-                            </button>
-                            <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
-                                상세 보기
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    // NOW 타입 응답 구조
-                    div.innerHTML = `
-                        <h4>${post.title || '제목 없음'}</h4>
-                        <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
-                        <p><strong>타입:</strong> ${postTypeBadge}</p>
-                        <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
-                        <p><strong>유사도:</strong> ${post.similarity ? (post.similarity * 100).toFixed(1) + '%' : 'N/A'}</p>
-                        <div class="action-buttons">
-                            <button onclick="joinTravelPost(${post.travelPostId})" class="approve">
-                                참여 신청
-                            </button>
-                            <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">
-                                상세 보기
-                            </button>
-                        </div>
-                    `;
-                }
-                
-                container.appendChild(div);
-            } catch (error) {
-                console.error(`게시글 ${index} 처리 중 오류:`, error, post);
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'schedule-item';
-                errorDiv.style.borderLeftColor = '#dc3545';
-                errorDiv.innerHTML = `
-                    <h4>❌ 게시글 처리 오류</h4>
-                    <p>게시글 데이터 처리 중 오류가 발생했습니다.</p>
-                    <p><strong>오류:</strong> ${error.message}</p>
-                `;
-                container.appendChild(errorDiv);
-            }
+            // ✅ 수정된 부분: API 응답에 맞춰 필드명을 모두 수정했습니다.
+            const isRecruiting = post.participants < post.maxParticipants;
+            const postTypeBadge = postType === 'BEFORE' ? '<span class="status-badge status-before">사전여행</span>' : '<span class="status-badge status-now">현지여행</span>';
+            const recruitmentBadge = isRecruiting ? '<span class="status-badge status-recruiting">모집중</span>' : '<span class="status-badge status-completed">모집완료</span>';
+            const participantsText = postType === 'BEFORE' ? `<p><strong>참가자:</strong> ${post.participants || 0} / ${post.maxParticipants || 'N/A'}명</p>` : '';
+
+            div.innerHTML = `
+            <h4>${post.title || '제목 없음'}</h4>
+            <p><strong>작성자:</strong> ${post.author?.nickname || 'N/A'}</p>
+            <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
+            ${postType === 'BEFORE' ? `<p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>` : ''}
+            <p><strong>타입:</strong> ${postTypeBadge}</p>
+            <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
+            ${participantsText}
+            <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
+            <div class="action-buttons">
+                <button onclick="joinTravelPost(${post.travelPostId})" class="approve">참여 신청</button>
+                <button onclick="getTravelPostDetail(${post.travelPostId})" class="test">상세 보기</button>
+                <button onclick="deleteTravelPost(${post.travelPostId})" class="reject">삭제</button>
+            </div>`;
+            container.appendChild(div);
         });
     }
 
     async function getTravelPostDetail(postId) {
-        if (!postId) {
-            postId = document.getElementById('travelPostId').value;
-            if (!postId) return alert('게시글ID를 입력해주세요');
-        }
-        
+        const resultDiv = document.getElementById('travel-result');
         try {
-            const res = await axios.get(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
+            const res = await apiClient.get(`/api/travel-posts/${postId}`);
             const post = res.data;
-
-            const container = document.getElementById('travel-result');
-            const postTypeBadge = post.postType === 'BEFORE' ? 
-                '<span class="status-badge status-before">사전여행</span>' : 
-                '<span class="status-badge status-now">현지여행</span>';
-            
-            const recruitmentBadge = post.isAddRecruit ? 
-                '<span class="status-badge status-recruiting">모집중</span>' : 
-                '<span class="status-badge status-completed">모집완료</span>';
-            
-            container.innerHTML = `
+            const recruitmentBadge = post.addRecruit ? '<span class="status-badge status-recruiting">모집중</span>' : '<span class="status-badge status-completed">모집완료</span>';
+            resultDiv.innerHTML = `
                 <div class="schedule-item">
-                    <h3>📋 게시글 상세 정보</h3>
-                    <h4>${post.title || '제목 없음'}</h4>
-                    <p><strong>작성자:</strong> ${post.author?.nickname || post.user?.nickname || 'N/A'}</p>
-                    <p><strong>기간:</strong> ${post.startTime || 'N/A'} ~ ${post.endTime || 'N/A'}</p>
-                    <p><strong>지역:</strong> ${post.location || 'N/A'}</p>
-                    <p><strong>타입:</strong> ${postTypeBadge}</p>
-                    <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
-                    <p><strong>모집인원:</strong> ${post.maxParticipants || post.recruitLimit || 'N/A'}명</p>
-                    <p><strong>조회수:</strong> ${post.viewCount || 0}</p>
-                    <p><strong>생성일:</strong> ${post.createdAt || 'N/A'}</p>
-                    <p><strong>내용:</strong> ${post.content || 'N/A'}</p>
-                    <div class="action-buttons">
-                        <button onclick="joinTravelPost(${post.travelPostId || post.id})" class="approve">
-                            참여 신청
-                        </button>
-                        <button onclick="updateTravelPost(${post.travelPostId || post.id})" class="test">
-                            수정
-                        </button>
-                        <button onclick="deleteTravelPost(${post.travelPostId || post.id})" class="reject">
-                            삭제
-                        </button>
-                    </div>
-                </div>
-            `;
-        } catch(e) { 
-            let errorMessage = '알 수 없는 오류가 발생했습니다.';
-            
-            if (e.response) {
-                if (e.response.status === 401) {
-                    errorMessage = '로그인이 필요합니다. Google 계정으로 로그인해주세요.';
-                } else if (e.response.status === 403) {
-                    errorMessage = '접근 권한이 없습니다.';
-                } else if (e.response.data && e.response.data.message) {
-                    errorMessage = e.response.data.message;
-                } else {
-                    errorMessage = `서버 오류 (${e.response.status}): ${e.message}`;
-                }
-            } else if (e.request) {
-                errorMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
-            } else {
-                errorMessage = e.message;
-            }
-            
-            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${errorMessage}</div>`;
-        }
-    }
-
-    async function joinTravelPost(postId) {
-        if (!postId) {
-            postId = document.getElementById('travelPostId').value;
-            if (!postId) return alert('게시글ID를 입력해주세요');
-        }
-        
-        try {
-            const res = await axios.post(`/api/travel-posts/${postId}/participations`, {}, {headers: getAuthHeaders()});
-
-            // 성공 메시지 표시
-            const container = document.getElementById('travel-result');
-            container.innerHTML = `
-                <div class="schedule-item" style="border-left-color: #28a745;">
-                    <h3>✅ 참여 신청 완료!</h3>
-                    <p><strong>신청 ID:</strong> ${res.data.applicationId || 'N/A'}</p>
-                    <p><strong>상태:</strong> ${res.data.status || 'PENDING'}</p>
-                    <p><strong>신청일:</strong> ${res.data.createdAt || new Date().toLocaleString()}</p>
-                    <p>참여 신청이 성공적으로 완료되었습니다. 작성자의 승인을 기다려주세요.</p>
-                </div>
-            `;
-
-            // 일정 데이터 새로고침 (내가 신청한 일정에 추가됨)
-            setTimeout(() => {
-                loadScheduleData();
-            }, 1000);
-
+                    <h3>📋 게시글 상세 정보 (ID: ${post.id})</h3>
+                    <h4>${post.title}</h4>
+                    <p><strong>작성자:</strong> ${post.authorNickname}</p>
+                    <p><strong>내용:</strong> ${post.content}</p>
+                    <p><strong>기간:</strong> ${post.startTime} ~ ${post.endTime}</p>
+                    <p><strong>모집인원:</strong> ${post.recruitLimit}명 (${recruitmentBadge})</p>
+                    <p><strong>조회수:</strong> ${post.viewCount}</p>
+                    <button onclick="getTravelPosts()">목록으로 돌아가기</button>
+                </div>`;
         } catch(e) {
-            document.getElementById('travel-result').innerHTML = `
-                <div class="error-message">
-                    <h3>❌ 참여 신청 실패</h3>
-                    <p><strong>에러 메시지:</strong> ${e.response?.data?.message || e.message}</p>
-                    <p><strong>상태 코드:</strong> ${e.response?.status || 'N/A'}</p>
-                </div>
-            `;
+            resultDiv.innerHTML = `<div class="error-message">❌ 상세 정보 조회 실패: ${e.response?.data?.message || e.message}</div>`;
         }
     }
 
-    async function createTravelPost(e) {
-        e.preventDefault();
+    async function createTravelPost(event) {
+        event.preventDefault();
 
-        // FormData 객체 생성
+        // ✅ FormData 사용
         const formData = new FormData();
         formData.append('title', document.getElementById('tp-title').value);
         formData.append('content', document.getElementById('tp-content').value);
@@ -660,478 +238,158 @@
         formData.append('startTime', document.getElementById('tp-start').value);
         formData.append('endTime', document.getElementById('tp-end').value);
         formData.append('recruitLimit', document.getElementById('tp-limit').value);
-        formData.append('postType', document.getElementById('tp-type').value);
+        formData.append('isAddRecruit', true);
 
-        // 이미지 파일이 있는 경우 추가 (실제 파일 업로드 시)
-        const imageInput = document.getElementById('tp-img');
-        if (imageInput.files && imageInput.files[0]) {
-            formData.append('image', imageInput.files[0]);
-        } else if (imageInput.value) {
-            // URL만 있는 경우
-            formData.append('imageUrl', imageInput.value);
+        const imageFile = document.getElementById('tp-img').files[0];
+        if (imageFile) {
+            formData.append('image', imageFile);
         }
 
-        formData.append('isAddRecruit', 'true');
+        // ✅ postType을 Query Param으로 전달
+        const postType = "BEFORE";
 
         try {
-            const res = await axios.post('/api/travel-posts', formData, {
-                headers: {
-                    ...getAuthHeaders(),
-                    'Content-Type': 'multipart/form-data'
-                }
+            await apiClient.post(`/api/travel-posts?postType=${postType}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-
-            document.getElementById('travel-result').innerHTML = `
-            <div class="success-message">
-                <h3>✅ 게시글 작성 완료!</h3>
-                <p><strong>게시글 ID:</strong> ${res.data.travelPostId || res.data.id}</p>
-                <p><strong>제목:</strong> ${res.data.title}</p>
-                <p>게시글이 성공적으로 작성되었습니다.</p>
-            </div>
-        `;
-
-            // 폼 초기화
+            alert('✅ 게시글이 성공적으로 작성되었습니다.');
             document.getElementById('createTravelPostForm').reset();
-
-            // 게시글 목록 새로고침
-            setTimeout(() => {
-                getTravelPosts();
-                loadScheduleData();
-            }, 1000);
-
-        } catch(e) {
-            console.error('게시글 작성 실패:', e);
-            document.getElementById('travel-result').innerHTML = `
-            <div class="error-message">
-                <h3>❌ 게시글 작성 실패</h3>
-                <p>${e.response?.data?.message || e.message}</p>
-                ${e.response?.data?.errors ?
-                `<ul>${e.response.data.errors.map(err => `<li>${err.field}: ${err.message}</li>`).join('')}</ul>`
-                : ''}
-            </div>
-        `;
-        }
-    }
-
-
-
-
-
-
-    async function updateTravelPost(postId) {
-        if (!postId) {
-            postId = document.getElementById('travelPostId').value;
-            if (!postId) return alert('게시글ID를 입력해주세요');
-        }
-
-        const newTitle = prompt('새로운 제목을 입력하세요:');
-        if (!newTitle) return;
-
-        const newContent = prompt('새로운 내용을 입력하세요:');
-        if (!newContent) return;
-
-        const data = {
-            title: newTitle,
-            content: newContent,
-            isAddRecruit: true
-        };
-
-        try {
-            const res = await axios.put(`/api/travel-posts/${postId}`, data, {headers: getAuthHeaders()});
-            document.getElementById('travel-result').innerHTML = `
-                <div class="success-message">
-                    <h3>✅ 게시글 수정 완료!</h3>
-                    <p>게시글이 성공적으로 수정되었습니다.</p>
-                </div>
-            `;
-            
-            // 게시글 목록 새로고침
-            setTimeout(() => {
-                getTravelPosts();
-            }, 1000);
-            
-        } catch(e) { 
-            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+            getTravelPosts();
+            loadScheduleData();
+        } catch (e) {
+            alert(`❌ 게시글 작성 실패: ${e.response?.data?.message || e.message}`);
         }
     }
 
     async function deleteTravelPost(postId) {
-        if (!postId) {
-            postId = document.getElementById('travelPostId').value;
-            if (!postId) return alert('게시글ID를 입력해주세요');
-        }
-
-        if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) return;
-
+        if (!confirm(`정말로 이 게시글(ID: ${postId})을 삭제하시겠습니까?`)) return;
         try {
-            const res = await axios.delete(`/api/travel-posts/${postId}`, {headers: getAuthHeaders()});
-            document.getElementById('travel-result').innerHTML = `
-                <div class="success-message">
-                    <h3>✅ 게시글 삭제 완료!</h3>
-                    <p>게시글이 성공적으로 삭제되었습니다.</p>
-                </div>
-            `;
-            
-            // 게시글 목록 새로고침
-            setTimeout(() => {
-                getTravelPosts();
-                loadScheduleData();
-            }, 1000);
-            
-        } catch(e) { 
-            document.getElementById('travel-result').innerHTML = `<div class="error-message">❌ 에러: ${e.response?.data?.message || e.message}</div>`;
+            await apiClient.delete(`/api/travel-posts/${postId}`);
+            alert('게시글이 삭제되었습니다.');
+            getTravelPosts();
+        } catch (e) {
+            alert(`❌ 삭제 실패: ${e.response?.data?.message || e.message}`);
         }
     }
 
-    // ===== 일정관리 API =====
+    async function joinTravelPost(postId) {
+        try {
+            // ✅ 반환값이 없으므로 성공 여부만 확인
+            await apiClient.post(`/api/travel-posts/${postId}/participations`);
+            alert('✅ 참여 신청이 완료되었습니다. 작성자의 승인을 기다려주세요.');
+            setTimeout(loadScheduleData, 1000); // 내 일정 목록 갱신
+        } catch(e) {
+            alert(`❌ 참여 신청 실패: ${e.response?.data?.message || e.message}`);
+        }
+    }
+
+    // ===== 일정 관리 API 함수들 =====
     async function loadScheduleData() {
         try {
-            const scheduleRes = await axios.get('/api/schedule/mine?page=0&size=10', {headers: getAuthHeaders()});
-            console.log('일정 API 응답:', scheduleRes.data);
-            
-            displaySchedules(scheduleRes.data);
+            const res = await apiClient.get('/api/schedule/mine');
+            // ✅ API가 이제 페이징 객체가 아닌 리스트를 직접 반환
+            displaySchedules(res.data);
 
-            // 첫 번째 일정의 참여자 데이터 로드
-            let scheduleData = scheduleRes.data;
-            console.log('원본 scheduleData:', scheduleData);
-            
-            // 서버 응답 구조에 맞게 data 필드 추출
-            if (scheduleData && typeof scheduleData === 'object' && scheduleData.data) {
-                scheduleData = scheduleData.data;
-                console.log('data 필드 추출 후:', scheduleData);
-            }
-            
-            if (scheduleData && !Array.isArray(scheduleData)) {
-                if (scheduleData.content && Array.isArray(scheduleData.content)) {
-                    scheduleData = scheduleData.content;
-                } else if (typeof scheduleData === 'object') {
-                    scheduleData = [scheduleData];
-                }
-            }
-
-            if (scheduleData && Array.isArray(scheduleData) && scheduleData.length > 0) {
-                const firstSchedule = scheduleData[0];
-                console.log('첫 번째 일정 데이터:', firstSchedule);
-                
-                // travelPostId 추출 시도
-                const travelPostId = firstSchedule.travelPostId || firstSchedule.id || firstSchedule.travel_post_id;
-                console.log('추출된 travelPostId:', travelPostId);
-                
-                if (travelPostId && travelPostId !== 'undefined') {
-                    await loadParticipantData(travelPostId);
-                } else {
-                    console.warn('travelPostId를 찾을 수 없습니다:', firstSchedule);
-                    document.getElementById('participant-management').innerHTML = 
-                        '<div class="warning-message">⚠️ 참여자 데이터를 로드할 수 없습니다. travelPostId가 없습니다.</div>';
-                }
+            if (res.data && res.data.length > 0) {
+                // 첫 번째 일정의 참여자 데이터를 자동으로 불러옴
+                loadParticipantData(res.data[0].travelPostId);
+            } else {
+                document.getElementById('participant-management').innerHTML = '';
             }
         } catch(e) {
             console.error('일정 데이터 로드 실패:', e);
-            document.getElementById('schedule-result').innerHTML = `<div class="error-message">❌ 일정 데이터 로드 실패: ${e.response?.data?.message || e.message}</div>`;
+            document.getElementById('schedule-list').innerHTML = `<div class="error-message">❌ 일정 로드 실패</div>`;
         }
     }
 
     function displaySchedules(schedules) {
         const container = document.getElementById('schedule-list');
         container.innerHTML = '';
-
-        // 디버깅을 위한 로그
-        console.log('일정 데이터:', schedules);
-        console.log('일정 데이터 타입:', typeof schedules);
-        console.log('일정 데이터가 배열인가:', Array.isArray(schedules));
-
-        // schedules가 배열이 아닌 경우 처리
-        if (!schedules) {
-            container.innerHTML = '<div class="success-message">📝 등록된 일정이 없습니다.</div>';
+        if (!schedules || schedules.length === 0) {
+            container.innerHTML = '<div>참여중인 일정이 없습니다.</div>';
             return;
         }
 
-        // schedules가 배열이 아닌 경우 배열로 변환 시도
-        let scheduleArray = schedules;
-        if (!Array.isArray(schedules)) {
-            if (typeof schedules === 'object') {
-                // 서버 응답 구조에 맞게 data 필드 확인
-                if (schedules.data && Array.isArray(schedules.data)) {
-                    scheduleArray = schedules.data;
-                    console.log('data 필드에서 배열 추출:', scheduleArray);
-                } else if (schedules.content && Array.isArray(schedules.content)) {
-                    scheduleArray = schedules.content;
-                } else {
-                    // 단일 객체인 경우 배열로 변환
-                    scheduleArray = [schedules];
-                }
-            } else {
-                container.innerHTML = '<div class="error-message">❌ 일정 데이터 형식이 올바르지 않습니다.</div>';
-                return;
-            }
-        }
-
-        if (scheduleArray.length === 0) {
-            container.innerHTML = '<div class="success-message">📝 등록된 일정이 없습니다.</div>';
-            return;
-        }
-
-        scheduleArray.forEach(schedule => {
+        schedules.forEach(schedule => {
             const div = document.createElement('div');
             div.className = 'schedule-item';
-            
-            const postTypeBadge = '<span class="status-badge status-before">사전여행</span>'; // 일정은 BEFORE만
-            
-            const recruitmentBadge = schedule.participants >= schedule.maxParticipants ? 
-                '<span class="status-badge status-completed">모집완료</span>' : 
-                '<span class="status-badge status-recruiting">모집중</span>';
-            
             div.innerHTML = `
-                <h4>${schedule.title || '제목 없음'}</h4>
-                <p><strong>작성자:</strong> ${schedule.author?.nickname || 'N/A'}</p>
-                <p><strong>기간:</strong> ${schedule.startTime || 'N/A'} ~ ${schedule.endTime || 'N/A'}</p>
-                <p><strong>타입:</strong> ${postTypeBadge}</p>
-                <p><strong>모집상태:</strong> ${recruitmentBadge}</p>
-                <p><strong>참가자:</strong> ${schedule.participants || 0}/${schedule.maxParticipants || 'N/A'}명</p>
-                <p><strong>지역:</strong> ${schedule.location || 'N/A'}</p>
-                <button onclick="loadParticipantData(${schedule.travelPostId || schedule.id || schedule.travel_post_id})" class="approve">
-                    참여자 관리
-                </button>
-            `;
+                <h4>${schedule.title}</h4>
+                <p><strong>작성자:</strong> ${schedule.authorNickname}</p>
+                <p><strong>기간:</strong> ${schedule.startTime} ~ ${schedule.endTime}</p>
+                <p><strong>참가자:</strong> ${schedule.approvedParticipantCount} / ${schedule.recruitLimit}명</p>
+                <button onclick="loadParticipantData(${schedule.travelPostId})" class="approve">참여자 관리</button>`;
             container.appendChild(div);
         });
     }
 
     async function loadParticipantData(postId) {
-        // postId 유효성 검사
-        if (!postId || postId === 'undefined' || postId === 'null') {
-            console.error('유효하지 않은 postId:', postId);
-            document.getElementById('participant-management').innerHTML =
-                '<div class="error-message">❌ 유효하지 않은 게시글 ID입니다.</div>';
-            return;
-        }
-
-        console.log('참여자 데이터 로드 시작 - postId:', postId);
-        
+        if (!postId) return;
+        const container = document.getElementById('participant-management');
+        container.innerHTML = `<div class="loader">참여자 목록 로딩 중... (게시글 ID: ${postId})</div>`;
         try {
             const [participantsRes, applicationsRes] = await Promise.all([
-                axios.get(`/api/schedule/${postId}/participants`, {headers: getAuthHeaders()}),
-                axios.get(`/api/schedule/${postId}/applications`, {headers: getAuthHeaders()})
+                apiClient.get(`/api/schedule/${postId}/participants`),
+                apiClient.get(`/api/schedule/${postId}/applications`)
             ]);
-
-            console.log('참여자 데이터 응답:', participantsRes.data);
-            console.log('신청자 데이터 응답:', applicationsRes.data);
-
             displayParticipantManagement(participantsRes.data, applicationsRes.data, postId);
-        } catch(e) {
+        } catch (e) {
             console.error('참여자 데이터 로드 실패:', e);
-            console.error('에러 상세:', e.response?.data);
-            
-            let errorMessage = '참여자 데이터를 로드할 수 없습니다.';
-            if (e.response?.status === 404) {
-                errorMessage = '게시글을 찾을 수 없습니다.';
-            } else if (e.response?.status === 500) {
-                errorMessage = '서버 내부 오류가 발생했습니다.';
-            } else if (e.response?.data?.message) {
-                errorMessage = e.response.data.message;
-            }
-            
-            document.getElementById('participant-management').innerHTML =
-                `<div class="error-message">❌ ${errorMessage}</div>`;
+            container.innerHTML = `<div class="error-message">❌ 참여자 정보 로드 실패</div>`;
         }
     }
 
     function displayParticipantManagement(participants, applications, postId) {
         const container = document.getElementById('participant-management');
-        container.innerHTML = '';
+        container.innerHTML = `<h4>게시글(ID: ${postId}) 참여자 관리</h4>`;
 
-        console.log('displayParticipantManagement 호출됨');
-        console.log('participants:', participants);
-        console.log('applications:', applications);
-        console.log('postId:', postId);
-
-        // 데이터 구조 확인 및 배열 변환
-        let participantsArray = participants;
-        let applicationsArray = applications;
-
-        // participants 처리
-        if (participants && !Array.isArray(participants)) {
-            if (participants.data && Array.isArray(participants.data)) {
-                participantsArray = participants.data;
-            } else if (typeof participants === 'object') {
-                participantsArray = [participants];
-            } else {
-                participantsArray = [];
-            }
-        }
-
-        // applications 처리
-        if (applications && !Array.isArray(applications)) {
-            if (applications.data && Array.isArray(applications.data)) {
-                applicationsArray = applications.data;
-            } else if (typeof applications === 'object') {
-                applicationsArray = [applications];
-            } else {
-                applicationsArray = [];
-            }
-        }
-
-        console.log('처리된 participantsArray:', participantsArray);
-        console.log('처리된 applicationsArray:', applicationsArray);
-
-        // 승인된 참가자 목록
-        const approvedParticipants = participantsArray || [];
-        if (approvedParticipants.length > 0) {
-            const participantsDiv = document.createElement('div');
-            participantsDiv.innerHTML = '<h4>✅ 승인된 참가자</h4>';
-
-            approvedParticipants.forEach(participant => {
-                const div = document.createElement('div');
-                div.className = 'participant-item';
-                div.innerHTML = `
-                    <p><strong>${participant.participantNickname || participant.userId || '사용자'}</strong></p>
-                    <p>상태: ${participant.status || 'APPROVED'}</p>
+        const pendingApps = applications.filter(app => app.status === 'PENDING');
+        if (pendingApps.length > 0) {
+            const pendingDiv = document.createElement('div');
+            pendingDiv.innerHTML = '<h5>⏳ 대기 중인 신청자</h5>';
+            pendingApps.forEach(app => {
+                const item = document.createElement('div');
+                item.className = 'application-item';
+                item.innerHTML = `
+                    <p><strong>${app.participantNickname}</strong></p>
                     <div class="action-buttons">
-                        <button onclick="updateParticipantStatus(${postId}, ${participant.userId || participant.participantId}, 'REJECTED')" class="reject">
-                            참여 취소
-                        </button>
-                    </div>
-                `;
-                participantsDiv.appendChild(div);
+                        <button onclick="updateParticipantStatus(${postId}, ${app.participantId}, 'APPROVED')" class="approve">승인</button>
+                        <button onclick="updateParticipantStatus(${postId}, ${app.participantId}, 'REJECTED')" class="reject">거절</button>
+                    </div>`;
+                pendingDiv.appendChild(item);
             });
-            container.appendChild(participantsDiv);
+            container.appendChild(pendingDiv);
         }
 
-        // 대기 중인 신청자 목록
-        const pendingApplications = applicationsArray ? applicationsArray.filter(app => app.status === 'PENDING') : [];
-        if (pendingApplications.length > 0) {
-            const applicationsDiv = document.createElement('div');
-            applicationsDiv.innerHTML = '<h4>⏳ 대기 중인 신청자</h4>';
-
-            pendingApplications.forEach(application => {
-                const div = document.createElement('div');
-                div.className = 'application-item';
-                div.innerHTML = `
-                    <p><strong>${application.participantNickname || application.userId || '사용자'}</strong></p>
-                    <p>신청일: ${application.createdAt || application.requestedAt || 'N/A'}</p>
-                    <div class="action-buttons">
-                        <button onclick="updateParticipantStatus(${postId}, ${application.participantId || application.userId}, 'APPROVED')" class="approve">
-                            승인
-                        </button>
-                        <button onclick="updateParticipantStatus(${postId}, ${application.participantId || application.userId}, 'REJECTED')" class="reject">
-                            거절
-                        </button>
-                    </div>
-                `;
-                applicationsDiv.appendChild(div);
+        const approvedParts = participants.filter(p => p.status === 'APPROVED');
+        if (approvedParts.length > 0) {
+            const approvedDiv = document.createElement('div');
+            approvedDiv.innerHTML = '<h5>✅ 승인된 참가자</h5>';
+            approvedParts.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'participant-item';
+                item.innerHTML = `<p><strong>${p.participantNickname}</strong></p>`;
+                approvedDiv.appendChild(item);
             });
-            container.appendChild(applicationsDiv);
+            container.appendChild(approvedDiv);
         }
 
-        // 거절된 신청자 목록
-        const rejectedApplications = applicationsArray ? applicationsArray.filter(app => app.status === 'REJECTED') : [];
-        if (rejectedApplications.length > 0) {
-            const rejectedDiv = document.createElement('div');
-            rejectedDiv.innerHTML = '<h4>❌ 거절된 신청자</h4>';
-
-            rejectedApplications.forEach(application => {
-                const div = document.createElement('div');
-                div.className = 'application-item';
-                div.style.borderLeftColor = '#dc3545';
-                div.innerHTML = `
-                    <p><strong>${application.participantNickname || application.userId || '사용자'}</strong></p>
-                    <p>신청일: ${application.createdAt || application.requestedAt || 'N/A'}</p>
-                    <p>상태: ${application.status}</p>
-                `;
-                rejectedDiv.appendChild(div);
-            });
-            container.appendChild(rejectedDiv);
-        }
-
-        if (approvedParticipants.length === 0 && pendingApplications.length === 0 && rejectedApplications.length === 0) {
-            container.innerHTML = '<div class="success-message">📝 참여자나 신청자가 없습니다.</div>';
+        if(pendingApps.length === 0 && approvedParts.length === 0) {
+            container.innerHTML += '<div>신청자 또는 참가자가 없습니다.</div>'
         }
     }
 
     async function updateParticipantStatus(postId, userId, status) {
-        if (!postId || !userId || userId === 'undefined') {
-            alert('유효하지 않은 요청입니다. postId 또는 userId가 없습니다.');
-            return;
-        }
-
+        if (!confirm(`${status} 처리하시겠습니까?`)) return;
         try {
-            const res = await axios.put(
-                `/api/schedule/${postId}/participants/${userId}`,
-                { status: status },
-                { headers: getAuthHeaders() }
-            );
-
-            // 성공 시 UI 업데이트
-            await loadParticipantData(postId);
-
-            // 성공 메시지
-            const statusText = status === 'APPROVED' ? '승인' : status === 'REJECTED' ? '거절' : '상태 변경';
-            alert(`${statusText} 처리되었습니다.`);
-
-            // 결과 로그
-            document.getElementById('schedule-result').innerHTML = `
-                <div class="success-message">
-                    <h3>✅ 상태 변경 성공</h3>
-                    <pre>${JSON.stringify(res.data, null, 2)}</pre>
-                </div>
-            `;
+            // ✅ 요청 본문 형식 수정
+            await apiClient.put(`/api/schedule/${postId}/participants/${userId}`, { status });
+            alert(`${status} 처리가 완료되었습니다.`);
+            loadParticipantData(postId); // UI 새로고침
         } catch (error) {
-            console.error('상태 변경 실패:', error);
-
-            let errorMessage = '상태 변경에 실패했습니다.';
-            if (error.response) {
-                errorMessage = error.response.data.message || errorMessage;
-            }
-
-            document.getElementById('schedule-result').innerHTML = `
-                <div class="error-message">
-                    <h3>❌ 상태 변경 실패</h3>
-                    <p>${errorMessage}</p>
-                </div>
-            `;
-
-            alert(errorMessage);
+            alert(`상태 변경 실패: ${error.response?.data?.message || error.message}`);
         }
     }
-
-    // ===== 공통 함수 =====
-    function logout() {
-        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        alert('로그아웃되었습니다.');
-        window.location.href = '/';
-    }
-
-    <!-- 웹 소켓 초기화 -->
-
-    // 공통 알림 표시 함수 (유지)
-    function showNotification(notification) {
-        const notificationDiv = document.createElement('div');
-        notificationDiv.className = 'notification';
-        notificationDiv.innerHTML = `
-        <strong>${notification.title || '새 알림'}</strong>
-        <p>${notification.content}</p>
-        <small>${new Date(notification.createdAt).toLocaleString()}</small>
-    `;
-        document.body.appendChild(notificationDiv);
-
-        setTimeout(() => notificationDiv.remove(), 5000);
-    }
-
-    // 수정된 페이지 로드 함수
-    window.onload = async function() {
-        const accessToken = getCookie('accessToken');
-        document.getElementById('login-status').textContent = accessToken ? '로그인됨' : '로그인 필요';
-
-        if (accessToken) {
-            try {
-                await window.wsManager.connect(); // 공통 WebSocketManager 사용
-                loadScheduleData();
-            } catch (error) {
-                console.error("웹소켓 연결 실패:", error);
-            }
-        }
-    };
 
 </script>
 </body>

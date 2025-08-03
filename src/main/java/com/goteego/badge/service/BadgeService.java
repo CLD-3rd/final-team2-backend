@@ -18,30 +18,20 @@ import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class BadgeService {
 
     private final UserBadgeRepository userBadgeRepository;
     private final BadgeRepository badgeRepository;
     private final FeedRepository feedRepository;
-
     private final LandmarkBadgeRequestReposiroty landmarkBadgeRequestReposiroty;
-
-    public BadgeService(UserBadgeRepository userBadgeRepository, BadgeRepository badgeRepository, FeedRepository feedRepository,
-
-                        LandmarkBadgeRequestReposiroty landmarkBadgeRequestReposiroty) {
-        this.userBadgeRepository = userBadgeRepository;
-        this.badgeRepository = badgeRepository;
-        this.feedRepository = feedRepository;
-
-        this.landmarkBadgeRequestReposiroty = landmarkBadgeRequestReposiroty;
-    }
-
 
     public List<BadgeResponse> getBadgesByUserId(Long userId) {
         List<UserBadge> userBadges = userBadgeRepository.findByUserId(userId);
@@ -127,7 +117,7 @@ public class BadgeService {
 
         Location location = feed.getLocation();
 
-        BadgeCode badgeCode = location.toBadgeCode(); // 안전한 변환
+        BadgeCode badgeCode = location.getBadgeCode(); // 안전한 변환
 
 
         if (badgeCode == null && useDefaultIfInvalid) {
@@ -145,4 +135,27 @@ public class BadgeService {
         return requests.stream().map(req -> BadgeRequestsResponse.of(req.getId(), req.getFeed().getAuthor().getId(), req.getFeed().getId(), req.getStatus().name())).collect(Collectors.toList());
     }
 
+    /**
+     * 사용자 프로필에 표시할 뱃지를 업데이트하는 메서드
+     *
+     * @param userId   사용자 ID
+     * @param badgeIds 표시할 뱃지 ID 목록
+     */
+    @Transactional
+    public void updateDisplayedBadges(Long userId, List<Long> badgeIds) {
+        // 1. 사용자 뱃지 조회
+        List<UserBadge> userBadges = userBadgeRepository.findByUserId(userId);
+
+        if (userBadges.isEmpty()) {
+            throw new NotFoundException(ErrorCode.USER_BADGE_NOT_FOUND);
+        }
+
+        // 2. 모든 뱃지 표시 상태 초기화
+        userBadges.forEach(userBadge -> userBadge.setDisplay(false));
+
+        // 3. 선택된 뱃지 ID들에 해당하는 항목만 true
+        userBadges.stream()
+                .filter(userBadge -> badgeIds.contains(userBadge.getBadge().getId()))
+                .forEach(userBadge -> userBadge.setDisplay(true));
+    }
 }

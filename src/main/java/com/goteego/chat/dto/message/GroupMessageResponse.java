@@ -21,8 +21,8 @@ public class GroupMessageResponse {
     private MessageType type;        // 메시지 타입
 
     // 엔티티 → DTO 변환
-    public static DirectMessageResponse fromEntity(ChatMessage message) {
-        return new DirectMessageResponse(
+    public static GroupMessageResponse fromEntity(ChatMessage message) {
+        return new GroupMessageResponse(
                 message.getRoomId(),
                 message.getSenderId(),
                 message.getSenderName(),

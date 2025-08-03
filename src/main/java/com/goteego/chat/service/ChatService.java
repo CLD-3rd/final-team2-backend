@@ -52,10 +52,13 @@ public class ChatService {
         // 3. 메시지 DB 저장
         ChatMessage message = createAndSaveMessage(roomId, directMessageRequest.getContent(), directMessageRequest.getType(), sender);
 
-        // 4. 메시지 전송 (수신자와 발신자 모두에게 전송)
+        // 4. 1:1 채팅방의 마지막 메시지 정보 업데이트
+        updateChatRoomLastMessage(roomId, message);
+
+        // 5. 메시지 전송 (수신자와 발신자 모두에게 전송)
         sendDirectMessage(message, recipient.getId());
 
-        // 5. 알림 전송
+        // 6. 알림 전송
         sendNotification(message, sender, recipient.getId(), roomId);
     }
 
@@ -76,10 +79,13 @@ public class ChatService {
         ChatMessage message = chatMessageRepository.save(ChatMessage.create(roomId, sender.getId(), sender.getNickname(),
                 groupMessageRequest.getContent(), groupMessageRequest.getType()));
 
-        // 4. 그룹 채팅방에 메시지 전송(브로드캐스트)
+        // 4. 그룹 채팅방의 마지막 메시지 정보 업데이트
+        updateChatRoomLastMessage(roomId, message);
+
+        // 5. 그룹 채팅방에 메시지 전송(브로드캐스트)
         broadcastGroupMessage(message);
 
-        // 5. 그룹 채팅방의 다른 참여자들에게 알림 전송
+        // 6. 그룹 채팅방의 다른 참여자들에게 알림 전송
         chatRoom.getParticipants().forEach(participant -> {
             User participantUser = participant.getUser();
             if (!participantUser.getId().equals(senderId)) {
@@ -125,9 +131,16 @@ public class ChatService {
     // 알림 전송
     private void sendNotification(ChatMessage message, UserDto sender, Long recipientId, String roomId) {
         NotificationResponse notification = NotificationResponse.create(sender.getEmail(), message.getContent(),
-                sender.getId(), sender.getNickname(), roomId);
+                sender.getId(), sender.getNickname(), roomId, message.getType());
         NotificationTransferDto notificationTransferDto = new NotificationTransferDto(recipientId, notification);
         redisPublisher.publish(notificationTopic, notificationTransferDto);
+    }
+
+    // 마지막 메시지 업데이트 로직
+    private void updateChatRoomLastMessage(String roomId, ChatMessage message) {
+        ChatRoom chatRoom = chatRoomRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.CHATROOM_NOT_FOUND));
+        chatRoom.updateLastMessage(message.getContent(), message.getTimestamp());
     }
 
 

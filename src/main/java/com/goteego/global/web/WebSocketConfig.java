@@ -1,6 +1,5 @@
 package com.goteego.global.web;
 
-import com.goteego.global.security.jwt.StompHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -16,6 +15,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final StompHandler stompHandler;
+    private final HttpHandshakeInterceptor httpHandshakeInterceptor;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -32,6 +32,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // STOMP 연결 전에 WebSocket을 먼저 핸드셰이크를 위한 주소 설정 (클라이언트가 WebSocket에 연결할 때 해당 엔드포인트 "/ws"로 접근)
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
+                .addInterceptors(httpHandshakeInterceptor) // 핸드셰이크 인터셉터 추가
                 .withSockJS()  // SockJS 폴백 지원 (브라우저 호환성)
                 .setSessionCookieNeeded(true) // ✅ 쿠키 전송 허용
                 .setSuppressCors(true);

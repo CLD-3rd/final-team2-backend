@@ -11,5 +11,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class NotificationTransferDto {
     private Long recipientId;
-    private NotificationResponse notificationResponse;
+    private NotificationResponse messageResponse;
 }

@@ -5,6 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -45,6 +48,16 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(exception, request);
     }
 
+
+    /**
+     * 📍❌ 잘못된 지역(Location) 요청 예외 처리
+     */
+    @ExceptionHandler(InvalidLocationException.class)
+    public ResponseEntity<Object> handleInvalidLocationException(InvalidLocationException exception, HttpServletRequest request) {
+        log.warn("\uD83D\uDCCD❌ [InvalidLocationException] {}", exception.getMessage());
+        return buildErrorResponse(exception, request);
+    }
+
     /**
      * 📂❌ 잘못된 파일 업로드 예외 처리
      */
@@ -55,12 +68,48 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 🏖❌ 잘못된 여행 태그(TravelTag) 요청 예외 처리
+     */
+    @ExceptionHandler(InvalidTravelTagException.class)
+    public ResponseEntity<Object> handleInvalidTravelTagException(InvalidTravelTagException exception, HttpServletRequest request) {
+        log.warn("🏖❌ [InvalidTravelTagException] {}", exception.getMessage());
+        return buildErrorResponse(exception, request);
+    }
+
+    /**
      * 🔐 인증 실패(Unauthorized) 예외 처리
      */
     @ExceptionHandler(UnauthorizedAccessException.class)
     public ResponseEntity<Object> handleUnauthorizedAccessException(UnauthorizedAccessException exception, HttpServletRequest request) {
         log.warn("🔐 [UnauthorizedAccessException] {}", exception.getMessage());
         return buildErrorResponse(exception, request);
+    }
+
+    /**
+     * 📦 S3 업로드/삭제 실패 예외 처리
+     */
+    @ExceptionHandler(S3Exception.class)
+    public ResponseEntity<Object> handleS3Exception(S3Exception exception, HttpServletRequest request) {
+        log.error("📦 [S3Exception] {}", exception.getMessage());
+        return buildErrorResponse(exception, request);
+    }
+
+    /**
+     * 🛠️ 요청 값 검증 실패 (Validation Exception)
+     * - @Valid, @Validated 검증 실패 시 발생
+     * - 필드별 상세 에러 정보 반환
+     */
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
+    public ResponseEntity<Object> handleValidationException(Exception exception, HttpServletRequest request) {
+        log.warn("🛠️ [ValidationException] 요청 값 검증 실패: {}", exception.getMessage());
+        String path = request.getRequestURI();
+
+        BindingResult bindingResult = (exception instanceof MethodArgumentNotValidException ex)
+                ? ex.getBindingResult()
+                : ((BindException) exception).getBindingResult();
+
+        ErrorResponse response = ErrorResponse.fromValidationErrors(bindingResult, path);
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     /**
