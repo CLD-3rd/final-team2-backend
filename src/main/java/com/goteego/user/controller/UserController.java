@@ -1,12 +1,10 @@
 package com.goteego.user.controller;
 
+import com.goteego.badge.service.BadgeService;
 import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.global.util.CookieUtil;
 import com.goteego.user.domain.User;
-import com.goteego.user.dto.UserDto;
-import com.goteego.user.dto.UserProfileResponse;
-import com.goteego.user.dto.UserResponse;
-import com.goteego.user.dto.UserUpdateRequest;
+import com.goteego.user.dto.*;
 import com.goteego.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +27,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final BadgeService badgeService;
     private final RefreshTokenService refreshTokenService;
 
     /**
@@ -97,8 +96,8 @@ public class UserController {
     }
 
     /**
-     * ✅ 사용자 프로필 수정 API<br>
-     * - 닉네임 및 프로필 이미지 동시 수정 가능<br>
+     * ✅ 사용자 프로필 수정 API
+     * <br>- 닉네임 및 프로필 이미지 동시 수정 가능<br>
      * - 프로필 이미지는 MultipartFile 형식으로 전송 (옵션)<br>
      * - 기존 이미지가 있으면 삭제 후 새 이미지 업로드<br>
      * - 이미지가 전달되지 않으면 기존 이미지 유지
@@ -116,5 +115,24 @@ public class UserController {
         UserResponse response = userService.updateUserProfile(user.getId(), request);
         log.info("✅ [User] 프로필 수정 성공 - userNickName: {} -> {}", oldNickname, response.nickname());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * ✅ 사용자 표시 뱃지 수정 API
+     * <br>사용자가 프로필에 표시할 뱃지를 업데이트합니다.
+     *
+     * @param user    인증된 사용자
+     * @param request 표시할 뱃지 ID 리스트
+     * @return 204 No Content
+     */
+    @PutMapping("/badges")
+    public ResponseEntity<Void> updateDisplayedBadges(
+            @AuthenticationPrincipal User user,
+            @RequestBody UserBadgeUpdateRequest request) {
+
+        badgeService.updateDisplayedBadges(user.getId(), request.badgeIds());
+        log.info("✅ [User] 표시 뱃지 수정 성공 - userId: {}, badgeIds: {}",
+                user.getId(), request.badgeIds());
+        return ResponseEntity.noContent().build(); // ✅ 204 No Content
     }
 }

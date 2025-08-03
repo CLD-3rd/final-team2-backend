@@ -68,6 +68,7 @@ public enum ErrorCode {
     INVALID_BADGE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 뱃지 타입입니다."),
     NOT_FOUND_BADGE(HttpStatus.NOT_FOUND, "해당 뱃지를 찾을 수 없습니다."),
     NOT_FOUND_BADGE_REQUEST(HttpStatus.NOT_FOUND, "해당 피드의 뱃지 요청이 존재하지 않습니다."),
+    USER_BADGE_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자가 보유한 뱃지가 없습니다."),
 
     // 피드 관련
     FEED_NOT_FOUND(HttpStatus.NOT_FOUND, "피드가 존재하지 않습니다."),
@@ -100,7 +101,6 @@ public enum ErrorCode {
     S3_INVALID_URL(HttpStatus.BAD_REQUEST, "잘못된 S3 URL입니다."),
     S3_UNKNOWN_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S3 작업 중 알 수 없는 오류가 발생했습니다."),
     ;
-
     private final HttpStatus status;
     private final String message;
 
