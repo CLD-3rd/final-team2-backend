@@ -22,6 +22,7 @@ public class User extends BaseEntity {
     @Column(name = "user_id") // ✅ 이름 변경
     private Long id;
 
+    @Column(name = "nickname", length = 50, nullable = false)
     private String nickname;
 
     private String profileImgUrl;
@@ -34,7 +35,14 @@ public class User extends BaseEntity {
 
     private boolean isSuspended = false;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @Column(name = "review_count", nullable = false)
+    private int reviewCount = 0;
+
+    @Column(name = "review_score_sum", nullable = false)
+    private long reviewScoreSum = 0L;
+
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserChatRoom> userChatRooms = new ArrayList<>();
 
     @Builder
@@ -54,9 +62,12 @@ public class User extends BaseEntity {
                 .build();
     }
 
-    public void setIsSuspend(boolean isSuspended) {
-        this.isSuspended = isSuspended;
-        // BaseEntity의 lastModifiedAt이 자동으로 업데이트됨
+    public void suspend() {
+        this.isSuspended = true;
+    }
+
+    public void activate() {
+        this.isSuspended = false;
     }
 
     public void updateProfileImage(String updatedProfileImgUrl) {
@@ -65,5 +76,21 @@ public class User extends BaseEntity {
 
     public void updateNickname(String newNickname) {
         this.nickname = newNickname;
+    }
+
+    public double getAverageRating() {
+        return reviewCount == 0 ? 0.0 : Math.round(((double) reviewScoreSum / reviewCount) * 10) / 10.0;
+    }
+
+    public void addReview(int rating) {
+        this.reviewCount++;
+        this.reviewScoreSum += rating;
+    }
+
+    public void removeReview(int rating) {
+        if (reviewCount > 0) {
+            this.reviewCount--;
+            this.reviewScoreSum -= rating;
+        }
     }
 }

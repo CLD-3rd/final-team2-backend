@@ -51,7 +51,6 @@ public enum ErrorCode {
     RECRUITMENT_FULL(HttpStatus.CONFLICT, "모집 인원이 마감되었습니다."),
     SELF_APPLICATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신의 게시글에는 참가 신청할 수 없습니다."),
 
-
     // ProfileAnswer 관련
     PROFILE_ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자 선호도를 찾을 수 없습니다."),
     PROFILE_ANSWER_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용자 선호도가 존재합니다."),
@@ -79,12 +78,14 @@ public enum ErrorCode {
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글이 존재하지 않습니다."),
     UNAUTHORIZED_COMMENT_UPDATE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 수정 권한이 없습니다."),
     UNAUTHORIZED_COMMENT_DELETE(HttpStatus.FORBIDDEN, "해당 댓글에 대한 삭제 권한이 없습니다."),
+
     // 리뷰 관련
     SELF_REVIEW_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신에게는 리뷰를 작성할 수 없습니다."),
     INVALID_REVIEW_TARGET(HttpStatus.BAD_REQUEST, "같은 여행에 참여하지 않은 대상자입니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_DUPLICATE(HttpStatus.CONFLICT, "중복된 리뷰입니다."),
     TRAVEL_NOT_FINISH(HttpStatus.BAD_REQUEST, "여행이 종료되지 않았습니다."),
+    UNAUTHORIZED_REVIEW_DELETE(HttpStatus.FORBIDDEN, "해당 리뷰에 대한 삭제 권한이 없습니다."),
 
     // ✅ 파일 업로드 유효성 검증 관련 (업로드 전)
     INVALID_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원되지 않는 파일 형식입니다."),

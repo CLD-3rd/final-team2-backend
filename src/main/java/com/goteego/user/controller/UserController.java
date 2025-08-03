@@ -4,6 +4,7 @@ import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.global.util.CookieUtil;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
+import com.goteego.user.dto.UserProfileResponse;
 import com.goteego.user.dto.UserResponse;
 import com.goteego.user.dto.UserUpdateRequest;
 import com.goteego.user.service.UserService;
@@ -42,6 +43,13 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // ✅ 401
         }
         return ResponseEntity.ok(UserResponse.from(user));
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<UserProfileResponse> getUserProfile(@AuthenticationPrincipal User user) {
+        UserProfileResponse response = userService.getUserProfile(user.getId());
+        log.info("✅ [User] 사용자 프로필 조회 성공 - userNickName: {}", user.getNickname());
+        return ResponseEntity.ok(response);
     }
 
     /**

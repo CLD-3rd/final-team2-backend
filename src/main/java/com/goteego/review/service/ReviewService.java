@@ -1,11 +1,11 @@
 package com.goteego.review.service;
 
+import com.goteego.global.error.exception.AccessDeniedException;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.review.domain.Review;
 import com.goteego.review.dto.review.ReviewRequestDto;
 import com.goteego.review.dto.review.ReviewTargetDto;
-import com.goteego.review.dto.review.UserReviewSummaryDto;
 import com.goteego.review.repository.ReviewRepository;
 import com.goteego.travelPost.domain.ParticipationApplication;
 import com.goteego.travelPost.domain.TravelPost;
@@ -13,7 +13,9 @@ import com.goteego.travelPost.repository.ParticipationApplicationRepository;
 import com.goteego.travelPost.repository.TravelPostRepository;
 import com.goteego.user.domain.User;
 import com.goteego.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ReviewService {
 
     private final ParticipationApplicationRepository participationApplicationRepository;
@@ -28,14 +31,7 @@ public class ReviewService {
     private final TravelPostRepository travelPostRepository;
     private final UserRepository userRepository;
 
-    public ReviewService(ParticipationApplicationRepository participationApplicationRepository, ReviewRepository reviewRepository, TravelPostRepository travelPostRepository, UserRepository userRepository) {
-        this.participationApplicationRepository = participationApplicationRepository;
-        this.reviewRepository = reviewRepository;
-        this.travelPostRepository = travelPostRepository;
-        this.userRepository = userRepository;
-    }
-
-
+    @Transactional
     public void createReview(Long reviewerId, ReviewRequestDto request) {
 
         TravelPost post = travelPostRepository.findById(request.getPostId())
@@ -66,10 +62,6 @@ public class ReviewService {
             throw new NotFoundException(ErrorCode.INVALID_REVIEW_TARGET);
         }
 
-        // 누적값 계산
-        int totalReviews = reviewRepository.countDistinctReviewerByRevieweeId(request.getRevieweeId()) + 1; // 리뷰인원 카운트 + 1
-        int totalRatingScore = reviewRepository.sumOverallRatingByRevieweeId(request.getRevieweeId()) + request.getRating();
-
         // Review 저장
         Review review = Review.builder()
                 .post(post)
@@ -77,40 +69,31 @@ public class ReviewService {
                 .reviewee(reviewee)
                 .overallRating(request.getRating())
                 .comment(request.getComment())
-                .totalReviews(totalReviews)
-                .totalRatingScore(totalRatingScore)
                 .build();
 
         reviewRepository.save(review);
 
+        // ✅ User 리뷰 점수 누적
+        reviewee.addReview(request.getRating());
     }
 
-
-    public UserReviewSummaryDto getUserReviewSummary(Long revieweeId) {
-        Review latestReview = reviewRepository.findFirstByRevieweeIdOrderByIdDesc(revieweeId)
+    @Transactional
+    public void deleteReview(Long reviewId, Long reviewerId) {
+        Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.REVIEW_NOT_FOUND));
 
-        if (latestReview == null) {
-            return UserReviewSummaryDto.builder()
-                    .totalReviews(0)
-                    .totalRatingScore(0)
-                    .averageRating(0.0)
-                    .build();
+        if (!review.getReviewer().getId().equals(reviewerId)) {
+            throw new AccessDeniedException(ErrorCode.UNAUTHORIZED_REVIEW_DELETE);
         }
 
-        int totalReviews = latestReview.getTotalReviews() != null ? latestReview.getTotalReviews() : 0;
-        int totalRatingScore = latestReview.getTotalRatingScore() != null ? latestReview.getTotalRatingScore() : 0;
+        User reviewee = review.getReviewee();
 
-        double average = totalReviews == 0 ? 0.0 : (double) totalRatingScore / totalReviews;
+        // 리뷰 삭제
+        reviewRepository.delete(review);
 
-        return UserReviewSummaryDto.builder()
-                .revieweeId(revieweeId)
-                .totalReviews(totalReviews)
-                .totalRatingScore(totalRatingScore)
-                .averageRating(average)
-                .build();
+        // ✅ 리뷰 카운트 및 점수 합계 감소
+        reviewee.removeReview(review.getOverallRating());
     }
-
 
     public List<ReviewTargetDto> getReviewerTargetsByPost(Long travelPostId, Long UserId) {
 

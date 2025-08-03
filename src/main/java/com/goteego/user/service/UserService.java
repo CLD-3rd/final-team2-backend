@@ -8,6 +8,7 @@ import com.goteego.global.s3.S3Service;
 import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
+import com.goteego.user.dto.UserProfileResponse;
 import com.goteego.user.dto.UserResponse;
 import com.goteego.user.dto.UserUpdateRequest;
 import com.goteego.user.repository.UserRepository;
@@ -88,6 +89,14 @@ public class UserService {
                 .filter(user -> !user.getId().equals(excludeId)) // 자신 제외
                 .map(user -> new UserDto(user.getId(), user.getNickname(), user.getOauthInfo().getOauthEmail()))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public UserProfileResponse getUserProfile(Long userId) {
+        User user = getUserById(userId);
+        int reviewCount = 0;
+        double averageRating = 0.0;
+        return UserProfileResponse.from(user, reviewCount, averageRating);
     }
 
     /**
