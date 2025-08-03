@@ -6,6 +6,8 @@ import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.global.s3.S3Directory;
 import com.goteego.global.s3.S3Service;
 import com.goteego.global.security.jwt.RefreshTokenService;
+import com.goteego.profileAnswer.dto.TravelTagResponse;
+import com.goteego.profileAnswer.service.ProfileAnswerService;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.UserDto;
 import com.goteego.user.dto.UserProfileResponse;
@@ -19,8 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -33,6 +37,7 @@ public class UserService {
     private static final String USER_CACHE_KEY = "user:";
     private static final long CACHE_TTL = 3600; // 3600초
     private final UserRepository userRepository;
+    private final ProfileAnswerService profileAnswerService;
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RefreshTokenService refreshTokenService;
@@ -94,14 +99,15 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserProfileResponse getUserProfile(Long userId) {
         User user = getUserById(userId);
-        int reviewCount = 0;
-        double averageRating = 0.0;
-        return UserProfileResponse.from(user, reviewCount, averageRating);
+
+        List<TravelTagResponse> travelTags = Optional.ofNullable(profileAnswerService.getUserTravelTags(userId))
+                .orElse(Collections.emptyList());
+        return UserProfileResponse.from(user, travelTags);
     }
 
     /**
-     * ✅ 사용자 프로필 수정 서비스<br>
-     * - 닉네임과 프로필 이미지를 동시에 수정 가능<br>
+     * ✅ 사용자 프로필 수정 서비스
+     * <br>- 닉네임과 프로필 이미지를 동시에 수정 가능<br>
      * - 닉네임: 기존 값과 다를 경우에만 업데이트<br>
      * - 프로필 이미지:<br>
      * - 새 이미지가 존재하면 기존 이미지 삭제 후 업로드<br>

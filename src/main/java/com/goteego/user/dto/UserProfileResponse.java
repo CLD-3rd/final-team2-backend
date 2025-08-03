@@ -1,6 +1,7 @@
 package com.goteego.user.dto;
 
 import com.goteego.badge.dto.BadgeResponse;
+import com.goteego.profileAnswer.dto.TravelTagResponse;
 import com.goteego.user.domain.User;
 import lombok.Builder;
 
@@ -13,14 +14,14 @@ public record UserProfileResponse(
         double averageRating,
         List<BadgeResponse> displayBadges,
         List<BadgeResponse> ownedBadges,
-        List<String> travelTags
+        List<TravelTagResponse> travelTags
 ) {
-    public static UserProfileResponse from(User user, int reviewCount, double averageRating) {
+    public static UserProfileResponse from(User user, List<TravelTagResponse> travelTags) {
         return UserProfileResponse.builder()
                 .user(UserResponse.from(user))
-                .reviewCount(reviewCount)
-                .averageRating(averageRating)
-
+                .reviewCount(user.getReviewCount())
+                .averageRating(user.getAverageRating())
+                .travelTags(travelTags)
                 .build();
     }
 }

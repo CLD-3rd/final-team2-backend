@@ -68,6 +68,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 🏖❌ 잘못된 여행 태그(TravelTag) 요청 예외 처리
+     */
+    @ExceptionHandler(InvalidTravelTagException.class)
+    public ResponseEntity<Object> handleInvalidTravelTagException(InvalidTravelTagException exception, HttpServletRequest request) {
+        log.warn("🏖❌ [InvalidTravelTagException] {}", exception.getMessage());
+        return buildErrorResponse(exception, request);
+    }
+
+    /**
      * 🔐 인증 실패(Unauthorized) 예외 처리
      */
     @ExceptionHandler(UnauthorizedAccessException.class)
