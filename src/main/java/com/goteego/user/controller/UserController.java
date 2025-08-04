@@ -3,6 +3,7 @@ package com.goteego.user.controller;
 import com.goteego.badge.service.BadgeService;
 import com.goteego.global.security.jwt.RefreshTokenService;
 import com.goteego.global.util.CookieUtil;
+import com.goteego.profileAnswer.service.ProfileAnswerService;
 import com.goteego.user.domain.User;
 import com.goteego.user.dto.*;
 import com.goteego.user.service.UserService;
@@ -28,6 +29,7 @@ public class UserController {
 
     private final UserService userService;
     private final BadgeService badgeService;
+    private final ProfileAnswerService profileAnswerService;
     private final RefreshTokenService refreshTokenService;
 
     /**
@@ -133,6 +135,17 @@ public class UserController {
         badgeService.updateDisplayedBadges(user.getId(), request.badgeIds());
         log.info("✅ [User] 표시 뱃지 수정 성공 - userId: {}, badgeIds: {}",
                 user.getId(), request.badgeIds());
+        return ResponseEntity.noContent().build(); // ✅ 204 No Content
+    }
+
+    @PutMapping("/travel-tags")
+    public ResponseEntity<Void> updateTravelTags(
+            @AuthenticationPrincipal User user,
+            @RequestBody UserTravelTagUpdateRequest request) {
+        log.info("tags: {}", request.travelTagKeys());
+        profileAnswerService.updateUserTravelTags(user.getId(), request);
+        log.info("✅ [User] 여행 성향 수정 성공 - userId: {}, badgeIds: {}",
+                user.getId(), request.travelTagKeys());
         return ResponseEntity.noContent().build(); // ✅ 204 No Content
     }
 }

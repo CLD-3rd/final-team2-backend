@@ -100,22 +100,15 @@ public class ProfileAnswer extends BaseEntity {
 
     @Column(name = "is_flex")
     private Boolean isFlex; // 상황에 따라 유동적으로
-
     // 🌆 여행지 유형 관련 선호도
     @Column(name = "is_city")
     private Boolean isCity; // 도시/핫플 위주
-
     @Column(name = "is_heal")
     private Boolean isHeal; // 자연/힐링 위주
-
     @Column(name = "is_beach")
     private Boolean isBeach; // 바다/해변
-
     @Column(name = "is_mountain")
     private Boolean isMountain; // 산/등산
-
-    // BaseEntity에서 상속받은 createdAt, lastModifiedAt 사용
-    // 별도로 정의하지 않음
 
     /**
      * 사용자 선호도 생성 빌더 메서드
@@ -153,6 +146,9 @@ public class ProfileAnswer extends BaseEntity {
         this.isBeach = isBeach;
         this.isMountain = isMountain;
     }
+
+    // BaseEntity에서 상속받은 createdAt, lastModifiedAt 사용
+    // 별도로 정의하지 않음
 
     /**
      * 사용자 선호도 정보를 업데이트하는 메서드
@@ -198,5 +194,107 @@ public class ProfileAnswer extends BaseEntity {
      */
     public boolean isAuthor(Long userId) {
         return this.user.getId().equals(userId);
+    }
+
+    // 🍶 술 관련 선호도
+    public void setIsAlchol3(Boolean isAlchol3) {
+        this.isAlchol3 = isAlchol3;
+    }
+
+    public void setIsAlchol2(Boolean isAlchol2) {
+        this.isAlchol2 = isAlchol2;
+    }
+
+    public void setIsAlchol1(Boolean isAlchol1) {
+        this.isAlchol1 = isAlchol1;
+    }
+
+    // 🚬 흡연 관련 선호도
+    public void setIsSmoker2(Boolean isSmoker2) {
+        this.isSmoker2 = isSmoker2;
+    }
+
+    public void setIsSmoker1(Boolean isSmoker1) {
+        this.isSmoker1 = isSmoker1;
+    }
+
+    // 🤝 성격 관련 선호도
+    public void setIsFriendly(Boolean isFriendly) {
+        this.isFriendly = isFriendly;
+    }
+
+    public void setIsQuiet(Boolean isQuiet) {
+        this.isQuiet = isQuiet;
+    }
+
+    public void setIsLead(Boolean isLead) {
+        this.isLead = isLead;
+    }
+
+    public void setIsParty(Boolean isParty) {
+        this.isParty = isParty;
+    }
+
+    public void setIsSearch(Boolean isSearch) {
+        this.isSearch = isSearch;
+    }
+
+    public void setIsListen(Boolean isListen) {
+        this.isListen = isListen;
+    }
+
+    // 🏞 활동 관련 선호도
+    public void setIsSee(Boolean isSee) {
+        this.isSee = isSee;
+    }
+
+    public void setIsCafe(Boolean isCafe) {
+        this.isCafe = isCafe;
+    }
+
+    public void setIsTaste(Boolean isTaste) {
+        this.isTaste = isTaste;
+    }
+
+    public void setIsPicture(Boolean isPicture) {
+        this.isPicture = isPicture;
+    }
+
+    public void setIsShopping(Boolean isShopping) {
+        this.isShopping = isShopping;
+    }
+
+    public void setIsOutdoor(Boolean isOutdoor) {
+        this.isOutdoor = isOutdoor;
+    }
+
+    // 💤 여행 스타일 관련 선호도
+    public void setIsChill(Boolean isChill) {
+        this.isChill = isChill;
+    }
+
+    public void setIsBusy(Boolean isBusy) {
+        this.isBusy = isBusy;
+    }
+
+    public void setIsFlex(Boolean isFlex) {
+        this.isFlex = isFlex;
+    }
+
+    // 🌆 여행지 유형 관련 선호도
+    public void setIsCity(Boolean isCity) {
+        this.isCity = isCity;
+    }
+
+    public void setIsHeal(Boolean isHeal) {
+        this.isHeal = isHeal;
+    }
+
+    public void setIsBeach(Boolean isBeach) {
+        this.isBeach = isBeach;
+    }
+
+    public void setIsMountain(Boolean isMountain) {
+        this.isMountain = isMountain;
     }
 } 

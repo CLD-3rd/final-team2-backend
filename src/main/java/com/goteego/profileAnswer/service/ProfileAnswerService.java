@@ -11,6 +11,7 @@ import com.goteego.profileAnswer.dto.TravelTagResponse;
 import com.goteego.profileAnswer.repository.ProfileAnswerRepository;
 import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.user.domain.User;
+import com.goteego.user.dto.UserTravelTagUpdateRequest;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -247,6 +248,31 @@ public class ProfileAnswerService {
         } else {
             return createProfileAnswer(user, requestDto);
         }
+    }
+
+    @Transactional
+    public void updateUserTravelTags(Long userId, UserTravelTagUpdateRequest request) {
+        // ✅ 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+
+        // ✅ ProfileAnswer 존재 여부 확인 (없으면 새로 생성)
+        ProfileAnswer profileAnswer = profileAnswerRepository.findByUserId(userId)
+                .orElse(ProfileAnswer.builder()
+                        .user(user)
+                        .build());
+
+        // ✅ 모든 TravelTag false 초기화
+        Arrays.stream(TravelTag.values()).forEach(tag -> tag.update(profileAnswer, false));
+
+        // ✅ 요청받은 key들 true 설정
+        for (String key : request.travelTagKeys()) {
+            TravelTag tag = TravelTag.fromKey(key);
+            tag.update(profileAnswer, true);
+        }
+
+        // ✅ 저장 (새로 생성되었거나 업데이트된 경우)
+        profileAnswerRepository.save(profileAnswer);
     }
 
     /**
