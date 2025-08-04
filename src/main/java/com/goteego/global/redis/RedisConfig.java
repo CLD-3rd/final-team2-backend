@@ -62,8 +62,12 @@ public class RedisConfig {
 
     // Redis Message Listener (이벤트 리스너)
     @Bean
-    public RedisMessageListenerContainer redisMessageListener(RedisConnectionFactory connectionFactory, MessageListenerAdapter listenerAdapter,
-                                                              ChannelTopic chatTopic, ChannelTopic notificationTopic) {
+    public RedisMessageListenerContainer redisMessageListener(
+            RedisConnectionFactory connectionFactory,
+            MessageListenerAdapter listenerAdapter,
+            @Qualifier("chatTopic") ChannelTopic chatTopic,
+            @Qualifier("notificationTopic") ChannelTopic notificationTopic
+    ) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         // [chat] 채널로부터 메시지가 오면 listenerAdapter가 처리하도록 설정
