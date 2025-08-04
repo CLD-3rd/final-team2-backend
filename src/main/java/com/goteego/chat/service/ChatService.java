@@ -17,6 +17,7 @@ import com.goteego.user.dto.UserDto;
 import com.goteego.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.redis.listener.ChannelTopic;
@@ -25,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Slf4j
 public class ChatService {
@@ -36,6 +36,18 @@ public class ChatService {
     private final RedisPublisher redisPublisher;
     private final ChannelTopic chatTopic;
     private final ChannelTopic notificationTopic;
+
+    public ChatService(ChatMessageRepository chatMessageRepository, UserService userService,
+                       ChatRoomRepository chatRoomRepository, RedisPublisher redisPublisher,
+                       @Qualifier("chatTopic") ChannelTopic chatTopic,
+                       @Qualifier("notificationTopic") ChannelTopic notificationTopic) {
+        this.chatMessageRepository = chatMessageRepository;
+        this.userService = userService;
+        this.chatRoomRepository = chatRoomRepository;
+        this.redisPublisher = redisPublisher;
+        this.chatTopic = chatTopic;
+        this.notificationTopic = notificationTopic;
+    }
 
     /**********************
      * 1:1 채팅 메시지 전송 /

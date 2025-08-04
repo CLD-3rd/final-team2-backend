@@ -8,12 +8,12 @@ import com.goteego.chat.dto.message.transfer.DirectMessageTransferDto;
 import com.goteego.chat.dto.message.transfer.NotificationTransferDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class RedisSubscriber {
 
@@ -23,6 +23,15 @@ public class RedisSubscriber {
     // ChannelTopic을 주입받아 토픽 이름을 비교하는 데 사용합니다.
     private final ChannelTopic chatTopic;
     private final ChannelTopic notificationTopic;
+
+    public RedisSubscriber(ObjectMapper objectMapper, SimpMessagingTemplate messagingTemplate,
+                           @Qualifier("chatTopic") ChannelTopic chatTopic,
+                           @Qualifier("notificationTopic") ChannelTopic notificationTopic) {
+        this.objectMapper = objectMapper;
+        this.messagingTemplate = messagingTemplate;
+        this.chatTopic = chatTopic;
+        this.notificationTopic = notificationTopic;
+    }
 
     private static final String DIRECT_MESSAGE_PATH = "/queue/messages";
     private static final String GROUP_MESSAGE_PATH = "/sub/chat/room/";

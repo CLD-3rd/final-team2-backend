@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.goteego.chat.service.redis.RedisSubscriber;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -82,6 +83,7 @@ public class RedisConfig {
 
     // Pub/Sub에서 사용할 채팅 관련 공용 채널 정의
     @Bean
+    @Qualifier("chatTopic")
     public ChannelTopic chatTopic() {
         // 여기서는 모든 채팅 메시지를 "chat"이라는 단일 토픽으로 처리
         return new ChannelTopic("chat");
@@ -89,6 +91,7 @@ public class RedisConfig {
 
     // Pub/Sub에서 사용할 알림 관련 공용 채널 정의
     @Bean
+    @Qualifier("notificationTopic")
     public ChannelTopic notificationTopic() {
         return new ChannelTopic("notification");
     }
