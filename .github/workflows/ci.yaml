@@ -47,10 +47,7 @@ jobs:
         shell: bash
 
       - name: 🏗️ Build with Gradle
-        run: ./gradlew build -x test
-
-      - name: 📝 Rename jar
-        run: mv build/libs/*.jar build/libs/app.jar
+        run: ./gradlew build -x test --no-daemon --build-cache --parallel --configure-on-demand
 
       - name: Log in to DockerHub
         uses: docker/login-action@v3
