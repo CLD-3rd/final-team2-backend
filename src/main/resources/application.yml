@@ -3,7 +3,7 @@
 ########################################
 spring:
   config:
-    import: optional:application-env.yaml
+    import: optional:application-env.yml
   application:
     name: GotEEgo
 
