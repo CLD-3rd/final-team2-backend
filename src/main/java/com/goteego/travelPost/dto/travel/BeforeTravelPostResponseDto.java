@@ -1,6 +1,8 @@
 package com.goteego.travelPost.dto.travel;
 
+import com.goteego.global.dto.Author;
 import com.goteego.travelPost.domain.TravelPost;
+import com.goteego.user.domain.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,7 +25,7 @@ public class BeforeTravelPostResponseDto {
     private Long viewCount;
     private String startTime;
     private String endTime;
-    private AuthorDto author;
+    private Author author;
     private Integer participants; // 현재까지 신청받은 인원 수
     private Integer maxParticipants; // 모집 인원 제한
     private String imageUrl;
@@ -32,7 +34,7 @@ public class BeforeTravelPostResponseDto {
     /**
      * TravelPost 엔티티를 DTO로 변환
      */
-    public static BeforeTravelPostResponseDto from(TravelPost travelPost, String nickname, Integer approvedParticipantCount, Long viewCount) {
+    public static BeforeTravelPostResponseDto from(TravelPost travelPost, User user, Integer approvedParticipantCount, Long viewCount) {
         return BeforeTravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
@@ -41,32 +43,11 @@ public class BeforeTravelPostResponseDto {
                 .viewCount(viewCount)
                 .startTime(travelPost.getStartTime().toString())
                 .endTime(travelPost.getEndTime().toString())
-                .author(createAuthorDto(travelPost.getUser(), nickname))
+                .author(Author.from(user))
                 .participants(approvedParticipantCount != null ? approvedParticipantCount : 0)
                 .maxParticipants(travelPost.getRecruitLimit())
                 .imageUrl(travelPost.getImageUrl())
                 .createdAt(travelPost.getCreatedAt().toString())
                 .build();
-    }
-
-    /**
-     * AuthorDto 생성 (객체 참조 방식)
-     */
-    private static AuthorDto createAuthorDto(com.goteego.user.domain.User user, String nickname) {
-        return AuthorDto.builder()
-                .userId(user.getId())
-                .nickname(nickname)
-                .profileImgUrl(user.getProfileImgUrl())
-                .build();
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class AuthorDto {
-        private Long userId;
-        private String nickname;
-        private String profileImgUrl;
     }
 } 

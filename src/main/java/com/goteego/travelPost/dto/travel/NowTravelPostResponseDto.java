@@ -1,10 +1,14 @@
 package com.goteego.travelPost.dto.travel;
 
+import com.goteego.profileAnswer.dto.TravelTagResponse;
 import com.goteego.travelPost.domain.TravelPost;
+import com.goteego.user.domain.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 /**
  * 현지동행모집글 응답 DTO (NOW)
@@ -19,46 +23,17 @@ public class NowTravelPostResponseDto {
     private Long travelPostId;
     private String title;
     private String location;
-    private AuthorDto author;
+    private AuthorDetail author;
     private String createdAt;
 
-    /**
-     * TravelPost 엔티티를 DTO로 변환
-     */
-    public static NowTravelPostResponseDto from(TravelPost travelPost, String nickname) {
+    public static NowTravelPostResponseDto from(TravelPost travelPost, User user,
+                                                List<TravelTagResponse> travelTags) {
         return NowTravelPostResponseDto.builder()
                 .travelPostId(travelPost.getId())
                 .title(travelPost.getTitle())
                 .location(travelPost.getLocation().name())
-                .author(createAuthorDto(travelPost.getUser(), nickname))
+                .author(AuthorDetail.from(user, travelTags))
                 .createdAt(travelPost.getCreatedAt().toString())
                 .build();
-    }
-
-    /**
-     * AuthorDto 생성 (객체 참조 방식)
-     */
-    private static AuthorDto createAuthorDto(com.goteego.user.domain.User user, String nickname) {
-        return AuthorDto.builder()
-                .userId(user.getId())
-                .nickname(nickname)
-                .profileImgUrl(user.getProfileImgUrl())
-                // TODO: user_review 테이블 구현 후 추가
-                // .rating(null)
-                // .tags(List.of())
-                .build();
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class AuthorDto {
-        private Long userId;
-        private String nickname;
-        private String profileImgUrl;
-        // TODO: user_review 테이블 구현 후 추가
-        // private Double rating;
-        // private List<String> tags;
     }
 } 
