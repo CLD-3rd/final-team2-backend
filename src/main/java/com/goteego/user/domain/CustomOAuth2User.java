@@ -1,27 +1,26 @@
 package com.goteego.user.domain;
 
-import lombok.Getter;
+import lombok.Builder;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-@Getter
-public class CustomOAuth2User implements OAuth2User {
+@Builder
+public class CustomOAuth2User implements OAuth2User, Serializable {
 
-    private final User user;
+    private static final long serialVersionUID = 1L;
+
+    private final Long userId;
+    private final String email;
+    private final String role;
     private final Map<String, Object> attributes;
 
-    public CustomOAuth2User(User user, Map<String, Object> attributes) {
-        this.user = user;
-        this.attributes = attributes;
-    }
-
-    public OauthInfo toOauthInfo() {
-        return user.getOauthInfo();
+    public Long getUserId() {
+        return userId;
     }
 
     @Override
@@ -31,12 +30,11 @@ public class CustomOAuth2User implements OAuth2User {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(user.getRole().getValue()));
+        return List.of(() -> role);
     }
 
     @Override
     public String getName() {
-        return user.getOauthInfo().getOauthId();
-//        return user.getOauthInfo().getOauthEmail();
+        return email;
     }
 }

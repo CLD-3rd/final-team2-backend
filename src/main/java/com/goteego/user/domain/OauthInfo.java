@@ -7,10 +7,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Embeddable
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class OauthInfo {
+public class OauthInfo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     public String oauthId;
     private String oauthProvider;

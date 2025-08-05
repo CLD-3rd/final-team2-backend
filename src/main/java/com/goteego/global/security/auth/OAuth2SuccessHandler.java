@@ -26,7 +26,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService; // ✅ 추가
-
     @Value("${frontend.url}")
     private String frontendUrl;
 
@@ -40,7 +39,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         log.info("✅ [OAuth2Success] 소셜 로그인 성공");
 
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
-        User user = oAuth2User.getUser();
+        Long userId = oAuth2User.getUserId();
+
+        User user = userService.getUserById(userId);
 
         log.info("✅ [OAuth2Success] 사용자 인증 성공: {}", user.getOauthInfo().getOauthEmail());
 
@@ -56,6 +57,14 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         response.addCookie(CookieUtil.createCookieForLocal("accessToken", accessToken, jwtTokenProvider.getAccessTokenMaxAgeInSeconds()));
         response.addCookie(CookieUtil.createCookieForLocal("refreshToken", refreshToken, jwtTokenProvider.getRefreshTokenMaxAgeInSeconds()));
         log.info("✅ [OAuth2Success] Token 쿠키로 전송 완료");
+
+        // ✅ 세션 무효화 (서버 + Redis 모두)
+        var session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+            log.info("✅ [OAuth2Success] 세션 무효화 및 Redis 세션 삭제 완료");
+        }
+
         // ✅ 리디렉션
 //        response.sendRedirect("/dashboard.html");
 //        response.sendRedirect("/post.html");

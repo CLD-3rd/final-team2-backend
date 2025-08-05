@@ -31,9 +31,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String oauthId = (String) attributes.get("sub");
         String name = (String) attributes.get("name");
         String email = (String) attributes.get("email");
-        String pictureUrl = (String) attributes.get("picture");
 
-        log.info("[OAuth2] 로그인 요청: {}, {}, {} {}", name, email, oauthId, pictureUrl);
+        log.info("[OAuth2] 로그인 요청: {}, {}, {}", name, email, oauthId);
 
         // ✅ OauthInfo 객체 생성
         OauthInfo oauthInfo = OauthInfo.builder()
@@ -47,10 +46,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         User user = userRepository.findByOauthInfoOauthId(oauthId)
                 .orElseGet(() -> {
                     log.info("[OAuth2] 새로운 사용자 등록: {}", email);
-                    return userRepository.save(User.createDefaultOAuthUser(oauthInfo, pictureUrl));
+                    return userRepository.save(User.createDefaultOAuthUser(oauthInfo));
                 });
 
         // ✅ CustomUserPrincipal 반환
-        return new CustomOAuth2User(user, attributes);
+        return CustomOAuth2User.builder()
+                .userId(user.getId())
+                .email(user.getOauthInfo().getOauthEmail())
+                .role(user.getRole().getValue())
+                .attributes(attributes)
+                .build();
     }
 }
