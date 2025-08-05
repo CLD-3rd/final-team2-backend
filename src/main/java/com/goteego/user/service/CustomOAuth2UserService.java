@@ -1,5 +1,6 @@
 package com.goteego.user.service;
 
+import com.goteego.global.s3.S3Service;
 import com.goteego.user.domain.CustomOAuth2User;
 import com.goteego.user.domain.OauthInfo;
 import com.goteego.user.domain.User;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+    private final S3Service s3Service;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {

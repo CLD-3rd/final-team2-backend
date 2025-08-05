@@ -67,7 +67,7 @@ public class ScheduleService {
                     Integer approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
                     return BeforeTravelPostResponseDto.from(
                             tp,
-                            tp.getUser().getNickname(),
+                            tp.getUser(),
                             approvedParticipantCount,
                             tp.getViewCount()
                     );

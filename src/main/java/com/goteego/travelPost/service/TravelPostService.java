@@ -11,6 +11,8 @@ import com.goteego.global.error.exception.NotFoundException;
 import com.goteego.global.error.exception.UnauthorizedAccessException;
 import com.goteego.global.s3.S3Directory;
 import com.goteego.global.s3.S3Service;
+import com.goteego.profileAnswer.dto.TravelTagResponse;
+import com.goteego.profileAnswer.service.ProfileAnswerService;
 import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.travelPost.domain.ParticipationApplication;
 import com.goteego.travelPost.domain.TravelPost;
@@ -31,8 +33,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -50,6 +54,7 @@ public class TravelPostService {
     private final ParticipationApplicationRepository participationApplicationRepository;
     private final RecommendationService recommendationService;
     private final UserService userService;
+    private final ProfileAnswerService profileAnswerService;
     private final ChatRoomService chatRoomService;
     private final S3Service s3Service;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -95,10 +100,11 @@ public class TravelPostService {
                     travelPostPage.getContent(),
                     currentUserId,
                     ctx -> {
+                        User author = ctx.tp().getUser();
                         Long approvedCount = participationApplicationRepository
                                 .countByTravelPostIdAndStatus(ctx.tp().getId(), ParticipationStatus.APPROVED);
                         int approvedParticipantCount = approvedCount != null ? approvedCount.intValue() : 0;
-                        return BeforeTravelPostResponseDto.from(ctx.tp(), ctx.nickname(), approvedParticipantCount, ctx.viewCount());
+                        return BeforeTravelPostResponseDto.from(ctx.tp(), author, approvedParticipantCount, ctx.viewCount());
                     }
             );
             return TravelPostResponseWrapper.before(content, pageInfo);
@@ -107,7 +113,13 @@ public class TravelPostService {
             List<NowTravelPostResponseDto> content = convertToDtoList(
                     travelPostPage.getContent(),
                     currentUserId,
-                    ctx -> NowTravelPostResponseDto.from(ctx.tp(), ctx.nickname())
+                    ctx -> {
+                        User author = ctx.tp().getUser();
+                        List<TravelTagResponse> authorTags = Optional.ofNullable(
+                                profileAnswerService.getUserTravelTags(author.getId())
+                        ).orElse(Collections.emptyList());
+                        return NowTravelPostResponseDto.from(ctx.tp(), author, authorTags);
+                    }
             );
             return TravelPostResponseWrapper.now(content, pageInfo);
         }
