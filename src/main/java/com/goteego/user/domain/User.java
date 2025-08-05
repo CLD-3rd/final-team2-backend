@@ -59,10 +59,9 @@ public class User extends BaseEntity implements UserDetails {
         this.oauthInfo = oauthInfo;
     }
 
-    public static User createDefaultOAuthUser(OauthInfo oauthInfo, String profileImgUrl) {
+    public static User createDefaultOAuthUser(OauthInfo oauthInfo) {
         return User.builder()
                 .nickname(oauthInfo.getName())
-                .profileImgUrl(profileImgUrl)
                 .role(UserRole.USER)
                 .oauthInfo(oauthInfo)
                 .build();
