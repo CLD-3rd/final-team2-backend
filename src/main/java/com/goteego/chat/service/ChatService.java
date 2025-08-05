@@ -34,19 +34,25 @@ public class ChatService {
     private final UserService userService;
     private final ChatRoomRepository chatRoomRepository;
     private final RedisPublisher redisPublisher;
-    private final ChannelTopic chatTopic;
+//    private final ChannelTopic chatTopic;
     private final ChannelTopic notificationTopic;
+    private final ChannelTopic directChatTopic;
+    private final ChannelTopic groupChatTopic;
 
     public ChatService(ChatMessageRepository chatMessageRepository, UserService userService,
                        ChatRoomRepository chatRoomRepository, RedisPublisher redisPublisher,
-                       @Qualifier("chatTopic") ChannelTopic chatTopic,
+//                       @Qualifier("chatTopic") ChannelTopic chatTopic,
+                       @Qualifier("directChatTopic") ChannelTopic directChatTopic, // 주입
+                       @Qualifier("groupChatTopic") ChannelTopic groupChatTopic,   // 주입
                        @Qualifier("notificationTopic") ChannelTopic notificationTopic) {
         this.chatMessageRepository = chatMessageRepository;
         this.userService = userService;
         this.chatRoomRepository = chatRoomRepository;
         this.redisPublisher = redisPublisher;
-        this.chatTopic = chatTopic;
+//        this.chatTopic = chatTopic;
         this.notificationTopic = notificationTopic;
+        this.directChatTopic = directChatTopic;
+        this.groupChatTopic = groupChatTopic;
     }
 
     /**********************
@@ -132,12 +138,15 @@ public class ChatService {
     private void sendDirectMessage(ChatMessage message, Long recipientId) {
         DirectMessageResponse responseDto = message.toDirectMessageDto();
         DirectMessageTransferDto transferDto = new DirectMessageTransferDto(recipientId, responseDto);
-        redisPublisher.publish(chatTopic, transferDto);
+//        redisPublisher.publish(chatTopic, transferDto);
+        redisPublisher.publish(directChatTopic, transferDto);
     }
 
     // 그룹 메시지 전송
     private void broadcastGroupMessage(ChatMessage message) {
-        redisPublisher.publish(chatTopic, message.toGroupMessageDto());
+//        redisPublisher.publish(chatTopic, message.toGroupMessageDto());
+        redisPublisher.publish(groupChatTopic, message.toGroupMessageDto());
+
     }
 
     // 알림 전송

@@ -65,13 +65,17 @@ public class RedisConfig {
     public RedisMessageListenerContainer redisMessageListener(
             RedisConnectionFactory connectionFactory,
             MessageListenerAdapter listenerAdapter,
-            @Qualifier("chatTopic") ChannelTopic chatTopic,
+            @Qualifier("directChatTopic") ChannelTopic directChatTopic, // directChatTopic 주입
+            @Qualifier("groupChatTopic") ChannelTopic groupChatTopic,  // groupChatTopic 주입
+//            @Qualifier("chatTopic") ChannelTopic chatTopic,
             @Qualifier("notificationTopic") ChannelTopic notificationTopic
     ) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         // [chat] 채널로부터 메시지가 오면 listenerAdapter가 처리하도록 설정
-        container.addMessageListener(listenerAdapter, chatTopic);
+//        container.addMessageListener(listenerAdapter, chatTopic);
+        container.addMessageListener(listenerAdapter, directChatTopic);
+        container.addMessageListener(listenerAdapter, groupChatTopic);
         // [notification] 채널로부터 메시지가 오면 listenerAdapter가 처리하도록 설정
         container.addMessageListener(listenerAdapter, notificationTopic);
         return container;
@@ -86,12 +90,25 @@ public class RedisConfig {
 
 
     // Pub/Sub에서 사용할 채팅 관련 공용 채널 정의
+//    @Bean
+//    @Qualifier("chatTopic")
+//    public ChannelTopic chatTopic() {
+//        // 여기서는 모든 채팅 메시지를 "chat"이라는 단일 토픽으로 처리
+//        return new ChannelTopic("chat");
+//    }
     @Bean
-    @Qualifier("chatTopic")
-    public ChannelTopic chatTopic() {
-        // 여기서는 모든 채팅 메시지를 "chat"이라는 단일 토픽으로 처리
-        return new ChannelTopic("chat");
+    @Qualifier("directChatTopic")
+    public ChannelTopic directChatTopic() {
+        return new ChannelTopic("directChat");
     }
+
+    // [수정] 그룹 채팅 메시지 전용 토픽
+    @Bean
+    @Qualifier("groupChatTopic")
+    public ChannelTopic groupChatTopic() {
+        return new ChannelTopic("groupChat");
+    }
+
 
     // Pub/Sub에서 사용할 알림 관련 공용 채널 정의
     @Bean
