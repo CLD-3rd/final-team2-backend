@@ -1,6 +1,8 @@
 # Spring Boot config
 /src/main/resources/application.properties
-/src/main/resources/application.yml
+/src/main/resources/application-env.yml
+/src/main/resources/application-env.yaml
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/eclipse,intellij,windows,macos,java,maven,gradle
 # Edit at https://www.toptal.com/developers/gitignore?templates=eclipse,intellij,windows,macos,java,maven,gradle
