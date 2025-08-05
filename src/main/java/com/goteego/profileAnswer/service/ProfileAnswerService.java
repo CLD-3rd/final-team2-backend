@@ -11,6 +11,7 @@ import com.goteego.profileAnswer.dto.TravelTagResponse;
 import com.goteego.profileAnswer.repository.ProfileAnswerRepository;
 import com.goteego.recommendation.service.RecommendationService;
 import com.goteego.user.domain.User;
+import com.goteego.user.dto.UserTravelTagUpdateRequest;
 import com.goteego.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -134,7 +135,8 @@ public class ProfileAnswerService {
                 .isAlchol3(requestDto.getIsAlchol3())
                 .isAlchol2(requestDto.getIsAlchol2())
                 .isAlchol1(requestDto.getIsAlchol1())
-                .isSmoker(requestDto.getIsSmoker())
+                .isSmoker2(requestDto.getIsSmoker2())
+                .isSmoker1(requestDto.getIsSmoker1())
                 .isFriendly(requestDto.getIsFriendly())
                 .isQuiet(requestDto.getIsQuiet())
                 .isLead(requestDto.getIsLead())
@@ -211,7 +213,7 @@ public class ProfileAnswerService {
 
         profileAnswer.update(
                 requestDto.getIsAlchol3(), requestDto.getIsAlchol2(), requestDto.getIsAlchol1(),
-                requestDto.getIsSmoker(), requestDto.getIsFriendly(), requestDto.getIsQuiet(),
+                requestDto.getIsSmoker2(), requestDto.getIsSmoker1(), requestDto.getIsFriendly(), requestDto.getIsQuiet(),
                 requestDto.getIsLead(), requestDto.getIsParty(), requestDto.getIsSearch(),
                 requestDto.getIsListen(), requestDto.getIsSee(), requestDto.getIsCafe(),
                 requestDto.getIsTaste(), requestDto.getIsPicture(), requestDto.getIsShopping(),
@@ -246,6 +248,31 @@ public class ProfileAnswerService {
         } else {
             return createProfileAnswer(user, requestDto);
         }
+    }
+
+    @Transactional
+    public void updateUserTravelTags(Long userId, UserTravelTagUpdateRequest request) {
+        // ✅ 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+
+        // ✅ ProfileAnswer 존재 여부 확인 (없으면 새로 생성)
+        ProfileAnswer profileAnswer = profileAnswerRepository.findByUserId(userId)
+                .orElse(ProfileAnswer.builder()
+                        .user(user)
+                        .build());
+
+        // ✅ 모든 TravelTag false 초기화
+        Arrays.stream(TravelTag.values()).forEach(tag -> tag.update(profileAnswer, false));
+
+        // ✅ 요청받은 key들 true 설정
+        for (String key : request.travelTagKeys()) {
+            TravelTag tag = TravelTag.fromKey(key);
+            tag.update(profileAnswer, true);
+        }
+
+        // ✅ 저장 (새로 생성되었거나 업데이트된 경우)
+        profileAnswerRepository.save(profileAnswer);
     }
 
     /**
@@ -352,36 +379,39 @@ public class ProfileAnswerService {
         vector[1] = profileAnswer.getIsAlchol2() != null && profileAnswer.getIsAlchol2() ? 1 : 0;
         vector[2] = profileAnswer.getIsAlchol1() != null && profileAnswer.getIsAlchol1() ? 1 : 0;
 
+        // 🚬 흡연 관련 선호도 (2개)
+        vector[3] = profileAnswer.getIsSmoker2() != null && profileAnswer.getIsSmoker2() ? 1 : 0; // 흡연해요
+        vector[4] = profileAnswer.getIsSmoker1() != null && profileAnswer.getIsSmoker1() ? 1 : 0; // 흡연 안해요
+
         // 🤝 성격 관련 선호도 (6개)
-        vector[3] = profileAnswer.getIsSmoker() != null && profileAnswer.getIsSmoker() ? 1 : 0;
-        vector[4] = profileAnswer.getIsFriendly() != null && profileAnswer.getIsFriendly() ? 1 : 0;
-        vector[5] = profileAnswer.getIsQuiet() != null && profileAnswer.getIsQuiet() ? 1 : 0;
-        vector[6] = profileAnswer.getIsLead() != null && profileAnswer.getIsLead() ? 1 : 0;
-        vector[7] = profileAnswer.getIsParty() != null && profileAnswer.getIsParty() ? 1 : 0;
-        vector[8] = profileAnswer.getIsSearch() != null && profileAnswer.getIsSearch() ? 1 : 0;
-        vector[9] = profileAnswer.getIsListen() != null && profileAnswer.getIsListen() ? 1 : 0;
+        vector[5] = profileAnswer.getIsFriendly() != null && profileAnswer.getIsFriendly() ? 1 : 0;
+        vector[6] = profileAnswer.getIsQuiet() != null && profileAnswer.getIsQuiet() ? 1 : 0;
+        vector[7] = profileAnswer.getIsLead() != null && profileAnswer.getIsLead() ? 1 : 0;
+        vector[8] = profileAnswer.getIsParty() != null && profileAnswer.getIsParty() ? 1 : 0;
+        vector[9] = profileAnswer.getIsSearch() != null && profileAnswer.getIsSearch() ? 1 : 0;
+        vector[10] = profileAnswer.getIsListen() != null && profileAnswer.getIsListen() ? 1 : 0;
 
         // 🏞 활동 관련 선호도 (6개)
-        vector[10] = profileAnswer.getIsSee() != null && profileAnswer.getIsSee() ? 1 : 0;
-        vector[11] = profileAnswer.getIsCafe() != null && profileAnswer.getIsCafe() ? 1 : 0;
-        vector[12] = profileAnswer.getIsTaste() != null && profileAnswer.getIsTaste() ? 1 : 0;
-        vector[13] = profileAnswer.getIsPicture() != null && profileAnswer.getIsPicture() ? 1 : 0;
-        vector[14] = profileAnswer.getIsShopping() != null && profileAnswer.getIsShopping() ? 1 : 0;
-        vector[15] = profileAnswer.getIsOutdoor() != null && profileAnswer.getIsOutdoor() ? 1 : 0;
+        vector[11] = profileAnswer.getIsSee() != null && profileAnswer.getIsSee() ? 1 : 0;
+        vector[12] = profileAnswer.getIsCafe() != null && profileAnswer.getIsCafe() ? 1 : 0;
+        vector[13] = profileAnswer.getIsTaste() != null && profileAnswer.getIsTaste() ? 1 : 0;
+        vector[14] = profileAnswer.getIsPicture() != null && profileAnswer.getIsPicture() ? 1 : 0;
+        vector[15] = profileAnswer.getIsShopping() != null && profileAnswer.getIsShopping() ? 1 : 0;
+        vector[16] = profileAnswer.getIsOutdoor() != null && profileAnswer.getIsOutdoor() ? 1 : 0;
 
         // 💤 여행 스타일 관련 선호도 (3개)
-        vector[16] = profileAnswer.getIsChill() != null && profileAnswer.getIsChill() ? 1 : 0;
-        vector[17] = profileAnswer.getIsBusy() != null && profileAnswer.getIsBusy() ? 1 : 0;
-        vector[18] = profileAnswer.getIsFlex() != null && profileAnswer.getIsFlex() ? 1 : 0;
+        vector[17] = profileAnswer.getIsChill() != null && profileAnswer.getIsChill() ? 1 : 0;
+        vector[18] = profileAnswer.getIsBusy() != null && profileAnswer.getIsBusy() ? 1 : 0;
+        vector[19] = profileAnswer.getIsFlex() != null && profileAnswer.getIsFlex() ? 1 : 0;
 
         // 🌆 여행지 유형 관련 선호도 (4개)
-        vector[19] = profileAnswer.getIsCity() != null && profileAnswer.getIsCity() ? 1 : 0;
-        vector[20] = profileAnswer.getIsHeal() != null && profileAnswer.getIsHeal() ? 1 : 0;
-        vector[21] = profileAnswer.getIsBeach() != null && profileAnswer.getIsBeach() ? 1 : 0;
-        vector[22] = profileAnswer.getIsMountain() != null && profileAnswer.getIsMountain() ? 1 : 0;
+        vector[20] = profileAnswer.getIsCity() != null && profileAnswer.getIsCity() ? 1 : 0;
+        vector[21] = profileAnswer.getIsHeal() != null && profileAnswer.getIsHeal() ? 1 : 0;
+        vector[22] = profileAnswer.getIsBeach() != null && profileAnswer.getIsBeach() ? 1 : 0;
+        vector[23] = profileAnswer.getIsMountain() != null && profileAnswer.getIsMountain() ? 1 : 0;
 
-        // 나머지 7차원은 0으로 설정 (확장성을 위해)
-        for (int i = 23; i < 30; i++) {
+        // 나머지 6차원은 0으로 설정 (확장성을 위해)
+        for (int i = 24; i < 30; i++) {
             vector[i] = 0;
         }
 
