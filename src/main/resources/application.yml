@@ -90,6 +90,7 @@ cloud:
       region: ${AWS_REGION}
       access-key: ${AWS_ACCESS_KEY}
       secret-key: ${AWS_SECRET_KEY}
+      cdn-domain: https://www.${FRONTEND_DOMAIN}
 
 ########################################
 # ✅ Server 설정

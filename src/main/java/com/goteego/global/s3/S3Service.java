@@ -135,10 +135,7 @@ public class S3Service {
      * ✅ S3 파일 URL 생성
      */
     private String generateFileUrl(String key) {
-        return String.format("https://%s.s3.%s.amazonaws.com/%s",
-                s3Properties.getBucketName(),
-                s3Properties.getRegion(),
-                key);
+        return String.format("%s/%s", s3Properties.getCdnDomain(), key);
     }
 
     /**
