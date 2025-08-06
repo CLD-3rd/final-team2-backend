@@ -39,8 +39,8 @@ public class WebSocketTicketController {
         Long userId = jwtTokenProvider.getUserId(accessToken);
 
         // 3. 일회용 티켓 생성 및 Redis에 저장 (유효시간 30초)
-        String ticket = UUID.randomUUID().toString();
-        String redisKey = "ws-ticket:" + ticket;
+        String ticket = UUID.randomUUID().toString(); // 1231231232
+        String redisKey = "ws-ticket:" + ticket;      // key(ws-ticket:1231231232) / value(1)
         redisTemplate.opsForValue().set(redisKey, String.valueOf(userId), Duration.ofSeconds(30));
 
         log.info("✅ 웹소켓 티켓 발급. Ticket: {}, UserID: {}", ticket, userId);

@@ -48,39 +48,11 @@ public class RedisSubscriber {
      * @param publishMessage 직렬화된 메시지 객체
      * @param channel 메시지가 발행된 채널(토픽) 이름
      */
-//    public void sendMessage(String publishMessage, String channel) {
-//        try {
-//            log.info("✅ Redis에서 메시지 수신, 채널: {}", channel);
-//
-//            // [수정] 채널 이름으로 메시지 타입을 명확하게 구분
-//            if (channel.equals(chatTopic.getTopic())) {
-//                // 채팅 토픽에서 온 메시지 처리
-//                // GroupMessage와 DirectMessage가 같은 토픽을 사용하므로 내부에서 한 번 더 파싱 시도
-//                try {
-//                    // 1:1 메시지 먼저 시도
-//                    DirectMessageTransferDto directMessageDto = objectMapper.readValue(publishMessage, DirectMessageTransferDto.class);
-//                    handleDirectMessage(directMessageDto);
-//                } catch (Exception e) {
-//                    // 그룹 메시지로 다시 시도
-//                    GroupMessageResponse groupMessage = objectMapper.readValue(publishMessage, GroupMessageResponse.class);
-//                    handleGroupMessage(groupMessage);
-//                }
-//
-//            } else if (channel.equals(notificationTopic.getTopic())) {
-//                // 알림 토픽에서 온 메시지 처리
-//                NotificationTransferDto notificationDto = objectMapper.readValue(publishMessage, NotificationTransferDto.class);
-//                handleNotification(notificationDto);
-//            }
-//
-//        } catch (Exception e) {
-//            log.error("메시지 처리 중 에러 발생: {}", publishMessage, e);
-//        }
-//    }
     public void sendMessage(String publishMessage, String channel) {
         try {
             log.info("✅ Redis에서 메시지 수신, 채널: {}", channel);
 
-            // 채널 이름으로 메시지 타입을 명확하게 구분
+            // 채널 이름으로 메시지 타입 구분
             if (channel.equals(directChatTopic.getTopic())) {
                 // 1:1 채팅 메시지 처리
                 DirectMessageTransferDto directMessageDto = objectMapper.readValue(publishMessage, DirectMessageTransferDto.class);
