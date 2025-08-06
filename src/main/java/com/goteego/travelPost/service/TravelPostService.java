@@ -158,7 +158,7 @@ public class TravelPostService {
         TravelPost createdTravelPost;
 
         if (postType == PostType.BEFORE) {
-            ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(currentUser, currentUser.getNickname());
+            ChatRoom groupChatRoom = chatRoomService.createGroupChatRoomForTravelPost(currentUser, request.getTitle());
 
             // 이미지 S3에 업로드 처리 - 이미지가 있으면 업로드 후 URL 반환
             String uploadedImageUrl = s3Service.uploadFile(request.getImage(), S3Directory.TRAVEL_POSTS, userId);

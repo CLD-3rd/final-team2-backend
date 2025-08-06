@@ -91,7 +91,7 @@ public class ChatRoomService {
     @Transactional
     public ChatRoom createGroupChatRoomForTravelPost(User author, String roomName) {
 
-        ChatRoom groupRoom = ChatRoom.createGroupRoom(roomName + "의 여행 채팅방");
+        ChatRoom groupRoom = ChatRoom.createGroupRoom(roomName);
         groupRoom.addParticipant(author);
 
         ChatRoom savedRoom = chatRoomRepository.save(groupRoom);
