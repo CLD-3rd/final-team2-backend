@@ -26,10 +26,9 @@ public class ChatController {
     // 1:1 채팅
     @MessageMapping("/chat.direct.send/{roomId}")
     public void sendDirectMessage(@Payload DirectMessageRequest directMessageRequest, @DestinationVariable(value = "roomId") String roomId, Principal principal) {
-        log.info("principal getName = {}", principal.getName());
-        log.info("principal = {}", principal);
+
+        log.info("✅✅✅ [ChatController] /chat.direct.send/{roomId} 메서드 진입! ✅✅✅");
         User user = (User) ((UsernamePasswordAuthenticationToken) principal).getPrincipal();
-        log.info("senderId = {}", user.getId());
         chatService.sendDirectMessage(roomId, directMessageRequest, user.getId());
     }
 

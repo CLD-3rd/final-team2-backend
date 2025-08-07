@@ -88,6 +88,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // ✅ 완전 무상태
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/test/**").permitAll() // k6 SetUp 용도의 컨트롤러 URI는 모두 허용하도록 설정 (개발 환경에서만 허용할 수 있도록 별도의 설정 필요함)
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_URLS).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST_URLS).permitAll()
                         .requestMatchers(PUBLIC_URLS).permitAll()
