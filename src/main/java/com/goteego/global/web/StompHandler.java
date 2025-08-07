@@ -57,7 +57,7 @@ public class StompHandler implements ChannelInterceptor {
 
         // STOMP CONNECT 요청일 때만 인증 처리
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            log.info("STOMP CONNECT 요청 처리 시작");
+            log.info("✅ STOMP CONNECT 요청 처리 시작");
 
             // 1. 헤더에서 인증 티켓 추출
             String ticket = accessor.getFirstNativeHeader(TICKET_HEADER);
@@ -82,11 +82,17 @@ public class StompHandler implements ChannelInterceptor {
             // 4. 사용자 정보로 Principal 객체 생성 및 세션에 등록
             Long userId = Long.parseLong(userIdStr);
             User user = userService.getUserById(userId);
+            log.warn("userId = {}", user.getId());
+            log.warn("user Name = {}", user.getNickname());
+            log.warn("user email = {}", user.getOauthInfo().getOauthEmail());
+
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
             accessor.setUser(authentication);
 
-            log.info("✅ WebSocket 인증 성공. 사용자 ID: {}, 세션 사용자: {}", userId, authentication.getName());
+            if (user != null) {
+                log.info("✅ WebSocket 인증 성공. 사용자 ID: {}, 세션 사용자: {}", userId, authentication.getName());
+            }
         }
 
         return message;

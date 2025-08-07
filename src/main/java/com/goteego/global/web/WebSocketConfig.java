@@ -48,6 +48,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureClientInboundChannel(ChannelRegistration registration) {
         // 메시지 인바운드 채널 인터셉터 설정
         registration.interceptors(stompHandler);
+        registration.taskExecutor()
+                .corePoolSize(4)
+                .maxPoolSize(8)
+                .queueCapacity(500);
     }
 
 }

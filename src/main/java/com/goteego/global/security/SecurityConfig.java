@@ -36,7 +36,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_GET_URLS = {
             "/", "/favicon.ico", "/index.html", "/static/**", "/.well-known/**",
             "/api/public/**", "/api/travel-posts/**", "/api/feeds/**", "/api/users/me",
-            "/ws/**",
+            "/ws/**", "/ws-raw/**",
     };
 
     private static final String[] PUBLIC_POST_URLS = {
