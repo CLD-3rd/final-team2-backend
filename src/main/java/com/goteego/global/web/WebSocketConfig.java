@@ -29,6 +29,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // 1. 기존 프론트엔드용 SockJS 엔드포인트
         // STOMP 연결 전에 WebSocket을 먼저 핸드셰이크를 위한 주소 설정 (클라이언트가 WebSocket에 연결할 때 해당 엔드포인트 "/ws"로 접근)
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
@@ -36,12 +37,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS()  // SockJS 폴백 지원 (브라우저 호환성)
                 .setSessionCookieNeeded(true) // ✅ 쿠키 전송 허용
                 .setSuppressCors(true);
+
+        // 2. ✅ k6 테스트용 순수 WebSocket 엔드포인트
+        registry.addEndpoint("/ws-raw")
+                .setAllowedOriginPatterns("*")
+                .addInterceptors(httpHandshakeInterceptor);
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         // 메시지 인바운드 채널 인터셉터 설정
         registration.interceptors(stompHandler);
+        registration.taskExecutor()
+                .corePoolSize(4)
+                .maxPoolSize(8)
+                .queueCapacity(500);
     }
 
 }
