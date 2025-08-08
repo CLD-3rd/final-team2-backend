@@ -58,6 +58,7 @@ public class StompHandler implements ChannelInterceptor {
         // STOMP CONNECT 요청일 때만 인증 처리
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             log.info("✅ STOMP CONNECT 요청 처리 시작");
+            String podName = System.getenv("HOSTNAME"); // Pod 이름 가져오기
 
             // 1. 헤더에서 인증 티켓 추출
             String ticket = accessor.getFirstNativeHeader(TICKET_HEADER);
@@ -83,6 +84,7 @@ public class StompHandler implements ChannelInterceptor {
             Long userId = Long.parseLong(userIdStr);
             User user = userService.getUserById(userId);
             log.warn("userId = {}", user.getId());
+            log.warn("podName = {}", podName);
             log.warn("user Name = {}", user.getNickname());
             log.warn("user email = {}", user.getOauthInfo().getOauthEmail());
 
