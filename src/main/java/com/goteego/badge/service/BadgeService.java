@@ -16,22 +16,33 @@ import com.goteego.feed.repository.FeedRepository;
 import com.goteego.global.domain.enumerate.Location;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
+import com.goteego.global.s3.S3Directory;
+import com.goteego.global.s3.S3Service;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
+import org.springframework.web.multipart.MultipartFile;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BadgeService {
 
     private final UserBadgeRepository userBadgeRepository;
     private final BadgeRepository badgeRepository;
     private final FeedRepository feedRepository;
     private final LandmarkBadgeRequestReposiroty landmarkBadgeRequestReposiroty;
+    private final S3Service s3Service;
 
     public List<BadgeResponse> getBadgesByUserId(Long userId) {
         List<UserBadge> userBadges = userBadgeRepository.findByUserId(userId);
@@ -68,9 +79,61 @@ public class BadgeService {
                 BadgeCode.LANDMARK_SEORAKSAN,
                 BadgeCode.LANDMARK_JEONJUHANOK);
 
-        for (BadgeCode code : badgeCodes) {
-            Badge badge = Badge.builder().category(BadgeCategory.LANDMARK).code(code).imgUrl("https://example.com/icon.png").build();
-            badgeRepository.save(badge);
+        List<String> googleFileIds = List.of(
+                "1A4_upRjZwtPNI19J2QS5_RZ3N6dIToug",
+                "1oQXqa5fJp4QHEqNqxT-BOhsx6gkNfmVr",
+                "1l_mCCvFwhcLNBVmAJJQg6DwsH7F9khll",
+                "1pFQSAN18-nVdgnViKnRmp3hJbJ6UBQzC",
+                "14f8nNZi90LCsVSa64ZXvKeTfydnGj_CV",
+                "1hP_6E62GDX_is0RmUi-jlA97aUMbqC3_",
+                "1hUZmItVGoyCbDhw75eT-lVBcaX8t5mRm",
+                "1N2J1lhkpuCzghiA6HCGNKLZL1mIv7ZsO",
+                "11l8Mveo4wre1uY5Um0wSuyuMng-B3UVG",
+                "1SywQdxcR12_VFl24jLk81oGq4nn87YM6"
+        );
+
+
+        for (int i = 0; i < badgeCodes.size(); i++) {
+            try (InputStream inputStream = downloadImageFromGoogleDrive(googleFileIds.get(i))) {
+                String fileName = badgeCodes.get(i).name().toLowerCase() + ".png";
+                String key = S3Directory.BADGES + "/" + fileName;
+
+                // InputStream 크기 측정
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                inputStream.transferTo(baos);
+                byte[] bytes = baos.toByteArray();
+
+                try (InputStream uploadStream = new ByteArrayInputStream(bytes)) {
+                    String uploadedImageUrl = s3Service.uploadFile(uploadStream, bytes.length, "image/png", key);
+
+                    Badge badge = Badge.builder()
+                            .category(BadgeCategory.LANDMARK)
+                            .code(badgeCodes.get(i))
+                            .imgUrl(uploadedImageUrl)
+                            .build();
+
+                    badgeRepository.save(badge);
+                }
+
+            } catch (IOException e) {
+                log.error("이미지 다운로드 또는 업로드 실패: " + badgeCodes.get(i), e);
+            }
+        }
+    }
+
+
+    public InputStream downloadImageFromGoogleDrive(String fileId) throws IOException {
+        String downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
+        URL url = new URL(downloadUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setDoInput(true);
+
+        int responseCode = conn.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            return conn.getInputStream();
+        } else {
+            throw new IOException("Failed to download file from Google Drive. HTTP code: " + responseCode);
         }
     }
 

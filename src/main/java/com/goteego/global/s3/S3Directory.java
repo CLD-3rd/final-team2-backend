@@ -4,6 +4,7 @@ public final class S3Directory {
     public static final String FEEDS = "feeds";
     public static final String TRAVEL_POSTS = "travel-posts";
     public static final String PROFILES = "profiles";
+    public static final String BADGES = "badges";
 
     private S3Directory() {
         // 인스턴스화 방지

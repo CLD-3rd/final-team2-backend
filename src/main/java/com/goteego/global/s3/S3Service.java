@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -75,6 +76,28 @@ public class S3Service {
         }
     }
 
+    /**
+     * 파일 업로드 InputStream
+     */
+    public String uploadFile(InputStream inputStream, long contentLength, String contentType, String key) {
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(s3Properties.getBucketName())
+                    .key(key)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(request, RequestBody.fromInputStream(inputStream, contentLength));
+
+            return generateFileUrl(key);
+        } catch (S3Exception e) {
+            log.error("❌ [S3] 업로드 실패", e);
+            throw new S3Exception(ErrorCode.S3_UPLOAD_FAILED);
+        } catch (Exception e) {
+            log.error("❌ [S3] 알 수 없는 오류", e);
+            throw new S3Exception(ErrorCode.S3_UNKNOWN_ERROR);
+        }
+    }
     /**
      * ✅ 단일 파일 삭제
      */
