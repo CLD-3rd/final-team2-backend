@@ -131,6 +131,15 @@ public class FeedService {
         // 피드 저장 - 생성된 피드를 데이터베이스에 저장하고 저장된 피드 반환
         Feed savedFeed = feedRepository.save(newFeed);
 
+        // 뱃지 요청 저장
+        if (request.getBadgeRequest()) {
+            LandmarkBadgeRequest badgeRequestEntity = LandmarkBadgeRequest.builder()
+                    .feed(savedFeed)
+                    .status(BadgeStatus.PENDING)
+                    .build();
+
+            landmarkBadgeRequestReposiroty.save(badgeRequestEntity);
+        }
         // 생성된 피드의 ID 반환
         return savedFeed.getId();
     }
