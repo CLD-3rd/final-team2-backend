@@ -40,7 +40,7 @@ public class SecurityConfig {
     };
 
     private static final String[] PUBLIC_POST_URLS = {
-            "/oauth2/**", "/login", "/login/oauth2/code/**", "/error"
+            "/oauth2/**", "/login", "/login/oauth2/code/**", "/error", "/api/v1/**"
     };
 
     private final CustomOAuth2UserService customOAuth2UserService;

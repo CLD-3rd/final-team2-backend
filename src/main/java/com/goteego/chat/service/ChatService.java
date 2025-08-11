@@ -5,22 +5,15 @@ import com.goteego.chat.domain.ChatMessage;
 import com.goteego.chat.domain.ChatRoom;
 import com.goteego.chat.domain.enumerate.MessageType;
 import com.goteego.chat.dto.message.*;
-import com.goteego.chat.dto.message.transfer.DirectMessageTransferDto;
-import com.goteego.chat.dto.message.transfer.NotificationTransferDto;
 import com.goteego.chat.repository.ChatRoomRepository;
-import com.goteego.chat.service.redis.RedisPublisher;
 import com.goteego.global.error.exception.ErrorCode;
 import com.goteego.global.error.exception.NotFoundException;
-import com.goteego.user.domain.User;
 import com.goteego.chat.repository.ChatMessageRepository;
 import com.goteego.user.dto.UserDto;
 import com.goteego.user.service.UserService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,26 +26,14 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final UserService userService;
     private final ChatRoomRepository chatRoomRepository;
-    private final RedisPublisher redisPublisher;
-//    private final ChannelTopic chatTopic;
-    private final ChannelTopic notificationTopic;
-    private final ChannelTopic directChatTopic;
-    private final ChannelTopic groupChatTopic;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public ChatService(ChatMessageRepository chatMessageRepository, UserService userService,
-                       ChatRoomRepository chatRoomRepository, RedisPublisher redisPublisher,
-//                       @Qualifier("chatTopic") ChannelTopic chatTopic,
-                       @Qualifier("directChatTopic") ChannelTopic directChatTopic, // 주입
-                       @Qualifier("groupChatTopic") ChannelTopic groupChatTopic,   // 주입
-                       @Qualifier("notificationTopic") ChannelTopic notificationTopic) {
+                       ChatRoomRepository chatRoomRepository, SimpMessagingTemplate messagingTemplate) {
         this.chatMessageRepository = chatMessageRepository;
         this.userService = userService;
         this.chatRoomRepository = chatRoomRepository;
-        this.redisPublisher = redisPublisher;
-//        this.chatTopic = chatTopic;
-        this.notificationTopic = notificationTopic;
-        this.directChatTopic = directChatTopic;
-        this.groupChatTopic = groupChatTopic;
+        this.messagingTemplate = messagingTemplate;
     }
 
     /**********************
@@ -60,23 +41,18 @@ public class ChatService {
      *********************/
     @Transactional
     public void sendDirectMessage(String roomId, DirectMessageRequest directMessageRequest, Long senderId) {
-
-        // 1. 발신자 조회
         UserDto sender = getUser(senderId);
-
-        // 2. 수신자 조회
         UserDto recipient = getUser(directMessageRequest.getRecipientId());
-
-        // 3. 메시지 DB 저장
         ChatMessage message = createAndSaveMessage(roomId, directMessageRequest.getContent(), directMessageRequest.getType(), sender);
-
-        // 4. 1:1 채팅방의 마지막 메시지 정보 업데이트
         updateChatRoomLastMessage(roomId, message);
 
-        // 5. 메시지 전송 (수신자와 발신자 모두에게 전송)
-        sendDirectMessage(message, recipient.getId());
+        DirectMessageResponse responseDto = message.toDirectMessageDto();
 
-        // 6. 알림 전송
+        // 수신자와 발신자 모두에게 메시지 전송
+        messagingTemplate.convertAndSendToUser(String.valueOf(recipient.getId()), "/queue/messages", responseDto);
+        messagingTemplate.convertAndSendToUser(String.valueOf(sender.getId()), "/queue/messages", responseDto);
+
+        // 알림 전송 로직 (필요 시)
         sendNotification(message, sender, recipient.getId(), roomId);
     }
 
@@ -85,29 +61,21 @@ public class ChatService {
      **********************/
     @Transactional
     public void sendGroupMessage(String roomId, GroupMessageRequest groupMessageRequest, Long senderId) {
-
-        // 1. 발신자 조회
         UserDto sender = getUser(senderId);
-
-        // 2. 채팅방 존재 여부 확인 (선택적)
         ChatRoom chatRoom = chatRoomRepository.findByRoomId(roomId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.CHATROOM_NOT_FOUND));
-
-        // 3. 메시지 저장
-        ChatMessage message = chatMessageRepository.save(ChatMessage.create(roomId, sender.getId(), sender.getNickname(),
-                groupMessageRequest.getContent(), groupMessageRequest.getType()));
-
-        // 4. 그룹 채팅방의 마지막 메시지 정보 업데이트
+        ChatMessage message = createAndSaveMessage(roomId, groupMessageRequest.getContent(), groupMessageRequest.getType(), sender);
         updateChatRoomLastMessage(roomId, message);
 
-        // 5. 그룹 채팅방에 메시지 전송(브로드캐스트)
-        broadcastGroupMessage(message);
+        GroupMessageResponse responseDto = message.toGroupMessageDto();
 
-        // 6. 그룹 채팅방의 다른 참여자들에게 알림 전송
+        // 해당 토픽을 구독하는 모든 클라이언트에게 메시지 전송
+        messagingTemplate.convertAndSend("/sub/chat/room/" + roomId, responseDto);
+
+        // 알림 전송 로직
         chatRoom.getParticipants().forEach(participant -> {
-            User participantUser = participant.getUser();
-            if (!participantUser.getId().equals(senderId)) {
-                sendNotification(message, sender, participantUser.getId(), roomId);
+            if (!participant.getUser().getId().equals(senderId)) {
+                sendNotification(message, sender, participant.getUser().getId(), roomId);
             }
         });
     }
@@ -134,27 +102,11 @@ public class ChatService {
         return chatMessageRepository.save(ChatMessage.create(roomId, sender.getId(), sender.getNickname(), content, type));
     }
 
-    // 1:1 메시지 전송
-    private void sendDirectMessage(ChatMessage message, Long recipientId) {
-        DirectMessageResponse responseDto = message.toDirectMessageDto();
-        DirectMessageTransferDto transferDto = new DirectMessageTransferDto(recipientId, responseDto);
-//        redisPublisher.publish(chatTopic, transferDto);
-        redisPublisher.publish(directChatTopic, transferDto);
-    }
-
-    // 그룹 메시지 전송
-    private void broadcastGroupMessage(ChatMessage message) {
-//        redisPublisher.publish(chatTopic, message.toGroupMessageDto());
-        redisPublisher.publish(groupChatTopic, message.toGroupMessageDto());
-
-    }
-
     // 알림 전송
     private void sendNotification(ChatMessage message, UserDto sender, Long recipientId, String roomId) {
         NotificationResponse notification = NotificationResponse.create(sender.getEmail(), message.getContent(),
                 sender.getId(), sender.getNickname(), roomId, message.getType());
-        NotificationTransferDto notificationTransferDto = new NotificationTransferDto(recipientId, notification);
-        redisPublisher.publish(notificationTopic, notificationTransferDto);
+        messagingTemplate.convertAndSendToUser(String.valueOf(recipientId), "/queue/notifications", notification);
     }
 
     // 마지막 메시지 업데이트 로직
