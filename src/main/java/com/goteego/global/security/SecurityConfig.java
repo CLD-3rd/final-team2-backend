@@ -75,20 +75,28 @@ public class SecurityConfig {
     }
 
     /**
-     * ✅ 2) API 요청용 SecurityFilterChain (Stateless)
+     * ✅ 2) API 및 웹소켓 통합 SecurityFilterChain
+     * - 역할: 웹소켓과 API 요청 모두 처리
+     * - 순서: OAuth2 다음으로 모든 요청을 처리하므로 @Order(2)
      */
     @Bean
-    @Order(2)
+    @Order(2) // ❗️ 순서를 2로 변경하고, 기존 웹소켓 필터체인은 삭제합니다.
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/**") // ✅ 나머지 요청
+                .securityMatcher("/**") // ✅ OAuth2를 제외한 모든 요청을 처리
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // 👇 [핵심 최종 수정]
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // ✅ 완전 무상태
+                        // 웹소켓과 API 모두 필요 시 세션을 사용하도록 허용
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        // 동시 요청으로 인한 세션 충돌(Session Invalidated 오류) 방지
+                        .sessionFixation().none()
                 )
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/test/**").permitAll() // k6 SetUp 용도의 컨트롤러 URI는 모두 허용하도록 설정 (개발 환경에서만 허용할 수 있도록 별도의 설정 필요함)
+                        .requestMatchers("/test/**").permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_URLS).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST_URLS).permitAll()
                         .requestMatchers(PUBLIC_URLS).permitAll()
