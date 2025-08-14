@@ -158,4 +158,39 @@ public class BadgeService {
                 .filter(userBadge -> badgeIds.contains(userBadge.getBadge().getId()))
                 .forEach(userBadge -> userBadge.setDisplay(true));
     }
+    /**
+     * 사용자 마이페이지에서 뱃지 선택하는 메서드
+     * @param badgeId
+     * @return
+     */
+    @Transactional
+    public List<BadgeResponse> setDisplayedBadge(Long badgeId, Long userId) {
+
+        // 1. 해당 유저의 모든 뱃지를 가져온다
+        List<UserBadge> userBadges = userBadgeRepository.findByUserId(userId);
+
+        // 2. true로 설정된 뱃지가 있다면 모두 false로 변경
+        userBadges.stream()
+                .filter(UserBadge::isDisplay)
+                .forEach(ub -> ub.setDisplay(false));
+
+        // 3. badgeId에 해당하는 뱃지를 true로 설정
+        UserBadge selectedBadge = userBadgeRepository.findByUser_IdAndBadge_Id(userId, badgeId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND_BADGE));
+
+
+        selectedBadge.setDisplay(true);
+
+
+        // 4. 변경된 내용 DB에 반영
+        userBadgeRepository.saveAll(userBadges);
+        userBadgeRepository.save(selectedBadge);
+
+
+        // 5. BadgeResponse 반환
+        return userBadges.stream()
+                .map(ub -> BadgeResponse.from(ub.getBadge()))
+                .collect(Collectors.toList());
+    }
+
 }

@@ -40,5 +40,18 @@ public class UserBadgeController {
         return ResponseEntity.ok(ApiResponse.of("뱃지 조회", response));
     }
 
+    /**
+     * 사용자 뱃지 선택
+     */
+    @GetMapping("/choice/{badgeId}/{userId}")
+    public ResponseEntity<ApiResponse<?>> choiceProfileBadge(@PathVariable Long badgeId, @PathVariable Long userId) {
+
+        List<BadgeResponse> badges = badgeService.setDisplayedBadge(badgeId, userId);
+        if (badges.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        BadgeListResponse response = BadgeListResponse.of(userId, badges);
+        return ResponseEntity.ok(ApiResponse.of("뱃지 조회", response));
+    }
 
 }
