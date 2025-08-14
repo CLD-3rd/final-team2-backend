@@ -25,8 +25,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 )
 public class MongoConfig {
 
-//    @Value("${spring.data.mongodb.database}")
-    @Value("${spring.mongodb.database}")
+    @Value("${spring.data.mongodb.database}")
     private String databaseName;
 
     @Bean
