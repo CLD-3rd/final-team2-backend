@@ -6,6 +6,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
@@ -17,12 +18,18 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 
 @Configuration
-@EnableMongoRepositories(basePackages = "com.goteego.chat.repository",
-                        includeFilters = @Filter(type = FilterType.ASSIGNABLE_TYPE, classes = MongoRepository.class))
+@EnableMongoRepositories(
+        basePackages = "com.goteego.chat.repository",
+        // 이 필터는 chat.repository 패키지 내에서도 MongoRepository를 상속한 인터페이스만 찾도록 합니다.
+        includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = MongoRepository.class)
+)
 public class MongoConfig {
+
+    @Value("${spring.data.mongodb.database}")
+    private String databaseName;
 
     @Bean
     public MongoTemplate mongoTemplate(MongoClient mongoClient) {
-        return new MongoTemplate(mongoClient, "team2-mongodb");
+        return new MongoTemplate(mongoClient, databaseName);
     }
 }

@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-@SpringBootApplication(exclude = MongoDataAutoConfiguration.class)
+@SpringBootApplication//(exclude = MongoDataAutoConfiguration.class)
 @EnableJpaAuditing
 public class GotEEgoApplication {
 
