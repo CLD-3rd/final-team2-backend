@@ -49,7 +49,23 @@ public class SecurityConfig {
     private final FrontendProperties frontendProperties;
 
     /**
-     * ✅ 1) OAuth2 전용 SecurityFilterChain
+     * ✅ 1) 모니터링용 SecurityFilterChain (Stateless)
+     */
+    @Bean
+    @Order(0)
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/actuator/**")
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        // JWT 필터 추가 X
+        return http.build();
+    }
+
+    /**
+     * ✅ 2) OAuth2 전용 SecurityFilterChain
      */
     @Bean
     @Order(1)
@@ -75,7 +91,7 @@ public class SecurityConfig {
     }
 
     /**
-     * ✅ 2) API 요청용 SecurityFilterChain (Stateless)
+     * ✅ 3) API 요청용 SecurityFilterChain (Stateless)
      */
     @Bean
     @Order(2)
@@ -92,6 +108,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_URLS).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST_URLS).permitAll()
                         .requestMatchers(PUBLIC_URLS).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -102,7 +119,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(frontendProperties.getCors().getAllowedOriginPatterns());
+        configuration.setAllowedOriginPatterns(frontendProperties.getCors().getAllowedOriginPatterns());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
