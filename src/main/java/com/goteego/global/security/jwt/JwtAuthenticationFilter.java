@@ -52,6 +52,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         AntPathMatcher pathMatcher = new AntPathMatcher();
 
+        // 🚫 actuator는 무조건 스킵
+        if (pathMatcher.match("/actuator/**", uri)) {
+            log.debug("✅ [JwtFilter] actuator 경로 스킵: {}", uri);
+            return true;
+        }
+        
         // ✅ GET 요청일 때만 화이트리스트 매칭
         if (method.equalsIgnoreCase("GET")) {
             for (String pattern : WHITELIST) {
