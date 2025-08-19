@@ -66,6 +66,8 @@ spring:
       client-name: default
       password: ${REDIS_PASSWORD:}
       timeout: 2000
+      ssl:
+        enabled: false
       lettuce:
         pool:
           max-active: 8
