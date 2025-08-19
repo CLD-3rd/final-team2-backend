@@ -17,19 +17,11 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 
-@Configuration
-@EnableMongoRepositories(
-        basePackages = "com.goteego.chat.repository",
-        // 이 필터는 chat.repository 패키지 내에서도 MongoRepository를 상속한 인터페이스만 찾도록 합니다.
-        includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = MongoRepository.class)
-)
-public class MongoConfig {
-
-    @Value("${spring.data.mongodb.database}")
-    private String databaseName;
-
-    @Bean
-    public MongoTemplate mongoTemplate(MongoClient mongoClient) {
-        return new MongoTemplate(mongoClient, databaseName);
-    }
-}
+//@Configuration
+//@EnableMongoRepositories(
+//        basePackages = "com.goteego.chat.repository",
+//        // 이 필터는 chat.repository 패키지 내에서도 MongoRepository를 상속한 인터페이스만 찾도록 합니다.
+//        includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = MongoRepository.class)
+//)
+//public class MongoConfig {
+//}
