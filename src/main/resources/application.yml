@@ -79,12 +79,13 @@ spring:
     # ✅ MongoDB 설정
     ########################################
     mongodb:
-      host: ${MONGO_HOST:localhost}
-      port: ${MONGO_PORT:27017}
-      database: ${MONGO_DATABASE}
-      username: ${MONGO_USERNAME}
-      password: ${MONGO_PASSWORD}
-      authentication-database: ${MONGO_AUTH_DB:admin}
+      uri: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}?tls=true&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false
+      # host: ${MONGO_HOST:localhost}
+      # port: ${MONGO_PORT:27017}
+      # database: ${MONGO_DATABASE}
+      # username: ${MONGO_USERNAME}
+      # password: ${MONGO_PASSWORD}
+      # authentication-database: ${MONGO_AUTH_DB:admin}
 
   ########################################
   # ✅ Devtools 설정
