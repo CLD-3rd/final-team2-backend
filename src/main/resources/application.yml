@@ -1,0 +1,159 @@
+########################################
+# ✅ Spring Application 설정
+########################################
+spring:
+  config:
+    import: optional:application-env.yml
+  application:
+    name: GotEEgo
+
+  ########################################
+  # ✅ Multipart 파일 업로드 설정
+  ########################################
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+  ########################################
+  # ✅ OAuth2 (Google 로그인)
+  ########################################
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: ${SERVER_URL:http://localhost:8080}/login/oauth2/code/google
+            scope:
+              - profile
+              - email
+        provider:
+          google:
+            user-name-attribute: sub
+
+  ########################################
+  # ✅ 데이터베이스 (PostgreSQL)
+  ########################################
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  ########################################
+  # ✅ JPA / Hibernate 설정
+  ########################################
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  ########################################
+  # ✅ Redis & Spring Session 설정
+  ########################################
+  session:
+    store-type: redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      client-name: default
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000
+      ssl:
+        enabled: false
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1
+
+    ########################################
+    # ✅ MongoDB 설정
+    ########################################
+    mongodb:
+      uri: "mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}?tls=true&tlsAllowInvalidHostnames=true&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false&authSource=${MONGO_AUTH_DB:admin}"
+
+  ########################################
+  # ✅ Devtools 설정
+  ########################################
+  devtools:
+    restart:
+      enabled: false
+
+########################################
+# ✅ AWS S3 설정
+########################################
+cloud:
+  aws:
+    s3:
+      bucket-name: ${AWS_S3_BUCKET}
+      region: ${AWS_REGION}
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+      cdn-domain: https://www.${FRONTEND_DOMAIN}
+
+########################################
+# ✅ Server 설정
+########################################
+server:
+  port: ${SERVER_PORT:8080}
+
+########################################
+# ✅ Frontend / Backend URL & CORS
+########################################
+frontend:
+  url: ${FRONTEND_URL:http://localhost:5173}
+  cors:
+    allowed-origin-patterns:
+      - http://localhost:5173
+      - ${FRONTEND_URL}
+      - https://*.${FRONTEND_DOMAIN}
+backend:
+  url: ${BACKEND_URL:http://localhost:8080}
+
+########################################
+# ✅ JWT 설정
+########################################
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}      # ✅ 15분
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000} # ✅ 7일
+
+########################################
+# ✅ Logging 설정
+########################################
+logging:
+  level:
+    root: INFO
+    io.redis.performance.service.CacheAsideService: INFO
+    # io.lettuce.core: DEBUG
+    # org.springframework.data.redis: DEBUG
+    # org.springframework.security: DEBUG
+
+########################################
+# ✅ Actuator / Management 설정
+########################################
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name:backend}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true   # p95 등 히스토그램 계산용
+      sla:
+        http.server.requests: 50ms,100ms,250ms,500ms,1s,2s

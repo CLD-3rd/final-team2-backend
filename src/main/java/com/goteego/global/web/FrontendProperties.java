@@ -18,6 +18,6 @@ public class FrontendProperties {
     @Getter
     @Setter
     public static class Cors {
-        private List<String> allowedOrigins;
+        private List<String> allowedOriginPatterns;
     }
 }
