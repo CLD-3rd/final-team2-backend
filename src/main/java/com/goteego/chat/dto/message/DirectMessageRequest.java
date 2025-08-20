@@ -1,5 +1,6 @@
 package com.goteego.chat.dto.message;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.goteego.chat.domain.enumerate.MessageType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DirectMessageRequest {
     private String content;          // 필수: 메시지 내용
     private Long recipientId;      // 필수: 수신자 아이디
