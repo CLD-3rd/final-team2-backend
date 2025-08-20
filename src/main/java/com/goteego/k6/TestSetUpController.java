@@ -28,7 +28,7 @@ public class TestSetUpController {
     @PostMapping("/setup/users")
     @Transactional
     public ResponseEntity<List<UserInfo>> seedTestUsers(@RequestBody SeedRequest request) {
-//        userRepository.deleteAllInBatch(); // 기존 사용자 모두 삭제
+        userRepository.deleteAllInBatch(); // 기존 사용자 모두 삭제
 
         List<User> usersToSave = new ArrayList<>();
         for (int i = 1; i <= request.getCount(); i++) {

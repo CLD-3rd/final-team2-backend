@@ -30,7 +30,7 @@ public class ChatRoom {
     @Enumerated(EnumType.STRING)
     private ChatType type; // DIRECT or GROUP
 
-    @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserChatRoom> participants = new ArrayList<>();
 
     private LocalDateTime createdAt;
