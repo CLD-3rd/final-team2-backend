@@ -1,5 +1,6 @@
 package com.goteego.k6;
 
+import com.goteego.chat.repository.UserChatRoomRepository;
 import com.goteego.global.security.jwt.JwtTokenProvider;
 import com.goteego.user.domain.OauthInfo;
 import com.goteego.user.domain.User;
@@ -24,10 +25,14 @@ public class TestSetUpController {
 
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserChatRoomRepository userChatRoomRepository;
 
     @PostMapping("/setup/users")
     @Transactional
     public ResponseEntity<List<UserInfo>> seedTestUsers(@RequestBody SeedRequest request) {
+
+        userChatRoomRepository.deleteAllInBatch(); // 기존 채팅방 모두 삭제
+
         userRepository.deleteAllInBatch(); // 기존 사용자 모두 삭제
 
         List<User> usersToSave = new ArrayList<>();
