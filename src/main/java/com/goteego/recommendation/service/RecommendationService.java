@@ -185,7 +185,7 @@ public class RecommendationService {
             Optional<UserEmbedding> currentUserEmbedding = userEmbeddingRepository.findByUserId(currentUserId);
             
             if (currentUserEmbedding.isEmpty()) {
-                log.warn("현재 사용자 임베딩이 없어서 기본값 0.5 반환");
+                log.warn("✅✅✅현재 사용자 임베딩이 없어서 기본값 0.5 반환✅✅✅");
                 return targetUserIds.stream().collect(Collectors.toMap(id -> id, id -> 0.5));
             }
 
