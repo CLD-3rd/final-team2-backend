@@ -27,13 +27,26 @@ public interface FeedRepository extends JpaRepository<Feed, Long> {
      * @param pageable 페이징 정보를 포함한 객체 (페이지 번호, 페이지 크기 등)
      * @return Page<Feed> 조건에 맞는 피드 목록과 페이징 정보가 포함된 페이지 객체
      */
+//    @EntityGraph(attributePaths = {"author"})
+//    @Query("""
+//                SELECT f FROM Feed f
+//                WHERE (:title IS NULL OR f.title LIKE CONCAT('%', :title, '%'))
+//                AND (:author IS NULL OR f.author.nickname LIKE CONCAT('%', :author, '%'))
+//                AND (:location IS NULL OR f.location = :location)
+//            """)
+//    Page<Feed> getFeedsWithCondition(
+//            @Param("title") String title,
+//            @Param("author") String author,
+//            @Param("location") Location location,
+//            Pageable pageable
+//    );
     @EntityGraph(attributePaths = {"author"})
     @Query("""
-                SELECT f FROM Feed f
-                WHERE (:title IS NULL OR f.title LIKE CONCAT('%', :title, '%'))
-                AND (:author IS NULL OR f.author.nickname LIKE CONCAT('%', :author, '%'))
-                AND (:location IS NULL OR f.location = :location)
-            """)
+        SELECT f FROM Feed f
+        WHERE (:title IS NULL OR f.title LIKE CONCAT('%', CAST(:title AS String), '%'))
+        AND (:author IS NULL OR f.author.nickname LIKE CONCAT('%', CAST(:author AS String), '%'))
+        AND (:location IS NULL OR f.location = :location)
+    """)
     Page<Feed> getFeedsWithCondition(
             @Param("title") String title,
             @Param("author") String author,
