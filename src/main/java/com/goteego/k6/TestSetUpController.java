@@ -1,7 +1,9 @@
 package com.goteego.k6;
 
+
 import com.goteego.feed.repository.FeedCommentRepository;
 import com.goteego.feed.repository.FeedRepository;
+import com.goteego.chat.repository.UserChatRoomRepository;
 import com.goteego.global.security.jwt.JwtTokenProvider;
 import com.goteego.user.domain.OauthInfo;
 import com.goteego.user.domain.User;
@@ -101,7 +103,7 @@ public class TestSetUpController {
     // 💣 [추가] 연관 데이터 삭제를 위한 Repository 주입
     private final FeedRepository feedRepository;
     private final FeedCommentRepository feedCommentRepository;
-    // ... 만약 다른 연관 테이블이 있다면 여기에 Repository를 추가 ...
+    private final UserChatRoomRepository userChatRoomRepository;
 
     @PostMapping("/setup/users")
     @Transactional
