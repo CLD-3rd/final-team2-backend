@@ -390,6 +390,10 @@ public class TravelPostService {
             // 유사도 계산
             Map<Long, Double> similarityMap = calculateSimilaritiesForUsers(currentUserId, authorIds);
 
+            log.info("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅");
+            log.info("✅✅✅ 유사도 계산 결과 (similarityMap): {} ✅✅✅", similarityMap);
+            log.info("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅");
+
             // similarity 내림차순 정렬
             sortedPosts = travelPosts.stream()
                     .sorted((tp1, tp2) -> {
