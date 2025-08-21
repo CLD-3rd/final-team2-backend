@@ -25,6 +25,16 @@ public class AdminBadgeController {
 
 
     /**
+     * 뱃지 데이터 init
+     */
+    @PostMapping("/upload-badge")
+    public ResponseEntity<String> triggerUpload() {
+        badgeService.uploadToS3();
+        return ResponseEntity.ok("Badge uploaded to S3 successfully.");
+    }
+
+
+    /**
      * 뱃지 승인 요청 한 목록 조회
      */
     @GetMapping("/requests")

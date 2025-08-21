@@ -54,9 +54,17 @@ public class BadgeService {
         return userBadges.stream().map(userBadge -> BadgeResponse.from(userBadge.getBadge())).toList();
     }
 
+    /**
+     * 뱃지 데이터 생성 -> api호출
+     */
+    public void uploadToS3() {
+        if (badgeRepository.count() == 0) {
+            createBadgeData();
+        }
+    }
 
     /**
-     * 서비스가 제공하는 뱃지 데이터 생성
+     * 서비스가 제공하는 뱃지 데이터 생성 -> 서버 재시작 용
      */
     @PostConstruct
     public void initBadgeData() {
