@@ -272,7 +272,9 @@ public class ProfileAnswerService {
         }
 
         // ✅ 저장 (새로 생성되었거나 업데이트된 경우)
-        profileAnswerRepository.save(profileAnswer);
+        ProfileAnswer savedProfileAnswer = profileAnswerRepository.save(profileAnswer);
+
+        createUserEmbeddingFromProfileAnswer(savedProfileAnswer);
     }
 
     /**
