@@ -139,8 +139,8 @@ public class TravelPostService {
         String viewCountKey = "post:view:" + postId;
         Long viewCount = redisTemplate.opsForValue().increment(viewCountKey);
 
-        // [2] 30번 조회할 때 마다 DB 반영
-        if (viewCount % 30 == 0) { //
+        // [2] 5번 조회할 때 마다 DB 반영
+        if (viewCount % 10 == 0) { //
             travelPost.updateViewCount(viewCount);
             travelPostRepository.save(travelPost);
         }
